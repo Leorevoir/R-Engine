@@ -87,7 +87,7 @@ ARGUMENTS:
       $0 [-d|--debug]   debug flags compilation
       $0 [-c|--clean]   clean the project
       $0 [-f|--fclean]  fclean the project
-      # $0 [-t|--tests]   run unit tests
+      $0 [-t|--tests]   run unit tests
 EOF
         exit 0
         ;;

@@ -45,7 +45,8 @@ bool r::Scene::update(const core::FrameTime &frame)
 void r::Scene::_sort()
 {
     const auto it = std::partition(_entities.begin(), _entities.end(),
-    [](const std::unique_ptr<ecs::Entity> &entity) {
+    [](const std::unique_ptr<ecs::Entity> &entity)
+    {
         return entity != nullptr && entity->isActive();
     });
 

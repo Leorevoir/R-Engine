@@ -1,3 +1,5 @@
+#pragma once
+
 template<typename T>
 void r::ecs::Commands::add_component(Entity e, T comp) const
 {

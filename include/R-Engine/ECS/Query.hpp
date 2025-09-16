@@ -107,10 +107,7 @@ template<typename... Wrappers>
 struct Query {
     public:
         constexpr Query() = default;
-        explicit Query(Scene *scene, std::vector<Entity> entities) : _scene(scene), _entities(std::move(entities))
-        {
-            /* __ctor__ */
-        }
+        explicit Query(Scene *scene, std::vector<Entity> entities);
 
         /**
         * @brief iterator
@@ -118,46 +115,15 @@ struct Query {
         */
         struct Iterator {
             public:
-                explicit Iterator(Scene *scene, const std::vector<Entity> *list, u64 i) : _scene(scene), _list(list), _idx(i)
-                {
-                    /* __ctor__ */
-                }
+                explicit Iterator(Scene *scene, const std::vector<Entity> *list, u64 i);
 
-                bool operator!=(const Iterator &other) const
-                {
-                    return _idx != other._idx;
-                }
-
-                bool operator==(const Iterator &other) const
-                {
-                    return _idx == other._idx;
-                }
-
-                void operator++()
-                {
-                    ++_idx;
-                }
-
-                auto operator*() const
-                {
-                    Entity e = (*_list)[_idx];
-
-                    return std::tuple<Wrappers...>{build_wrapper<Wrappers>(_scene, e)...};
-                }
+                bool operator!=(const Iterator &other) const;
+                bool operator==(const Iterator &other) const;
+                void operator++();
+                auto operator*() const;
 
                 template<typename W>
-                static W build_wrapper(Scene *scene, Entity e)
-                {
-                    if constexpr (is_mut<W>::value) {
-                        using Comp = typename component_of<W>::type;
-                        return W{scene->get_component_ptr<Comp>(e)};
-                    } else if constexpr (is_ref<W>::value) {
-                        using Comp = typename component_of<W>::type;
-                        return W{scene->get_component_ptr<Comp>(e)};
-                    } else {
-                        static_assert(false, "Query wrappers must be Mut<T> or Ref<T>");
-                    }
-                }
+                static W build_wrapper(Scene *scene, Entity e);
 
             private:
                 Scene *_scene = nullptr;
@@ -165,15 +131,8 @@ struct Query {
                 u64 _idx = 0;
         };
 
-        Iterator begin() const
-        {
-            return Iterator(_scene, &_entities, 0);
-        }
-
-        Iterator end() const
-        {
-            return Iterator(_scene, &_entities, _entities.size());
-        }
+        Iterator begin() const;
+        Iterator end() const;
 
     private:
         Scene *_scene = nullptr;
@@ -183,3 +142,5 @@ struct Query {
 }// namespace ecs
 
 }// namespace r
+
+#include "Inline/Query.inl"

@@ -9,6 +9,6 @@ function(apply_compiler_warnings target)
         -Wmissing-declarations -Wswitch-default
         -Wdouble-promotion -Wformat=2 -Wwrite-strings
     )
-    target_compile_options(r-engine PRIVATE -Wno-undef) # raylib triggers this warning
+    target_compile_options(r-engine PRIVATE -Wno-stringop-overflow -Wno-undef) # raylib triggers this warning
     message(STATUS "INFO: applied compiler warnings to target ${target}")
 endfunction()

@@ -6,7 +6,7 @@ ILC="\033[3m"
 ORG="\033[1;33m"
 RST="\033[0m"
 
-PROGRAM_NAME="r-engine"
+PROGRAM_NAME="r-engine r-engine__example"
 UNIT_TESTS_NAME="unit_tests"
 
 function _error()
@@ -53,16 +53,15 @@ function _debug()
     exit 0
 }
 
-# function _tests_run()
-# {
-#     _base_run "-DCMAKE_BUILD_TYPE=Debug -DENABLE_DEBUG=ON -DENABLE_TESTING=ON" "$UNIT_TESTS_NAME"
-#     cd .. || _error "cd failed"
-#     if ! ./$UNIT_TESTS_NAME; then 
-#         _error "unit tests error" "unit tests failed!"
-#     fi
-#     _success "unit tests succeed!"
-#     exit 0
-# }
+function _tests_run()
+{
+    _base_run "-DCMAKE_BUILD_TYPE=Debug -DENABLE_DEBUG=ON -DENABLE_TESTS=ON" "$UNIT_TESTS_NAME"
+    if ! ./$UNIT_TESTS_NAME; then 
+        _error "unit tests error" "unit tests failed!"
+    fi
+    _success "unit tests succeed!"
+    exit 0
+}
 
 function _clean()
 {
@@ -72,7 +71,7 @@ function _clean()
 function _fclean()
 {
     _clean
-    rm -rf $PROGRAM_NAME $UNIT_TESTS_NAME plugins code_coverage.txt $UNIT_TESTS_NAME-*.profraw $UNIT_TESTS_NAME.profdata vgcore* cmake-build-debug *.a
+    rm -rf $PROGRAM_NAME $UNIT_TESTS_NAME plugins code_coverage.txt $UNIT_TESTS_NAME-*.profraw $UNIT_TESTS_NAME.profdata vgcore* cmake-build-debug *.a libr*
 }
 
 for args in "$@"
@@ -88,7 +87,7 @@ ARGUMENTS:
       $0 [-d|--debug]   debug flags compilation
       $0 [-c|--clean]   clean the project
       $0 [-f|--fclean]  fclean the project
-      # $0 [-t|--tests]   run unit tests
+      $0 [-t|--tests]   run unit tests
 EOF
         exit 0
         ;;
@@ -103,9 +102,9 @@ EOF
     -d|--debug)
         _debug
         ;;
-    # -t|--tests)
-    #     _tests_run
-        # ;;
+    -t|--tests)
+        _tests_run
+        ;;
     -r|--re)
         _fclean
         _all

@@ -66,6 +66,5 @@ asm_offset
 *.cc
 *.glb
 
-.clang-format
 console.log
 assets/shaders/cache

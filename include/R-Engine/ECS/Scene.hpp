@@ -31,7 +31,7 @@ class Scene : public NonCopyable
         * If the storage does not exist, it will be created.
         */
         template<typename T>
-        ComponentStorage<T> &storage();
+        ComponentStorage<T> &storage() noexcept;
 
         /**
         * @brief Add a component of type T to an entity.
@@ -39,7 +39,7 @@ class Scene : public NonCopyable
         * @param comp The component to be added.
         */
         template<typename T>
-        void add_component(Entity e, T comp);
+        void add_component(Entity e, T comp) noexcept;
 
         /**
         * @brief Get a pointer to the component of type T associated with an entity.
@@ -47,7 +47,7 @@ class Scene : public NonCopyable
         * @return A pointer to the component of type T, or nullptr if the entity does
         */
         template<typename T>
-        T *get_component_ptr(Entity e);
+        T *get_component_ptr(Entity e) noexcept;
 
         /**
         * @brief Check if an entity has a component of type T.
@@ -55,26 +55,26 @@ class Scene : public NonCopyable
         * @return true if the entity has the component of type T, false otherwise.
         */
         template<typename T>
-        bool has_component(Entity e) const;
+        bool has_component(Entity e) const noexcept;
 
         /**
          * @brief Insert a resource of type T into the scene.
          * @param r The resource to be inserted.
          */
         template<typename T>
-        void insert_resource(T r);
+        void insert_resource(T r) noexcept;
 
         /**
         * @brief Get a pointer to a resource of type T.
         * @return A pointer to the resource of type T, or nullptr if the resource does not exist.
         */
         template<typename T>
-        T *get_resource_ptr();
+        T *get_resource_ptr() noexcept;
 
-        StorageMap &getStorages();
-        Commands make_commands();
-        Entity create_entity();
-        void destroy_entity(Entity e);
+        StorageMap &getStorages() noexcept;
+        Commands make_commands() noexcept;
+        Entity create_entity() noexcept;
+        void destroy_entity(Entity e) noexcept;
 
     private:
         StorageMap _storages;

@@ -5,7 +5,7 @@
 */
 
 template<typename T>
-r::ecs::ComponentStorage<T> &r::ecs::Scene::storage()
+r::ecs::ComponentStorage<T> &r::ecs::Scene::storage() noexcept
 {
     const auto key = std::type_index(typeid(T));
     const auto it = _storages.find(key);
@@ -21,13 +21,13 @@ r::ecs::ComponentStorage<T> &r::ecs::Scene::storage()
 }
 
 template<typename T>
-void r::ecs::Scene::add_component(Entity e, T comp)
+void r::ecs::Scene::add_component(Entity e, T comp) noexcept
 {
     storage<T>().add(e, std::move(comp));
 }
 
 template<typename T>
-T *r::ecs::Scene::get_component_ptr(Entity e)
+T *r::ecs::Scene::get_component_ptr(Entity e) noexcept
 {
     const auto key = std::type_index(typeid(T));
     const auto it = _storages.find(key);
@@ -39,7 +39,7 @@ T *r::ecs::Scene::get_component_ptr(Entity e)
 }
 
 template<typename T>
-bool r::ecs::Scene::has_component(Entity e) const
+bool r::ecs::Scene::has_component(Entity e) const noexcept
 {
     const auto key = std::type_index(typeid(T));
     const auto it = _storages.find(key);
@@ -51,13 +51,13 @@ bool r::ecs::Scene::has_component(Entity e) const
 }
 
 template<typename T>
-void r::ecs::Scene::insert_resource(T r)
+void r::ecs::Scene::insert_resource(T r) noexcept
 {
     _resources[std::type_index(typeid(T))] = std::move(r);
 }
 
 template<typename T>
-T *r::ecs::Scene::get_resource_ptr()
+T *r::ecs::Scene::get_resource_ptr() noexcept
 {
     const auto it = _resources.find(std::type_index(typeid(T)));
 

@@ -4,7 +4,7 @@
 * public
 */
 
-void r::core::Clock::tick()
+void r::core::Clock::tick() noexcept
 {
     const TimePoint current_time = SystemClock::now();
 
@@ -20,7 +20,7 @@ void r::core::Clock::tick()
     }
 }
 
-const r::core::FrameTime &r::core::Clock::frame() const
+const r::core::FrameTime &r::core::Clock::frame() const noexcept
 {
     return _frame;
 }

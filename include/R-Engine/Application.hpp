@@ -25,10 +25,10 @@ class Application
         ~Application() = default;
 
         template<typename Func>
-        Application &add_system(Schedule when, Func &&func);
+        Application &add_system(Schedule when, Func &&func) noexcept;
 
         template<typename ResT>
-        Application &insert_resource(ResT res);
+        Application &insert_resource(ResT res) noexcept;
 
         void run();
 

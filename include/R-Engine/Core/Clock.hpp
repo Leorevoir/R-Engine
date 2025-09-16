@@ -12,8 +12,8 @@ class Clock
         constexpr Clock() = default;
         constexpr ~Clock() = default;
 
-        void tick();
-        const FrameTime &frame() const;
+        void tick() noexcept;
+        const FrameTime &frame() const noexcept;
 
     private:
         core::FrameTime _frame{};

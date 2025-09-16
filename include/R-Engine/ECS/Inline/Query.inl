@@ -55,8 +55,13 @@ W r::ecs::Query<Wrappers...>::Iterator::build_wrapper(Scene *scene, Entity e)
     } else if constexpr (is_ref<W>::value) {
         using Comp = typename component_of<W>::type;
         return W{scene->get_component_ptr<Comp>(e)};
+    } else if constexpr (is_optional<W>::value) {
+        using Comp = typename component_of<W>::type;
+        return W{scene->get_component_ptr<Comp>(e)};
+    } else if constexpr (is_with<W>::value || is_without<W>::value) {
+        return W{};
     } else {
-        static_assert(!sizeof(W), "r::ecs::Query wrappers must be Mut<T> or Ref<T>");
+        static_assert(!sizeof(W), "r::ecs::Query wrappers must be Mut<T>, Ref<T>, With<T>, Without<T>, or Optional<T>");
     }
 }
 

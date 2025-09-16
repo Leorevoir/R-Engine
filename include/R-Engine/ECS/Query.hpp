@@ -41,6 +41,32 @@ struct Ref {
 };
 
 /**
+ * @brief With (Filter)
+ * @info requires an entity to have component <T> without accessing its data.
+ */
+template<typename T>
+struct With {
+};
+
+/**
+ * @brief Without (Filter)
+ * @info excludes entities that have component <T>.
+ */
+template<typename T>
+struct Without {
+};
+
+/**
+ * @brief Optional
+ * @info provides conditional read-only access to component <T>.
+ * The pointer will be nullptr if the entity does not have the component.
+ */
+template<typename T>
+struct Optional {
+        const T *ptr = nullptr;
+};
+
+/**
 * traits
 */
 
@@ -56,6 +82,18 @@ template<typename>
 struct is_ref : std::false_type {
 };
 
+template<typename>
+struct is_with : std::false_type {
+};
+
+template<typename>
+struct is_without : std::false_type {
+};
+
+template<typename>
+struct is_optional : std::false_type {
+};
+
 template<typename T>
 struct is_res<Res<T>> : std::true_type {
 };
@@ -66,6 +104,18 @@ struct is_mut<Mut<T>> : std::true_type {
 
 template<typename T>
 struct is_ref<Ref<T>> : std::true_type {
+};
+
+template<typename T>
+struct is_with<With<T>> : std::true_type {
+};
+
+template<typename T>
+struct is_without<Without<T>> : std::true_type {
+};
+
+template<typename T>
+struct is_optional<Optional<T>> : std::true_type {
 };
 
 /**
@@ -85,23 +135,35 @@ struct component_of<Ref<T>> {
         using type = T;
 };
 
+template<typename T>
+struct component_of<With<T>> {
+        using type = T;
+};
+
+template<typename T>
+struct component_of<Without<T>> {
+        using type = T;
+};
+
+template<typename T>
+struct component_of<Optional<T>> {
+        using type = T;
+};
+
 /**
 * @brief query
-* @info accepts wrappers Mut<T> / Ref<T>
+* @info accepts wrappers Mut<T> / Ref<T> / With<T> / Without<T> / Optional<T>
 *
-* void move_system(Res<FrameTime> time, Query<Mut<Position>, Ref<Velocity>> q)
+* void complex_system(Query<Mut<Position>, Without<Velocity>, Optional<Health>> q)
 * {
-*     for (const auto &tup : q) {
-*         pos.ptr->x += vel.ptr->vx * time.ptr->delta_time;
-*         pos.ptr->y += vel.ptr->vy * time.ptr->delta_time;
+*     for (auto [pos, _, health_opt] : q) {
+*         // This system runs on entities that have Position, but not Velocity.
+*         // Health is optional.
+*         if (health_opt.ptr) {
+*             // ...
+*         }
 *     }
 * }
-*
-* in this example:
-*   - the ECS injects FrameTime (a global resource)
-*   - ECS finds all entities with Position and Velocity components
-*   - for each entity, ECS yields a tuple (Mut<Position>, Ref<Velocity>) to the system
-*   - the system can mutate Position and read Velocity
 */
 template<typename... Wrappers>
 struct Query {

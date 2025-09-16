@@ -10,9 +10,12 @@
 * public
 */
 
-void r::Logger::debug(const std::string_view message, const std::string_view file, int line)
+void r::Logger::debug([[maybe_unused]] const std::string_view message, [[maybe_unused]] const std::string_view file,
+    [[maybe_unused]] int line)
 {
+#if defined(ENGINE_DEBUG)
     _emit(message, Level::Debug, file, line);
+#endif
 }
 
 void r::Logger::info(const std::string_view message, const std::string_view file, int line)

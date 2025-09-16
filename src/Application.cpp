@@ -25,3 +25,15 @@ void r::Application::Application::run()
 /**
 * private
 */
+
+void r::Application::_run_schedule(const Schedule sched)
+{
+    const auto it = _systems.find(sched);
+
+    if (it == _systems.end()) {
+        return;
+    }
+    for (const auto &sys : it->second) {
+        sys(_scene);
+    }
+}

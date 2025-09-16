@@ -6,7 +6,6 @@
 #include <R-Engine/ECS/System.hpp>
 
 #include <functional>
-#include <type_traits>
 #include <vector>
 
 namespace r {
@@ -25,39 +24,17 @@ class Application
         ~Application() = default;
 
         template<typename Func>
-        Application &add_system(Schedule when, Func &&func)
-        {
-            using FuncDecay = std::decay_t<Func>;
-            FuncDecay fn = std::forward<Func>(func);
-
-            _systems[when].emplace_back([fn](ecs::Scene &scene) mutable { ecs::run_system(fn, scene); });
-
-            return *this;
-        }
+        Application &add_system(Schedule when, Func &&func);
 
         template<typename ResT>
-        Application &insert_resource(ResT res)
-        {
-            _scene.insert_resource<ResT>(std::move(res));
-            return *this;
-        }
+        Application &insert_resource(ResT res);
 
         void run();
 
         static inline bool quit = false;
 
     private:
-        void _run_schedule(const Schedule sched)
-        {
-            const auto it = _systems.find(sched);
-
-            if (it == _systems.end()) {
-                return;
-            }
-            for (const auto &sys : it->second) {
-                sys(_scene);
-            }
-        }
+        void _run_schedule(const Schedule sched);
 
         using SystemFunc = std::function<void(ecs::Scene &)>;
         using ScheduleMap = std::unordered_map<Schedule, std::vector<SystemFunc>>;
@@ -68,3 +45,5 @@ class Application
 };
 
 }// namespace r
+
+#include "Application.inl"

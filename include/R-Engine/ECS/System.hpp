@@ -1,33 +1,100 @@
 #pragma once
 
-#include <R-Engine/Core/FrameTime.hpp>
-#include <R-Engine/ECS/Entity.hpp>
+#include <R-Engine/ECS/Resolver.hpp>
+#include <R-Engine/Types.hpp>
+
+#include <functional>
+#include <tuple>
+#include <utility>
 
 namespace r {
 
 namespace ecs {
 
-class System : public NonCopyable
-{
-    public:
-        constexpr System() = default;
-        virtual ~System();
-
-        virtual bool update(const core::FrameTime &frame);
-
-        const core::BitMask &getAcceptedComponents() const;
-
-        bool contains(const Entity &entity) const;
-        void link(const std::unique_ptr<Entity> &entity);
-        void unlink(const std::unique_ptr<Entity> &entity);
-
-    protected:
-        std::vector<Entity *> _entities;
-        core::BitMask _accepted_components;
-
-    private:
-        static inline u64 _max_id = 0;
+/**
+ * @brief type trait to extract the argument list from any callable.
+ * 
+ * supports:
+ *   - lambdas / functors (operator())
+ *   - function pointers
+ *   - member function pointers
+ * 
+ * result is available as `function_traits<F>::args` (a std::tuple of argument types).
+ */
+template<typename T>
+struct function_traits : function_traits<decltype(&T::operator())> {
 };
+
+/**
+* @brief const operator ()
+* @info (for lambdas and functors)
+*
+* void operator() (Args...) const;
+*/
+template<typename R, typename C, typename... Args>
+struct function_traits<R (C::*)(Args...) const> {
+        using args = std::tuple<Args...>;
+};
+
+/**
+* @brief non-const operator ()
+* @info (for lambdas and functors)
+*
+* void operator() (Args...);
+*/
+template<typename R, typename C, typename... Args>
+struct function_traits<R (C::*)(Args...)> {
+        using args = std::tuple<Args...>;
+};
+
+/**
+* @brief function pointer
+* @info (for free functions)
+*
+* void (*)(int, float);
+*/
+template<typename R, typename... Args>
+struct function_traits<R (*)(Args...)> {
+        using args = std::tuple<Args...>;
+};
+
+/**
+ * @brief invoke a system function with arguments resolved from the ECS Scene.
+ * 
+ * for each argument type in the function signature, uses Resolver to construct
+ * the correct wrapper (Res<T>, ResMut<T>, Query<...>, etc).
+ * 
+ * @param func system function type
+ * @param args argument types (deduced from function_traits)
+ */
+
+template<typename Func, typename... Args, size_t... I>
+static inline auto call_with_resolved(Func &&f, Scene &scene, std::tuple<Args...>, std::index_sequence<I...>)
+{
+    Resolver resolver(&scene);
+    return std::invoke(std::forward<Func>(f), resolver.resolve(std::type_identity<Args>{})...);
+}
+
+/**
+ * @brief entry point to execute a system.
+ * 
+ * deduces the system function's argument list via function_traits,
+ * and calls it with arguments automatically provided by Resolver.
+ * 
+ * this allows writing systems like:
+ *   void my_system(Res<Time>, Query<Mut<Position>, Ref<Velocity>>);
+ * 
+ * without manually wiring dependencies.
+ */
+
+template<typename Func>
+static inline void run_system(Func &&f, Scene &scene)
+{
+    using traits = function_traits<std::remove_cvref_t<Func>>;
+    using args = typename traits::args;
+
+    call_with_resolved(std::forward<Func>(f), scene, args{}, std::make_index_sequence<std::tuple_size_v<args>>{});
+}
 
 }// namespace ecs
 

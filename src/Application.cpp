@@ -1,44 +1,27 @@
 #include <R-Engine/Application.hpp>
-#include <csignal>
+#include <R-Engine/Core/Clock.hpp>
 
 /**
 * public
 */
 
-r::Application::Application(const u32 scene_count)
+void r::Application::Application::run()
 {
-    _scenes.reserve(scene_count);
+    _scene.insert_resource<core::FrameTime>(_clock.frame());
+    _run_schedule(Schedule::STARTUP);
 
-    std::signal(SIGINT, [](i32) -> void { Application::quit = true; });
-}
-
-r::Application::~Application()
-{
-    _scenes.clear();
-}
-
-void r::Application::run()
-{
     while (!quit) {
         _clock.tick();
-        _update();
+        *_scene.get_resource_ptr<core::FrameTime>() = _clock.frame();
+
+        _run_schedule(Schedule::UPDATE);
+
+        for (i32 i = 0; i < _clock.frame().substep_count; ++i) {
+            _run_schedule(Schedule::FIXED_UPDATE);
+        }
     }
 }
 
 /**
 * private
 */
-
-void r::Application::_update()
-{
-    for (u64 i = 0; i < _scenes.size(); ++i) {
-        if (!_active_scene[i]) {
-            continue;
-        }
-        if (!_scenes[i]->update(_clock.frame())) {
-            _active_scene.reset(i);
-        }
-    }
-
-    quit = _active_scene.empty();
-}

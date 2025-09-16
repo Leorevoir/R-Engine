@@ -16,20 +16,7 @@ include(4_Sources)
 # R-Engine lib
 ########################################
 
-# add_library(r-engine SHARED ${SRC_ENGINE})
-# target_include_directories(r-engine PRIVATE 
-#     ${CMAKE_SOURCE_DIR}/include
-#     ${CMAKE_SOURCE_DIR}/external
-# )
-# target_link_libraries(r-engine PRIVATE
-#     raylib
-# )
-
-########################################
-# R-Engine r-engine__example
-########################################
-
-add_executable(r-engine ${SRC_ENGINE})
+add_library(r-engine SHARED ${SRC_ENGINE})
 target_include_directories(r-engine PRIVATE 
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/external
@@ -37,13 +24,18 @@ target_include_directories(r-engine PRIVATE
 target_link_libraries(r-engine PRIVATE
     raylib
 )
-# add_executable(r-engine__example ${SRC_EXAMPLE})
-# target_include_directories(r-engine__example PRIVATE
-#     ${CMAKE_SOURCE_DIR}/include
-# )
-# target_link_libraries(r-engine__example PRIVATE
-#     r-engine
-# )
+
+########################################
+# R-Engine r-engine__example
+########################################
+
+add_executable(r-engine__example ${SRC_EXAMPLE})
+target_include_directories(r-engine__example PRIVATE
+    ${CMAKE_SOURCE_DIR}/include
+)
+target_link_libraries(r-engine__example PRIVATE
+    r-engine
+)
 
 ########################################
 # R-Engine unit tests

@@ -108,9 +108,9 @@ void r::ecs::Resolver::_collect_for(std::vector<std::vector<Entity>> &out)
     static_assert(is_mut<W>::value || is_ref<W>::value, "Query arguments must be Mut<T> or Ref<T>");
 
     using Comp = typename component_of<W>::type;
-    const u64 id = type_id<Comp>();
+    auto key = std::type_index(typeid(Comp));
     const auto &storages = _scene->getStorages();
-    const auto it = storages.find(id);
+    const auto it = storages.find(key);
 
     if (it == storages.end()) {
         out.emplace_back();

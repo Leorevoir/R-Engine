@@ -1,27 +1,17 @@
 #pragma once
 
-#include <atomic>
-
 /**
  * Storage Template Implementations
  */
 
 /**
- * @brief Generate the next unique type ID
- */
-static inline u64 r::ecs::next_type_id()
-{
-    static std::atomic<u64> c{0};
-    return c++;
-}
-
-/**
  * @brief Get unique type ID for type T
  */
 template<typename T>
-static inline u64 r::ecs::type_id()
+static inline u64 r::ecs::type_id() noexcept
 {
-    static u64 id = next_type_id();
+    static const u64 id = g_type_counter.fetch_add(1u, std::memory_order_relaxed);
+
     return id;
 }
 

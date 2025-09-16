@@ -4,6 +4,7 @@
 #include <R-Engine/Types.hpp>
 
 #include <any>
+#include <typeindex>
 #include <unordered_map>
 
 namespace r {
@@ -22,8 +23,8 @@ class Scene : public NonCopyable
         Scene() = default;
         ~Scene() = default;
 
-        using StorageMap = std::unordered_map<u64, StoragePtr>;
-        using ResourceMap = std::unordered_map<u64, std::any>;
+        using StorageMap = std::unordered_map<std::type_index, StoragePtr>;
+        using ResourceMap = std::unordered_map<std::type_index, std::any>;
 
         /**
         * @brief get the storage for a specific component type T.

@@ -3,6 +3,7 @@
 #include <R-Engine/ECS/Entity.hpp>
 #include <R-Engine/Types.hpp>
 
+#include <atomic>
 #include <memory>
 #include <unordered_map>
 #include <vector>
@@ -12,17 +13,20 @@ namespace r {
 namespace ecs {
 
 /**
- * @brief generate unique type IDs at runtime
- * @info atomic because Scene::storage<T> can be called from multiple threads
+ * @brief Global type id counter shared across translation units and shared libraries
+ *
+ * Why?
+ * - 'inline' ensures a single definition across TUs (C++17).
+ * - using atomic and fetch_add makes it safe for concurrent initialization.
  */
-static inline u64 next_type_id();
+inline std::atomic<u64> g_type_counter{0u};
 
 /**
  * @brief get unique type ID for type T
  * @info each type T will get its own unique
  */
 template<typename T>
-static inline u64 type_id();
+static inline u64 type_id() noexcept;
 
 /**
  * @brief interface for component storage

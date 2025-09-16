@@ -1,23 +1,23 @@
 #pragma once
 
 /**
- * Scene Implementation (templates)
- */
+* Scene Implementation
+*/
 
 template<typename T>
 r::ecs::ComponentStorage<T> &r::ecs::Scene::storage()
 {
-    const u64 id = type_id<T>();
-    const auto it = _storages.find(id);
+    const auto key = std::type_index(typeid(T));
+    const auto it = _storages.find(key);
 
     if (it == _storages.end()) {
         auto ptr = std::make_unique<ComponentStorage<T>>();
         ComponentStorage<T> *raw = ptr.get();
-        _storages.emplace(id, std::move(ptr));
+
+        _storages.emplace(key, std::move(ptr));
         return *raw;
     }
-
-    return *static_cast<ComponentStorage<T> *>(_storages[id].get());
+    return *static_cast<ComponentStorage<T> *>(_storages[key].get());
 }
 
 template<typename T>
@@ -29,8 +29,9 @@ void r::ecs::Scene::add_component(Entity e, T comp)
 template<typename T>
 T *r::ecs::Scene::get_component_ptr(Entity e)
 {
-    const u64 id = type_id<T>();
-    const auto it = _storages.find(id);
+    const auto key = std::type_index(typeid(T));
+    const auto it = _storages.find(key);
+
     if (it == _storages.end()) {
         return nullptr;
     }
@@ -40,8 +41,9 @@ T *r::ecs::Scene::get_component_ptr(Entity e)
 template<typename T>
 bool r::ecs::Scene::has_component(Entity e) const
 {
-    const u64 id = type_id<T>();
-    const auto it = _storages.find(id);
+    const auto key = std::type_index(typeid(T));
+    const auto it = _storages.find(key);
+
     if (it == _storages.end()) {
         return false;
     }
@@ -51,13 +53,13 @@ bool r::ecs::Scene::has_component(Entity e) const
 template<typename T>
 void r::ecs::Scene::insert_resource(T r)
 {
-    _resources[type_id<T>()] = std::move(r);
+    _resources[std::type_index(typeid(T))] = std::move(r);
 }
 
 template<typename T>
 T *r::ecs::Scene::get_resource_ptr()
 {
-    const auto it = _resources.find(type_id<T>());
+    const auto it = _resources.find(std::type_index(typeid(T)));
 
     if (it == _resources.end()) {
         return nullptr;

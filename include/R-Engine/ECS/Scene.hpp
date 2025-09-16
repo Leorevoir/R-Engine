@@ -12,6 +12,10 @@ namespace ecs {
 
 struct Commands;
 
+/**
+* @brief Scene class that manages entities, components, and resources.
+* @info create & destroy entities, add & get components, insert & get resources.
+*/
 class Scene : public NonCopyable
 {
     public:
@@ -21,65 +25,50 @@ class Scene : public NonCopyable
         using StorageMap = std::unordered_map<u64, StoragePtr>;
         using ResourceMap = std::unordered_map<u64, std::any>;
 
+        /**
+        * @brief get the storage for a specific component type T.
+        * If the storage does not exist, it will be created.
+        */
         template<typename T>
-        ComponentStorage<T> &storage()
-        {
-            const u64 id = type_id<T>();
-            const auto it = _storages.find(id);
+        ComponentStorage<T> &storage();
 
-            if (it == _storages.end()) {
-                auto ptr = std::make_unique<ComponentStorage<T>>();
-                ComponentStorage<T> *raw = ptr.get();
-                _storages.emplace(id, std::move(ptr));
-                return *raw;
-            }
-            return *static_cast<ComponentStorage<T> *>(_storages[id].get());
-        }
-
+        /**
+        * @brief Add a component of type T to an entity.
+        * @param e The entity to which the component will be added.
+        * @param comp The component to be added.
+        */
         template<typename T>
-        void add_component(Entity e, T comp)
-        {
-            storage<T>().add(e, std::move(comp));
-        }
+        void add_component(Entity e, T comp);
 
+        /**
+        * @brief Get a pointer to the component of type T associated with an entity.
+        * @param e The entity whose component is to be retrieved.
+        * @return A pointer to the component of type T, or nullptr if the entity does
+        */
         template<typename T>
-        T *get_component_ptr(Entity e)
-        {
-            const u64 id = type_id<T>();
-            const auto it = _storages.find(id);
-            if (it == _storages.end()) {
-                return nullptr;
-            }
-            return static_cast<ComponentStorage<T> *>(it->second.get())->get_ptr(e);
-        }
+        T *get_component_ptr(Entity e);
 
+        /**
+        * @brief Check if an entity has a component of type T.
+        * @param e The entity to check.
+        * @return true if the entity has the component of type T, false otherwise.
+        */
         template<typename T>
-        bool has_component(Entity e) const
-        {
-            const u64 id = type_id<T>();
-            const auto it = _storages.find(id);
-            if (it == _storages.end()) {
-                return false;
-            }
-            return it->second->has(e);
-        }
+        bool has_component(Entity e) const;
 
+        /**
+         * @brief Insert a resource of type T into the scene.
+         * @param r The resource to be inserted.
+         */
         template<typename T>
-        void insert_resource(T r)
-        {
-            _resources[type_id<T>()] = std::move(r);
-        }
+        void insert_resource(T r);
 
+        /**
+        * @brief Get a pointer to a resource of type T.
+        * @return A pointer to the resource of type T, or nullptr if the resource does not exist.
+        */
         template<typename T>
-        T *get_resource_ptr()
-        {
-            const auto it = _resources.find(type_id<T>());
-
-            if (it == _resources.end()) {
-                return nullptr;
-            }
-            return std::any_cast<T>(&it->second);
-        }
+        T *get_resource_ptr();
 
         StorageMap &getStorages();
         Commands make_commands();
@@ -96,3 +85,5 @@ class Scene : public NonCopyable
 }// namespace ecs
 
 }// namespace r
+
+#include "Inline/Scene.inl"

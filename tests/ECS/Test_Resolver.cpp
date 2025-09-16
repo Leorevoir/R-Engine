@@ -17,6 +17,12 @@ struct Velocity {
         float vy = 0.0f;
 };
 
+struct Health {
+        int value = 100;
+};
+struct PlayerTag {
+};
+
 Test(Resolver, ResolveRes)
 {
     auto scene = std::make_unique<r::ecs::Scene>();
@@ -138,4 +144,119 @@ Test(Resolver, ResolveUnsupportedType)
     r::ecs::Resolver resolver(scene.get());
 
     cr_assert(true);
+}
+
+Test(Resolver, ResolveQueryWithFilter)
+{
+    // Setup: e1 has Position and PlayerTag. e2 only has Position.
+    auto scene = std::make_unique<r::ecs::Scene>();
+    auto cmds = r::ecs::Commands(scene.get());
+    const auto e1 = cmds.spawn();
+    cmds.add_component<Position>(e1, {10, 10});
+    cmds.add_component<PlayerTag>(e1, {});
+    const auto e2 = cmds.spawn();
+    cmds.add_component<Position>(e2, {20, 20});
+
+    // Query for entities with Position AND PlayerTag
+    r::ecs::Resolver resolver(scene.get());
+    auto query = resolver.resolve(std::type_identity<r::ecs::Query<r::ecs::Ref<Position>, r::ecs::With<PlayerTag>>>{});
+
+    // Expect to find only e1
+    int count = 0;
+    for (auto [pos, _] : query) {
+        cr_assert_eq(pos.ptr->x, 10, "Should only find entity e1");
+        count++;
+    }
+    cr_assert_eq(count, 1, "Expected to find exactly one entity");
+}
+
+Test(Resolver, ResolveQueryWithoutFilter)
+{
+    // Setup: e1 has Position and Velocity. e2 only has Position.
+    auto scene = std::make_unique<r::ecs::Scene>();
+    auto cmds = r::ecs::Commands(scene.get());
+    const auto e1 = cmds.spawn();
+    cmds.add_component<Position>(e1, {10, 10});
+    cmds.add_component<Velocity>(e1, {1, 1});
+    const auto e2 = cmds.spawn();
+    cmds.add_component<Position>(e2, {20, 20});
+
+    // Query for entities with Position but WITHOUT Velocity
+    r::ecs::Resolver resolver(scene.get());
+    auto query = resolver.resolve(std::type_identity<r::ecs::Query<r::ecs::Ref<Position>, r::ecs::Without<Velocity>>>{});
+
+    // Expect to find only e2
+    int count = 0;
+    for (auto [pos, _] : query) {
+        cr_assert_eq(pos.ptr->x, 20, "Should only find entity e2");
+        count++;
+    }
+    cr_assert_eq(count, 1, "Expected to find exactly one entity");
+}
+
+Test(Resolver, ResolveQueryOptionalFilter)
+{
+    // Setup: e1 has Position and Health. e2 only has Position.
+    auto scene = std::make_unique<r::ecs::Scene>();
+    auto cmds = r::ecs::Commands(scene.get());
+    const auto e1 = cmds.spawn();
+    cmds.add_component<Position>(e1, {10, 10});
+    cmds.add_component<Health>(e1, {80});
+    const auto e2 = cmds.spawn();
+    cmds.add_component<Position>(e2, {20, 20});
+
+    // Query for entities with Position and optionally Health
+    r::ecs::Resolver resolver(scene.get());
+    auto query = resolver.resolve(std::type_identity<r::ecs::Query<r::ecs::Ref<Position>, r::ecs::Optional<Health>>>{});
+
+    // Expect to find both e1 and e2
+    int count = 0;
+    bool found_e1 = false;
+    bool found_e2 = false;
+
+    for (auto [pos, health_opt] : query) {
+        if (pos.ptr->x == 10) {// This is e1
+            found_e1 = true;
+            cr_assert(health_opt.ptr != nullptr, "e1 should have a Health component");
+            cr_assert_eq(health_opt.ptr->value, 80);
+        } else if (pos.ptr->x == 20) {// This is e2
+            found_e2 = true;
+            cr_assert(health_opt.ptr == nullptr, "e2 should not have a Health component");
+        }
+        count++;
+    }
+    cr_assert_eq(count, 2, "Expected to find two entities");
+    cr_assert(found_e1 && found_e2, "Should have found both entities");
+}
+
+Test(Resolver, ResolveQueryCombinedFilters)
+{
+    // Setup: A mix of entities
+    auto scene = std::make_unique<r::ecs::Scene>();
+    auto cmds = r::ecs::Commands(scene.get());
+    // e1: Player with Position but no Velocity (should be found)
+    const auto e1 = cmds.spawn();
+    cmds.add_component<Position>(e1, {1, 1});
+    cmds.add_component<PlayerTag>(e1, {});
+    // e2: Player with Position and Velocity (should be excluded by Without)
+    const auto e2 = cmds.spawn();
+    cmds.add_component<Position>(e2, {2, 2});
+    cmds.add_component<PlayerTag>(e2, {});
+    cmds.add_component<Velocity>(e2, {1, 1});
+    // e3: Non-player with Position (should be excluded by With)
+    const auto e3 = cmds.spawn();
+    cmds.add_component<Position>(e3, {3, 3});
+
+    // Query for players (With) that are not moving (Without)
+    r::ecs::Resolver resolver(scene.get());
+    auto query =
+        resolver.resolve(std::type_identity<r::ecs::Query<r::ecs::Ref<Position>, r::ecs::With<PlayerTag>, r::ecs::Without<Velocity>>>{});
+
+    // Expect to find only e1
+    int count = 0;
+    for (auto [pos, _, __] : query) {
+        cr_assert_eq(pos.ptr->x, 1, "Should only find entity e1");
+        count++;
+    }
+    cr_assert_eq(count, 1, "Expected to find exactly one entity");
 }

@@ -25,37 +25,37 @@ static void spawn_startup(Commands cmds)
     cmds.add_component<Velocity>(e2, Velocity{-0.2f, 0.0f});
 }
 
-static void setup_systems(Res<core::FrameTime> time, Query<Mut<Position>, Ref<Velocity>> q)
-{
-    for (const auto &tup : q) {
-        const auto &pos_mut = std::get<0>(tup);
-        const auto &vel_ref = std::get<1>(tup);
+// static void setup_systems(Res<core::FrameTime> time, Query<Mut<Position>, Ref<Velocity>> q)
+// {
+//     for (const auto &tup : q) {
+//         const auto &pos_mut = std::get<0>(tup);
+//         const auto &vel_ref = std::get<1>(tup);
+//
+//         if (pos_mut.ptr && vel_ref.ptr) {
+//             pos_mut.ptr->x += vel_ref.ptr->vx * time.ptr->delta_time;
+//             pos_mut.ptr->y += vel_ref.ptr->vy * time.ptr->delta_time;
+//         }
+//     }
+// }
 
-        if (pos_mut.ptr && vel_ref.ptr) {
-            pos_mut.ptr->x += vel_ref.ptr->vx * time.ptr->delta_time;
-            pos_mut.ptr->y += vel_ref.ptr->vy * time.ptr->delta_time;
-        }
-    }
-}
-
-static void print_systems(Query<Ref<Position>> q)
-{
-    for (const auto &tup : q) {
-        const auto &pos = std::get<0>(tup);
-
-        if (pos.ptr) {
-            std::cout << " - (" << pos.ptr->x << ", " << pos.ptr->y << ")\n";
-        }
-    }
-}
-
+// static void print_systems(Query<Ref<Position>> q)
+// {
+//     for (const auto &tup : q) {
+//         const auto &pos = std::get<0>(tup);
+//
+//         if (pos.ptr) {
+//             std::cout << " - (" << pos.ptr->x << ", " << pos.ptr->y << ")\n";
+//         }
+//     }
+// }
+//
 int main()
 {
     Application app;
 
     app.add_system(Schedule::STARTUP, spawn_startup)
-        .add_system(Schedule::UPDATE, setup_systems)
-        .add_system(Schedule::FIXED_UPDATE, print_systems)
+        // .add_system(Schedule::UPDATE, setup_systems)
+        // .add_system(Schedule::FIXED_UPDATE, print_systems)
         .run();
 
     return 0;

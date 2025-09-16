@@ -3,6 +3,7 @@
 #include <R-Engine/Core/Error.hpp>
 #include <R-Engine/ECS/Query.hpp>
 #include <R-Engine/ECS/Scene.hpp>
+#include <unordered_set>
 
 namespace r {
 
@@ -15,7 +16,7 @@ struct Resolver {
 
         explicit Resolver(Scene *s);
 
-        /** 
+        /**
          * @brief Res<T>
          */
         template<typename T>
@@ -42,10 +43,16 @@ struct Resolver {
         Scene *_scene;
 
         /**
-        * @brief collect list for wrapper W (must be Mut<T> or Ref<T>)
-        */
+         * @brief Collects entity list for a component if the wrapper is a requirement (Mut, Ref, With).
+         */
         template<typename W>
-        void _collect_for(std::vector<std::vector<Entity>> &out);
+        void _collect_required_for(std::vector<std::vector<Entity>> &out);
+
+        /**
+         * @brief Collects entities to be excluded into a hash set if the wrapper is a `Without`.
+         */
+        template<typename W>
+        void _collect_excluded_for(std::unordered_set<Entity> &out);
 };
 
 }// namespace ecs

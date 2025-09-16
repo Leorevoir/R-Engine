@@ -95,23 +95,23 @@ struct Vec : public details::VecData<N, T> {
         using value_type = T;
         static constexpr usize size = N;
 
-        constexpr Vec() = default;
-        constexpr Vec(const T &value);
+        constexpr Vec() noexcept = default;
+        constexpr Vec(const T &value) noexcept;
 
-        constexpr Vec(const std::initializer_list<T> &il);
+        constexpr Vec(const std::initializer_list<T> &il) noexcept;
 
         template<typename... Args>
             requires(sizeof...(Args) == N) && concepts::AllConvertibleTo<T, Args...>
-        constexpr Vec(Args &&...args);
+        constexpr Vec(Args &&...args) noexcept;
 
         template<typename U>
             requires concepts::AllConvertibleTo<T, U>
-        constexpr Vec(const Vec<N, U> &other);
+        constexpr Vec(const Vec<N, U> &other) noexcept;
 
-        constexpr T dot(const Vec<N, T> &other) const;
-        constexpr Vec<N, T> cross(const Vec<N, T> &other) const;
-        constexpr Vec<N, T> normalize() const;
-        constexpr T length() const;
+        constexpr T dot(const Vec<N, T> &other) const noexcept;
+        constexpr Vec<N, T> cross(const Vec<N, T> &other) const noexcept;
+        constexpr Vec<N, T> normalize() const noexcept;
+        constexpr T length() const noexcept;
 };
 
 template<typename T>

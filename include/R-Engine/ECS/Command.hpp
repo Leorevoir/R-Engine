@@ -9,12 +9,12 @@ namespace ecs {
 
 struct Commands {
     public:
-        explicit Commands(Scene *scene = nullptr);
+        explicit Commands(Scene *scene = nullptr) noexcept;
 
-        Entity spawn() const;
+        Entity spawn() const noexcept;
 
         template<typename T>
-        void add_component(Entity e, T comp) const;
+        void add_component(Entity e, T comp) const noexcept;
 
     private:
         Scene *_scene;

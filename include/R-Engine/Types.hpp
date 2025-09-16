@@ -18,14 +18,15 @@ using f64 = double;
 using usize = u64;
 using isize = i64;
 
-class NonCopyable {
-protected:
-  constexpr NonCopyable() = default;
-  constexpr ~NonCopyable() = default;
-  constexpr NonCopyable(const NonCopyable &) = delete;
-  constexpr NonCopyable &operator=(const NonCopyable &) = delete;
-  constexpr NonCopyable(NonCopyable &&) = delete;
-  constexpr NonCopyable &operator=(NonCopyable &&) = delete;
+class NonCopyable
+{
+    protected:
+        constexpr NonCopyable() = default;
+        constexpr ~NonCopyable() = default;
+        constexpr NonCopyable(const NonCopyable &) = delete;
+        constexpr NonCopyable &operator=(const NonCopyable &) = delete;
+        constexpr NonCopyable(NonCopyable &&) = delete;
+        constexpr NonCopyable &operator=(NonCopyable &&) = delete;
 };
 
 #define R_ENGINE_EPSILON 1e-6f
@@ -34,11 +35,11 @@ namespace r {
 
 namespace F32 {
 
-static inline bool equal(const f32 a, const f32 b,
-                         const f32 epsilon = R_ENGINE_EPSILON) {
-  return std::fabsf(a - b) <= epsilon * fmaxf(1.0f, fmaxf(fabsf(a), fabsf(b)));
+static inline bool equal(const f32 a, const f32 b, const f32 epsilon = R_ENGINE_EPSILON) noexcept
+{
+    return std::fabsf(a - b) <= epsilon * fmaxf(1.0f, fmaxf(fabsf(a), fabsf(b)));
 }
 
-} // namespace F32
+}// namespace F32
 
-} // namespace r
+}// namespace r

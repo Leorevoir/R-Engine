@@ -35,9 +35,9 @@ static inline u64 type_id() noexcept;
 struct IComponentStorage {
         virtual ~IComponentStorage() = default;
 
-        virtual void remove(Entity) = 0;
-        virtual std::vector<Entity> entity_list() const = 0;
-        virtual bool has(Entity) const = 0;
+        virtual void remove(Entity) noexcept = 0;
+        virtual std::vector<Entity> entity_list() const noexcept = 0;
+        virtual bool has(Entity) const noexcept = 0;
 };
 
 /**
@@ -53,12 +53,12 @@ using StoragePtr = std::unique_ptr<IComponentStorage>;
 template<typename T>
 struct ComponentStorage : IComponentStorage {
     public:
-        void add(Entity e, T comp);
-        T *get_ptr(Entity e);
+        void add(Entity e, T comp) noexcept;
+        T *get_ptr(Entity e) noexcept;
 
-        void remove(Entity e) override;
-        std::vector<Entity> entity_list() const override;
-        bool has(Entity e) const override;
+        void remove(Entity e) noexcept override;
+        std::vector<Entity> entity_list() const noexcept override;
+        bool has(Entity e) const noexcept override;
 
     private:
         std::unordered_map<Entity, std::unique_ptr<T>> _data;

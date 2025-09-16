@@ -8,7 +8,7 @@ namespace r {
 
 template<usize N, typename T>
     requires concepts::Vec<N, T>
-constexpr Vec<N, T> operator+(const Vec<N, T> &lhs, const Vec<N, T> &rhs)
+constexpr Vec<N, T> operator+(const Vec<N, T> &lhs, const Vec<N, T> &rhs) noexcept
 {
     Vec<N, T> result;
 
@@ -20,7 +20,7 @@ constexpr Vec<N, T> operator+(const Vec<N, T> &lhs, const Vec<N, T> &rhs)
 
 template<usize N, typename T>
     requires concepts::Vec<N, T>
-constexpr Vec<N, T> operator-(const Vec<N, T> &lhs, const Vec<N, T> &rhs)
+constexpr Vec<N, T> operator-(const Vec<N, T> &lhs, const Vec<N, T> &rhs) noexcept
 {
     Vec<N, T> result;
 
@@ -32,7 +32,7 @@ constexpr Vec<N, T> operator-(const Vec<N, T> &lhs, const Vec<N, T> &rhs)
 
 template<usize N, typename T>
     requires concepts::Vec<N, T>
-constexpr Vec<N, T> operator*(const Vec<N, T> &lhs, const Vec<N, T> &rhs)
+constexpr Vec<N, T> operator*(const Vec<N, T> &lhs, const Vec<N, T> &rhs) noexcept
 {
     Vec<N, T> result;
 
@@ -44,7 +44,7 @@ constexpr Vec<N, T> operator*(const Vec<N, T> &lhs, const Vec<N, T> &rhs)
 
 template<usize N, typename T>
     requires concepts::Vec<N, T>
-constexpr Vec<N, T> operator/(const Vec<N, T> &lhs, const Vec<N, T> &rhs)
+constexpr Vec<N, T> operator/(const Vec<N, T> &lhs, const Vec<N, T> &rhs) noexcept
 {
     Vec<N, T> result;
 
@@ -56,7 +56,7 @@ constexpr Vec<N, T> operator/(const Vec<N, T> &lhs, const Vec<N, T> &rhs)
 
 template<usize N, typename T>
     requires concepts::Vec<N, T>
-constexpr Vec<N, T> operator*(const Vec<N, T> &lhs, const T &scalar)
+constexpr Vec<N, T> operator*(const Vec<N, T> &lhs, const T &scalar) noexcept
 {
     Vec<N, T> result;
 
@@ -68,14 +68,14 @@ constexpr Vec<N, T> operator*(const Vec<N, T> &lhs, const T &scalar)
 
 template<usize N, typename T>
     requires concepts::Vec<N, T>
-constexpr Vec<N, T> operator*(const T &scalar, const Vec<N, T> &rhs)
+constexpr Vec<N, T> operator*(const T &scalar, const Vec<N, T> &rhs) noexcept
 {
     return rhs * scalar;
 }
 
 template<usize N, typename T>
     requires concepts::Vec<N, T>
-constexpr Vec<N, T> operator/(const Vec<N, T> &lhs, const T &scalar)
+constexpr Vec<N, T> operator/(const Vec<N, T> &lhs, const T &scalar) noexcept
 {
     Vec<N, T> result;
 
@@ -87,7 +87,7 @@ constexpr Vec<N, T> operator/(const Vec<N, T> &lhs, const T &scalar)
 
 template<usize N, typename T>
     requires concepts::Vec<N, T>
-constexpr Vec<N, T> &operator+=(Vec<N, T> &lhs, const Vec<N, T> &rhs)
+constexpr Vec<N, T> &operator+=(Vec<N, T> &lhs, const Vec<N, T> &rhs) noexcept
 {
     for (usize i = 0; i < N; ++i) {
         lhs.data[i] += rhs.data[i];
@@ -97,7 +97,7 @@ constexpr Vec<N, T> &operator+=(Vec<N, T> &lhs, const Vec<N, T> &rhs)
 
 template<usize N, typename T>
     requires concepts::Vec<N, T>
-constexpr Vec<N, T> &operator-=(Vec<N, T> &lhs, const Vec<N, T> &rhs)
+constexpr Vec<N, T> &operator-=(Vec<N, T> &lhs, const Vec<N, T> &rhs) noexcept
 {
     for (usize i = 0; i < N; ++i) {
         lhs.data[i] -= rhs.data[i];
@@ -107,7 +107,7 @@ constexpr Vec<N, T> &operator-=(Vec<N, T> &lhs, const Vec<N, T> &rhs)
 
 template<usize N, typename T>
     requires concepts::Vec<N, T>
-constexpr Vec<N, T> &operator*=(Vec<N, T> &lhs, const T &scalar)
+constexpr Vec<N, T> &operator*=(Vec<N, T> &lhs, const T &scalar) noexcept
 {
     for (usize i = 0; i < N; ++i) {
         lhs.data[i] *= scalar;
@@ -117,7 +117,7 @@ constexpr Vec<N, T> &operator*=(Vec<N, T> &lhs, const T &scalar)
 
 template<usize N, typename T>
     requires concepts::Vec<N, T>
-constexpr Vec<N, T> &operator/=(Vec<N, T> &lhs, const T &scalar)
+constexpr Vec<N, T> &operator/=(Vec<N, T> &lhs, const T &scalar) noexcept
 {
     for (usize i = 0; i < N; ++i) {
         lhs.data[i] /= scalar;
@@ -127,7 +127,7 @@ constexpr Vec<N, T> &operator/=(Vec<N, T> &lhs, const T &scalar)
 
 template<usize N, typename T>
     requires concepts::Vec<N, T>
-constexpr bool operator==(const Vec<N, T> &lhs, const Vec<N, T> &rhs)
+constexpr bool operator==(const Vec<N, T> &lhs, const Vec<N, T> &rhs) noexcept
 {
     for (usize i = 0; i < N; ++i) {
         if (lhs.data[i] != rhs.data[i]) {
@@ -139,14 +139,14 @@ constexpr bool operator==(const Vec<N, T> &lhs, const Vec<N, T> &rhs)
 
 template<usize N, typename T>
     requires concepts::Vec<N, T>
-constexpr bool operator!=(const Vec<N, T> &lhs, const Vec<N, T> &rhs)
+constexpr bool operator!=(const Vec<N, T> &lhs, const Vec<N, T> &rhs) noexcept
 {
     return !(lhs == rhs);
 }
 
 template<usize N, typename T>
     requires concepts::Vec<N, T>
-constexpr Vec<N, T> operator-(const Vec<N, T> &vec)
+constexpr Vec<N, T> operator-(const Vec<N, T> &vec) noexcept
 {
     Vec<N, T> result;
 
@@ -158,7 +158,7 @@ constexpr Vec<N, T> operator-(const Vec<N, T> &vec)
 
 template<usize N, typename T>
     requires concepts::Vec<N, T>
-constexpr Vec<N, T> &operator*=(Vec<N, T> &lhs, const Vec<N, T> &rhs)
+constexpr Vec<N, T> &operator*=(Vec<N, T> &lhs, const Vec<N, T> &rhs) noexcept
 {
     for (usize i = 0; i < N; ++i) {
         lhs.data[i] *= rhs.data[i];
@@ -168,7 +168,7 @@ constexpr Vec<N, T> &operator*=(Vec<N, T> &lhs, const Vec<N, T> &rhs)
 
 template<usize N, typename T>
     requires concepts::Vec<N, T>
-constexpr Vec<N, T> &operator/=(const Vec<N, T> &lhs, const Vec<N, T> &rhs)
+constexpr Vec<N, T> &operator/=(const Vec<N, T> &lhs, const Vec<N, T> &rhs) noexcept
 {
     for (usize i = 0; i < N; ++i) {
         lhs.data[i] /= rhs.data[i];
@@ -182,7 +182,7 @@ constexpr Vec<N, T> &operator/=(const Vec<N, T> &lhs, const Vec<N, T> &rhs)
 
 template<usize N, typename T>
     requires concepts::Vec<N, T>
-constexpr Vec<N, T>::Vec(const T &value)
+constexpr Vec<N, T>::Vec(const T &value) noexcept
 {
     for (usize i = 0; i < N; ++i) {
         this->data[i] = value;
@@ -191,7 +191,7 @@ constexpr Vec<N, T>::Vec(const T &value)
 
 template<usize N, typename T>
     requires concepts::Vec<N, T>
-constexpr Vec<N, T>::Vec(const std::initializer_list<T> &il)
+constexpr Vec<N, T>::Vec(const std::initializer_list<T> &il) noexcept
 {
     usize i = 0;
 
@@ -206,7 +206,7 @@ template<usize N, typename T>
     requires concepts::Vec<N, T>
 template<typename... Args>
     requires(sizeof...(Args) == N) && concepts::AllConvertibleTo<T, Args...>
-constexpr Vec<N, T>::Vec(Args &&...args)
+constexpr Vec<N, T>::Vec(Args &&...args) noexcept
 {
     const T temp[N] = {static_cast<T>(args)...};
 
@@ -219,7 +219,7 @@ template<usize N, typename T>
     requires concepts::Vec<N, T>
 template<typename U>
     requires concepts::AllConvertibleTo<T, U>
-constexpr Vec<N, T>::Vec(const Vec<N, U> &other)
+constexpr Vec<N, T>::Vec(const Vec<N, U> &other) noexcept
 {
     for (usize i = 0; i < N; ++i) {
         this->data[i] = static_cast<T>(other.data[i]);
@@ -228,7 +228,7 @@ constexpr Vec<N, T>::Vec(const Vec<N, U> &other)
 
 template<usize N, typename T>
     requires concepts::Vec<N, T>
-constexpr T Vec<N, T>::dot(const Vec<N, T> &other) const
+constexpr T Vec<N, T>::dot(const Vec<N, T> &other) const noexcept
 {
     T result = static_cast<T>(0);
 
@@ -240,7 +240,7 @@ constexpr T Vec<N, T>::dot(const Vec<N, T> &other) const
 
 template<usize N, typename T>
     requires concepts::Vec<N, T>
-constexpr Vec<N, T> Vec<N, T>::cross(const Vec<N, T> &other) const
+constexpr Vec<N, T> Vec<N, T>::cross(const Vec<N, T> &other) const noexcept
 {
     if (N != 3) {
         return Vec<N, T>{0};
@@ -257,7 +257,7 @@ constexpr Vec<N, T> Vec<N, T>::cross(const Vec<N, T> &other) const
 
 template<usize N, typename T>
     requires concepts::Vec<N, T>
-constexpr Vec<N, T> Vec<N, T>::normalize() const
+constexpr Vec<N, T> Vec<N, T>::normalize() const noexcept
 {
     const T length = std::sqrt(dot(*this));
 
@@ -273,7 +273,7 @@ constexpr Vec<N, T> Vec<N, T>::normalize() const
 
 template<usize N, typename T>
     requires concepts::Vec<N, T>
-constexpr T Vec<N, T>::length() const
+constexpr T Vec<N, T>::length() const noexcept
 {
     return std::sqrt(dot(*this));
 }

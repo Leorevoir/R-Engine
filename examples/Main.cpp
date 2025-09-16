@@ -6,6 +6,7 @@
 struct Position {
         f32 x, y = 0;
 };
+
 struct Velocity {
         f32 vx = 0, vy = 0;
 };
@@ -51,8 +52,6 @@ static void print_systems(Query<Ref<Position>> q)
 int main()
 {
     Application app;
-
-    app.insert_resource<f32>(0.016f);
 
     app.add_system(Schedule::STARTUP, spawn_startup)
         .add_system(Schedule::UPDATE, setup_systems)

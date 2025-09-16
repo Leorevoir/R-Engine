@@ -5,7 +5,7 @@
 // clang-format off
 
 template<typename Func>
-r::Application &r::Application::add_system(Schedule when, Func &&func)
+r::Application &r::Application::add_system(Schedule when, Func &&func) noexcept
 {
     using FuncDecay = std::decay_t<Func>;
     FuncDecay fn = std::forward<Func>(func);
@@ -22,7 +22,7 @@ r::Application &r::Application::add_system(Schedule when, Func &&func)
 // clang-format on
 
 template<typename ResT>
-r::Application &r::Application::insert_resource(ResT res)
+r::Application &r::Application::insert_resource(ResT res) noexcept
 {
     _scene.insert_resource<ResT>(std::move(res));
     return *this;

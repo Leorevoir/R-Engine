@@ -13,7 +13,6 @@ void r::Application::Application::run()
     while (!quit) {
         _clock.tick();
         *_scene.get_resource_ptr<core::FrameTime>() = _clock.frame();
-
         _run_schedule(Schedule::UPDATE);
 
         for (i32 i = 0; i < _clock.frame().substep_count; ++i) {

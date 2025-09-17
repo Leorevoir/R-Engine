@@ -68,3 +68,13 @@ asm_offset
 
 console.log
 assets/shaders/cache
+*.vs
+obj/
+*.user
+*.suo
+*.ncb
+*.opt
+*.cache
+*.log
+appsettings.json
+*.vscode/

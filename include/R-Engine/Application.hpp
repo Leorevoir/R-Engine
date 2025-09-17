@@ -14,7 +14,8 @@ enum class Schedule {
     STARTUP = 1 << 0,
     UPDATE = 1 << 1,
     FIXED_UPDATE = 1 << 2,
-    SHUTDOWN = 1 << 3,
+    RENDER = 1 << 3,
+    SHUTDOWN = 1 << 4,
 };
 R_ENUM_FLAGABLE(Schedule)
 

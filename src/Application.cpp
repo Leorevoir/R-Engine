@@ -25,15 +25,19 @@ void r::Application::Application::run()
 
     Logger::debug("Startup schedule running...");
     _run_schedule(Schedule::STARTUP);
+    _apply_commands();
     Logger::debug("Startup schedule complete. Entering main loop.");
 
     while (!quit) {
         _clock.tick();
         *_scene.get_resource_ptr<core::FrameTime>() = _clock.frame();
+
         _run_schedule(Schedule::UPDATE);
+        _apply_commands();
 
         for (i32 i = 0; i < _clock.frame().substep_count; ++i) {
             _run_schedule(Schedule::FIXED_UPDATE);
+            _apply_commands();
         }
 
         _run_schedule(Schedule::RENDER);
@@ -41,6 +45,7 @@ void r::Application::Application::run()
 
     Logger::debug("Main loop exited. Running shutdown schedule...");
     _run_schedule(Schedule::SHUTDOWN);
+    _apply_commands();
     Logger::debug("Shutdown schedule complete. Application exiting.");
 }
 
@@ -56,6 +61,11 @@ void r::Application::_run_schedule(const Schedule sched)
         return;
     }
     for (const auto &sys : it->second) {
-        sys(_scene);
+        sys(_scene, _command_buffer);
     }
+}
+
+void r::Application::_apply_commands()
+{
+    _command_buffer.apply(_scene);
 }

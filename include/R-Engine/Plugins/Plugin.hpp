@@ -1,8 +1,6 @@
 #pragma once
 
 #include <memory>
-#include <typeinfo>
-#include <utility>
 #include <vector>
 
 namespace r {
@@ -50,12 +48,7 @@ class PluginGroup
         * @brief Builds all plugins in the group.
         * @param app The application to configure.
         */
-        virtual void build(Application &app)
-        {
-            for (const auto &plugin : _plugins) {
-                plugin->build(app);
-            }
-        }
+        virtual void build(Application &app);
 
         /**
          * @brief Replaces a plugin of the same type `PluginT` within the group,
@@ -65,24 +58,7 @@ class PluginGroup
          * @return A reference to this `PluginGroup` to allow for chaining.
          */
         template<typename PluginT>
-        PluginGroup &set(PluginT plugin)
-        {
-            static_assert(std::is_base_of_v<Plugin, PluginT>, "Type T must be a derivative of r::Plugin");
-
-            bool replaced = false;
-            for (auto &p : _plugins) {
-                if (typeid(*p) == typeid(PluginT)) {
-                    p = std::make_unique<PluginT>(std::move(plugin));
-                    replaced = true;
-                    break;
-                }
-            }
-
-            if (!replaced) {
-                _plugins.push_back(std::make_unique<PluginT>(std::move(plugin)));
-            }
-            return *this;
-        }
+        PluginGroup &set(PluginT plugin);
 
     protected:
         /**
@@ -91,14 +67,12 @@ class PluginGroup
          * @tparam Args Constructor arguments for the plugin.
          */
         template<typename PluginT, typename... Args>
-        void add(Args &&...args)
-        {
-            static_assert(std::is_base_of_v<Plugin, PluginT>, "Type T must be a derivative of r::Plugin");
-            _plugins.push_back(std::make_unique<PluginT>(std::forward<Args>(args)...));
-        }
+        void add(Args &&...args);
 
     private:
         std::vector<std::unique_ptr<Plugin>> _plugins;
 };
 
 }// namespace r
+
+#include "Inline/Plugin.inl"

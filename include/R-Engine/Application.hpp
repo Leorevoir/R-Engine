@@ -10,9 +10,6 @@
 
 namespace r {
 
-class Plugin;
-class PluginGroup;
-
 enum class Schedule {
     STARTUP = 1 << 0,
     UPDATE = 1 << 1,

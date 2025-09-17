@@ -2,6 +2,7 @@
 
 #include <R-Engine/Core/Clock.hpp>
 #include <R-Engine/Core/Flagable.hpp>
+#include <R-Engine/ECS/Command.hpp>
 #include <R-Engine/ECS/Scene.hpp>
 #include <R-Engine/ECS/System.hpp>
 
@@ -84,16 +85,18 @@ class Application
 
     private:
         void _run_schedule(const Schedule sched);
+        void _apply_commands();
 
         template<typename Func>
         void _add_one_system(Schedule when, Func &&func) noexcept;
 
-        using SystemFunc = std::function<void(ecs::Scene &)>;
+        using SystemFunc = std::function<void(ecs::Scene &, ecs::CommandBuffer &)>;
         using ScheduleMap = std::unordered_map<Schedule, std::vector<SystemFunc>>;
 
         core::Clock _clock = {};
         ScheduleMap _systems = {};
         ecs::Scene _scene = {};
+        ecs::CommandBuffer _command_buffer = {};
 };
 
 }// namespace r

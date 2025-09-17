@@ -1,5 +1,6 @@
 #pragma once
 
+#include "R-Engine/Application.hpp"
 #include <R-Engine/Plugins/Plugin.hpp>
 
 #include <type_traits>
@@ -7,15 +8,15 @@
 // clang-format off
 
 template<typename Func>
-void r::Application::_add_one_system(Schedule when, Func &&func) noexcept
+void r::Application::_add_one_system(r::Schedule when, Func &&func) noexcept
 {
     using FuncDecay = std::decay_t<Func>;
     FuncDecay fn = std::forward<Func>(func);
 
     _systems[when].emplace_back(
-    [fn](ecs::Scene &scene) mutable
+    [fn](ecs::Scene &scene, ecs::CommandBuffer &cmd) mutable
     {
-        ecs::run_system(fn, scene);
+        ecs::run_system(fn, scene, cmd);
     });
 }
 

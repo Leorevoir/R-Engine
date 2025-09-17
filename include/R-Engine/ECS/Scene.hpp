@@ -11,8 +11,6 @@ namespace r {
 
 namespace ecs {
 
-struct Commands;
-
 /**
 * @brief Scene class that manages entities, components, and resources.
 * @info create & destroy entities, add & get components, insert & get resources.
@@ -40,6 +38,13 @@ class Scene : public NonCopyable
         */
         template<typename T>
         void add_component(Entity e, T comp) noexcept;
+
+        /**
+         * @brief Removes a component of type T from an entity.
+         * @param e The entity from which the component will be removed.
+         */
+        template<typename T>
+        void remove_component(Entity e) noexcept;
 
         /**
         * @brief Get a pointer to the component of type T associated with an entity.
@@ -71,14 +76,18 @@ class Scene : public NonCopyable
         template<typename T>
         T *get_resource_ptr() noexcept;
 
-        StorageMap &getStorages() noexcept;
-        Commands make_commands() noexcept;
+        StorageMap &get_storages() noexcept;
         Entity create_entity() noexcept;
         void destroy_entity(Entity e) noexcept;
+
+        void clear_command_buffer_placeholder_map() noexcept;
+        void map_command_buffer_placeholder(Entity placeholder, Entity real) noexcept;
+        const std::unordered_map<Entity, Entity> &get_command_buffer_placeholder_map() const noexcept;
 
     private:
         StorageMap _storages;
         ResourceMap _resources;
+        std::unordered_map<Entity, Entity> _placeholder_map;
 
         Entity _next_entity = 1;
 };

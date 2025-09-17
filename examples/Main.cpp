@@ -1,6 +1,5 @@
-#include "R-Engine/Plugins/DefaultPlugins.hpp"
 #include <R-Engine/Application.hpp>
-#include <R-Engine/ECS/Command.hpp>
+#include <R-Engine/Plugins/DefaultPlugins.hpp>
 
 // clang-format off
 

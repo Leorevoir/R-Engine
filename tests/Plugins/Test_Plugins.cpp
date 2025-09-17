@@ -1,6 +1,8 @@
 #include "../Test.hpp"
 
 #include <R-Engine/Application.hpp>
+#include <R-Engine/Plugins/DefaultPlugins.hpp>
+#include <R-Engine/Plugins/Plugin.hpp>
 
 #include <criterion/redirect.h>
 
@@ -10,7 +12,7 @@ static void _redirect_all_stdout()
     cr_redirect_stderr();
 }
 
-Test(Plugins, Plugin, .init = _redirect_all_stdout)
+Test(Plugins, AddPluginByType, .init = _redirect_all_stdout)
 {
     class TestPlugin : public r::Plugin
     {
@@ -25,12 +27,12 @@ Test(Plugins, Plugin, .init = _redirect_all_stdout)
 
     app.add_plugins<TestPlugin>();
     app.add_systems(r::Schedule::STARTUP, [](r::ecs::Res<int> res) {
-        cr_assert(res.ptr != nullptr);
-        cr_assert(*res.ptr == 42);
+        cr_assert(res.ptr != nullptr, "Resource should have been inserted by the plugin.");
+        cr_assert_eq(*res.ptr, 42, "Resource value is incorrect.");
     });
 }
 
-Test(Plugins, PluginGroup, .init = _redirect_all_stdout)
+Test(Plugins, BasicPluginGroup, .init = _redirect_all_stdout)
 {
     class TestPluginA : public r::Plugin
     {
@@ -51,32 +53,72 @@ Test(Plugins, PluginGroup, .init = _redirect_all_stdout)
     class TestPluginGroup : public r::PluginGroup
     {
         public:
-            void build(r::Application &app) override
+            TestPluginGroup()
             {
-                app.add_plugins<TestPluginA, TestPluginB>();
+                add<TestPluginA>();
+                add<TestPluginB>();
             }
     };
+
     r::Application app;
-    app.add_plugins<TestPluginGroup>();
+    app.add_plugins(TestPluginGroup{});
+
     app.add_systems(r::Schedule::STARTUP, [](r::ecs::Res<int> res_int, r::ecs::Res<float> res_float) {
         cr_assert(res_int.ptr != nullptr);
-        cr_assert(*res_int.ptr == 42);
+        cr_assert_eq(*res_int.ptr, 42);
         cr_assert(res_float.ptr != nullptr);
-        cr_assert(*res_float.ptr == 3.14f);
+        cr_assert_float_eq(*res_float.ptr, 3.14f, 1e-6);
     });
 }
 
-Test(Application, VariadicAddSystem, .init = _redirect_all_stdout)
+Test(Plugins, BevyStyleSet, .init = _redirect_all_stdout)
 {
+    struct MyConfig {
+            int value = 10;
+    };
+
+    class ConfigurablePlugin : public r::Plugin
+    {
+        public:
+            ConfigurablePlugin(MyConfig config = {}) : _config(config)
+            {
+            }
+            void build(r::Application &app) override
+            {
+                app.insert_resource<MyConfig>(_config);
+            }
+
+        private:
+            MyConfig _config;
+    };
+
+    class UntouchedPlugin : public r::Plugin
+    {
+        public:
+            void build(r::Application &app) override
+            {
+                app.insert_resource<float>(99.0f);
+            }
+    };
+
+    class TestGroupWithDefaults : public r::PluginGroup
+    {
+        public:
+            TestGroupWithDefaults()
+            {
+                add<ConfigurablePlugin>();
+                add<UntouchedPlugin>();
+            }
+    };
+
     r::Application app;
 
-    /* These systems don't need to do anything; the test is that
-    the application accepts them in a single variadic call. */
-    auto system1 = []() {};
-    auto system2 = []() {};
+    app.add_plugins(TestGroupWithDefaults{}.set(ConfigurablePlugin{MyConfig{.value = 500}}));
 
-    app.add_systems(r::Schedule::UPDATE, system1, system2);
-
-    /* If the above line compiles and doesn't crash, the test passes. */
-    cr_assert(true, "Variadic add_systems should be callable with multiple systems.");
+    app.add_systems(r::Schedule::STARTUP, [](r::ecs::Res<MyConfig> config, r::ecs::Res<float> untouched) {
+        cr_assert(config.ptr != nullptr);
+        cr_assert_eq(config.ptr->value, 500, "The configured value should be 500, not the default.");
+        cr_assert(untouched.ptr != nullptr);
+        cr_assert_float_eq(*untouched.ptr, 99.0f, 1e-6);
+    });
 }

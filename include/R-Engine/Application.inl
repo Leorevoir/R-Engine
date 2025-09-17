@@ -35,6 +35,18 @@ r::Application &r::Application::insert_resource(ResT res) noexcept
     return *this;
 }
 
+template<typename PluginT>
+r::Application &r::Application::add_plugins(PluginT &&plugin) noexcept
+{
+    using DecayedPluginT = std::decay_t<PluginT>;
+    if constexpr (std::is_base_of_v<Plugin, DecayedPluginT> || std::is_base_of_v<PluginGroup, DecayedPluginT>) {
+        plugin.build(*this);
+    } else {
+        static_assert(always_false<PluginT>, "Argument must be a Plugin or PluginGroup instance.");
+    }
+    return *this;
+}
+
 template<typename PluginT, typename... Args>
 r::Application &r::Application::add_plugins(Args &&...args) noexcept
 {

@@ -1,5 +1,10 @@
 #pragma once
 
+#include <memory>
+#include <typeinfo>
+#include <utility>
+#include <vector>
+
 namespace r {
 
 class Application;
@@ -14,7 +19,13 @@ class Application;
 class Plugin
 {
     public:
+        Plugin() = default;
         virtual ~Plugin() = default;
+
+        Plugin(Plugin &&) = default;
+        Plugin &operator=(Plugin &&) = default;
+        Plugin(const Plugin &) = default;
+        Plugin &operator=(const Plugin &) = default;
 
         /**
         * @brief configure the given `Application`
@@ -25,23 +36,69 @@ class Plugin
 };
 
 /**
-* @brief base interface for plugins groups.
-* @details a plugin group is a container that makes it easy to add multiple
-* plugins at once.
-* `DefaultPlugins` is an example of a plugin group.
+* @brief A collection of plugins that can be added to an `Application` together.
+* @details Plugin groups can be configured using the `.set()` method to replace
+* a default plugin with a custom-configured one.
 */
 class PluginGroup
 {
     public:
+        PluginGroup() = default;
         virtual ~PluginGroup() = default;
 
         /**
-        * @brief configure the given `Application` by adding multiple plugins to it.
-        * @details it is here that the plugin group should add multiple plugins to
-        * the application.
-        * @param app the application reference to configure
+        * @brief Builds all plugins in the group.
+        * @param app The application to configure.
         */
-        virtual void build(Application &app) = 0;
+        virtual void build(Application &app)
+        {
+            for (const auto &plugin : _plugins) {
+                plugin->build(app);
+            }
+        }
+
+        /**
+         * @brief Replaces a plugin of the same type `PluginT` within the group,
+         * or adds it if it's not already present.
+         * @tparam PluginT The type of the plugin to set.
+         * @param plugin An instance of the plugin to add/replace.
+         * @return A reference to this `PluginGroup` to allow for chaining.
+         */
+        template<typename PluginT>
+        PluginGroup &set(PluginT plugin)
+        {
+            static_assert(std::is_base_of_v<Plugin, PluginT>, "Type T must be a derivative of r::Plugin");
+
+            bool replaced = false;
+            for (auto &p : _plugins) {
+                if (typeid(*p) == typeid(PluginT)) {
+                    p = std::make_unique<PluginT>(std::move(plugin));
+                    replaced = true;
+                    break;
+                }
+            }
+
+            if (!replaced) {
+                _plugins.push_back(std::make_unique<PluginT>(std::move(plugin)));
+            }
+            return *this;
+        }
+
+    protected:
+        /**
+         * @brief Adds a plugin to the group. Intended for use by derived classes in their constructors.
+         * @tparam PluginT The type of plugin to add.
+         * @tparam Args Constructor arguments for the plugin.
+         */
+        template<typename PluginT, typename... Args>
+        void add(Args &&...args)
+        {
+            static_assert(std::is_base_of_v<Plugin, PluginT>, "Type T must be a derivative of r::Plugin");
+            _plugins.push_back(std::make_unique<PluginT>(std::forward<Args>(args)...));
+        }
+
+    private:
+        std::vector<std::unique_ptr<Plugin>> _plugins;
 };
 
 }// namespace r

@@ -35,9 +35,15 @@ namespace r {
 
 namespace F32 {
 
+/**
+* @brief compare two floating point numbers for equality within a certain epsilon
+* 
+* @param a the first number
+* @param b the second number
+*/
 static inline bool equal(const f32 a, const f32 b, const f32 epsilon = R_ENGINE_EPSILON) noexcept
 {
-    return std::fabsf(a - b) <= epsilon * fmaxf(1.0f, fmaxf(fabsf(a), fabsf(b)));
+    return std::fabs(a - b) <= epsilon * fmaxf(1.0f, fmaxf(std::fabs(a), std::fabs(b)));
 }
 
 }// namespace F32

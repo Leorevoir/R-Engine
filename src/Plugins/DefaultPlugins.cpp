@@ -11,6 +11,5 @@
 
 void r::DefaultPlugins::build(r::Application &app)
 {
-    app.add_plugins<r::WindowPlugin>();
-    app.add_plugins<r::RenderPlugin>();
+    app.add_plugins<r::WindowPlugin, r::RenderPlugin>();
 }

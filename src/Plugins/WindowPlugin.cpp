@@ -64,9 +64,9 @@ void r::WindowPlugin::build(r::Application &app)
 {
     app
         .insert_resource(_config)
-        .add_system(Schedule::STARTUP, _init_window_system)
-        .add_system(Schedule::UPDATE, _update_window_system)
-        .add_system(Schedule::SHUTDOWN, _destroy_window_system);
+        .add_systems(Schedule::STARTUP, _init_window_system)
+        .add_systems(Schedule::UPDATE, _update_window_system)
+        .add_systems(Schedule::SHUTDOWN, _destroy_window_system);
 
     Logger::info("WindowPlugin built");
 }

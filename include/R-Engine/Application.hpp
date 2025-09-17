@@ -26,13 +26,13 @@ class Application
         ~Application() = default;
 
         /**
-        * @brief add a system to the Application
-        * @details the system will be run in the specified schedule
-        * @param when the schedule to run the system in
-        * @param func the system function to run
+        * @brief add one or more systems to the Application
+        * @details the systems will be run in the specified schedule
+        * @param when the schedule to run the systems in
+        * @param funcs the system functions to run
         */
-        template<typename Func>
-        Application &add_system(Schedule when, Func &&func) noexcept;
+        template<typename... Funcs>
+        Application &add_systems(Schedule when, Funcs &&...funcs) noexcept;
 
         /**
         * @brief insert a resource into the Application scene
@@ -47,6 +47,12 @@ class Application
         */
         template<typename PluginT, typename... Args>
         Application &add_plugins(Args &&...args) noexcept;
+
+        /**
+        * @brief add multiple plugins or plugin groups to the Application (without constructor arguments)
+        */
+        template<typename PluginT1, typename PluginT2, typename... Rest>
+        Application &add_plugins() noexcept;
 
         /**
         * @brief run the application
@@ -70,6 +76,9 @@ class Application
 
     private:
         void _run_schedule(const Schedule sched);
+
+        template<typename Func>
+        void _add_one_system(Schedule when, Func &&func) noexcept;
 
         using SystemFunc = std::function<void(ecs::Scene &)>;
         using ScheduleMap = std::unordered_map<Schedule, std::vector<SystemFunc>>;

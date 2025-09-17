@@ -24,7 +24,7 @@ Test(Plugins, Plugin, .init = _redirect_all_stdout)
     r::Application app;
 
     app.add_plugins<TestPlugin>();
-    app.add_system(r::Schedule::STARTUP, [](r::ecs::Res<int> res) {
+    app.add_systems(r::Schedule::STARTUP, [](r::ecs::Res<int> res) {
         cr_assert(res.ptr != nullptr);
         cr_assert(*res.ptr == 42);
     });
@@ -59,7 +59,7 @@ Test(Plugins, PluginGroup, .init = _redirect_all_stdout)
     };
     r::Application app;
     app.add_plugins<TestPluginGroup>();
-    app.add_system(r::Schedule::STARTUP, [](r::ecs::Res<int> res_int, r::ecs::Res<float> res_float) {
+    app.add_systems(r::Schedule::STARTUP, [](r::ecs::Res<int> res_int, r::ecs::Res<float> res_float) {
         cr_assert(res_int.ptr != nullptr);
         cr_assert(*res_int.ptr == 42);
         cr_assert(res_float.ptr != nullptr);

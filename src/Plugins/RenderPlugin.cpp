@@ -24,6 +24,5 @@ static void _end_frame(void)
 
 void r::RenderPlugin::build(r::Application &app)
 {
-    app.add_system(Schedule::RENDER, _begin_frame);
-    app.add_system(Schedule::RENDER, _end_frame);
+    app.add_systems(Schedule::RENDER, _begin_frame, _end_frame);
 }

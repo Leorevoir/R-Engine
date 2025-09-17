@@ -15,6 +15,25 @@ static void _init_window_system(r::ecs::Res<r::WindowPluginConfig> config)
     const std::string &title = config.ptr->title;
     const i32 fps = static_cast<i32>(config.ptr->frame_per_second);
 
+    u32 config_flags = 0;
+
+    if ((config.ptr->settings & r::WindowPluginSettings::RESIZABLE) == r::WindowPluginSettings::RESIZABLE) {
+        config_flags |= FLAG_WINDOW_RESIZABLE;
+    }
+    if (!((config.ptr->settings & r::WindowPluginSettings::DECORATED) == r::WindowPluginSettings::DECORATED)) {
+        config_flags |= FLAG_WINDOW_UNDECORATED;
+    }
+    if ((config.ptr->settings & r::WindowPluginSettings::MAXIMIZED) == r::WindowPluginSettings::MAXIMIZED) {
+        config_flags |= FLAG_WINDOW_MAXIMIZED;
+    }
+    if ((config.ptr->settings & r::WindowPluginSettings::ALWAYS_ON_TOP) == r::WindowPluginSettings::ALWAYS_ON_TOP) {
+        config_flags |= FLAG_WINDOW_TOPMOST;
+    }
+    if ((config.ptr->settings & r::WindowPluginSettings::TRANSPARENT_FB) == r::WindowPluginSettings::TRANSPARENT_FB) {
+        config_flags |= FLAG_WINDOW_TRANSPARENT;
+    }
+
+    SetConfigFlags(config_flags);
     InitWindow(size.width, size.height, title.c_str());
     SetTargetFPS(fps);
 }

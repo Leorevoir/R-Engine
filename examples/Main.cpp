@@ -6,7 +6,9 @@
 
 int main()
 {
-    r::Application{}.add_plugins<r::DefaultPlugins>().run();
+    r::Application{}
+        .add_plugins<r::DefaultPlugins>()
+        .run();
 
     return 0;
 }

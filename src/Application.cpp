@@ -35,6 +35,8 @@ void r::Application::Application::run()
         for (i32 i = 0; i < _clock.frame().substep_count; ++i) {
             _run_schedule(Schedule::FIXED_UPDATE);
         }
+
+        _run_schedule(Schedule::RENDER);
     }
 
     Logger::debug("Main loop exited. Running shutdown schedule...");

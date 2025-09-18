@@ -1,5 +1,7 @@
 #pragma once
 
+#include "R-Engine/ECS/Scene.hpp"
+
 /**
 * Scene Implementation
 */
@@ -24,6 +26,17 @@ template<typename T>
 void r::ecs::Scene::add_component(Entity e, T comp) noexcept
 {
     storage<T>().add(e, std::move(comp));
+}
+
+template<typename T>
+void r::ecs::Scene::remove_component(Entity e) noexcept
+{
+    const auto key = std::type_index(typeid(T));
+    const auto it = _storages.find(key);
+
+    if (it != _storages.end()) {
+        it->second->remove(e);
+    }
 }
 
 template<typename T>

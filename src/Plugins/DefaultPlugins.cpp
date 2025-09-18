@@ -9,8 +9,14 @@
 * public
 */
 
+r::DefaultPlugins::DefaultPlugins()
+{
+    add<WindowPlugin>();
+    add<RenderPlugin>();
+}
+
 void r::DefaultPlugins::build(r::Application &app)
 {
-    app.add_plugins<r::WindowPlugin>();
-    app.add_plugins<r::RenderPlugin>();
+    /* Use the base class implementation which iterates and builds all stored plugins */
+    PluginGroup::build(app);
 }

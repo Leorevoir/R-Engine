@@ -7,13 +7,19 @@ namespace r {
 /**
  * @brief This group of plugins adds all the default features
  * for an R-Engine application.
- * 
- * The inclusion of plugins is controlled by macros in R-Engine/Config.hpp,
- * mimicking the Cargo “features” system in Bevy.
+ *
+ * You can configure the plugins in this group using the `.set()` method,
+ * similar to Bevy's API.
+ *
+ * Example:
+ * .add_plugins(DefaultPlugins{}.set(WindowPlugin{
+ *     WindowPluginConfig { .title = "My Game" }
+ * }))
  */
 class DefaultPlugins final : public PluginGroup
 {
     public:
+        DefaultPlugins();
         void build(Application &app) override;
 };
 

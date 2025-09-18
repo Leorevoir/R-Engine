@@ -2,6 +2,7 @@
 
 #include "R-Engine/ECS/Command.hpp"
 #include "R-Engine/ECS/Query.hpp"
+#include "R-Engine/ECS/Scene.hpp"
 
 struct Position {
         float x = 0;
@@ -20,11 +21,13 @@ struct Health {
 Test(Query, QuerySingleComponent)
 {
     auto scene = std::make_unique<r::ecs::Scene>();
-    const auto command = r::ecs::Commands(scene.get());
+    auto buffer = std::make_unique<r::ecs::CommandBuffer>();
+    auto commands = r::ecs::Commands(buffer.get());
 
-    const auto entity = command.spawn();
-    command.add_component<Position>(entity, Position{1.0f, 2.0f});
+    commands.spawn().insert(Position{1.0f, 2.0f});
+    buffer->apply(*scene);
 
+    const r::ecs::Entity entity = 1;
     r::ecs::Query<r::ecs::Ref<Position>> query(scene.get(), {entity});
 
     for (auto [pos] : query) {
@@ -36,20 +39,19 @@ Test(Query, QuerySingleComponent)
 Test(Query, QueryMutAndRef)
 {
     auto scene = std::make_unique<r::ecs::Scene>();
-    const auto command = r::ecs::Commands(scene.get());
+    auto buffer = std::make_unique<r::ecs::CommandBuffer>();
+    auto commands = r::ecs::Commands(buffer.get());
 
-    const auto entity = command.spawn();
-    command.add_component<Position>(entity, Position{1.0f, 2.0f});
-    command.add_component<Velocity>(entity, Velocity{0.5f, 1.5f});
+    commands.spawn().insert(Position{1.0f, 2.0f}).insert(Velocity{0.5f, 1.5f});
+    buffer->apply(*scene);
 
+    const r::ecs::Entity entity = 1;
     r::ecs::Query<r::ecs::Mut<Position>, r::ecs::Ref<Velocity>> query(scene.get(), {entity});
 
     for (auto [pos, vel] : query) {
-        /** @brief read */
         cr_assert_eq(vel.ptr->vx, 0.5f);
         cr_assert_eq(vel.ptr->vy, 1.5f);
 
-        /** @brief mutate */
         pos.ptr->x += vel.ptr->vx;
         pos.ptr->y += vel.ptr->vy;
     }
@@ -63,13 +65,14 @@ Test(Query, QueryMutAndRef)
 Test(Query, QueryMultipleEntities)
 {
     auto scene = std::make_unique<r::ecs::Scene>();
-    const auto command = r::ecs::Commands(scene.get());
+    auto buffer = std::make_unique<r::ecs::CommandBuffer>();
+    auto commands = r::ecs::Commands(buffer.get());
 
-    const auto e1 = command.spawn();
-    const auto e2 = command.spawn();
-    command.add_component<Position>(e1, Position{1.0f, 1.0f});
-    command.add_component<Position>(e2, Position{2.0f, 2.0f});
+    commands.spawn().insert(Position{1.0f, 1.0f});
+    commands.spawn().insert(Position{2.0f, 2.0f});
+    buffer->apply(*scene);
 
+    const r::ecs::Entity e1 = 1, e2 = 2;
     r::ecs::Query<r::ecs::Mut<Position>> query(scene.get(), {e1, e2});
 
     int i = 0;
@@ -77,6 +80,9 @@ Test(Query, QueryMultipleEntities)
         pos.ptr->x += 10.0f;
         pos.ptr->y += 20.0f;
 
+        // Note: The order of iteration is not guaranteed in a real ECS.
+        // For this simple test, we assume the insertion order is maintained.
+        // A more robust test would check for values without relying on order.
         if (i == 0) {
             cr_assert_eq(pos.ptr->x, 11.0f);
             cr_assert_eq(pos.ptr->y, 21.0f);

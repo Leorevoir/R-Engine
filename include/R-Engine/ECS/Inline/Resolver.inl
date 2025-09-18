@@ -1,5 +1,6 @@
 #pragma once
 
+#include "R-Engine/ECS/Resolver.hpp"
 #include <algorithm>
 #include <unordered_set>
 
@@ -127,7 +128,7 @@ void r::ecs::Resolver::_collect_required_for(std::vector<std::vector<Entity>> &o
     if constexpr (is_mut<W>::value || is_ref<W>::value || is_with<W>::value) {
         using Comp = typename component_of<W>::type;
         auto key = std::type_index(typeid(Comp));
-        const auto &storages = _scene->getStorages();
+        const auto &storages = _scene->get_storages();
         const auto it = storages.find(key);
 
         if (it == storages.end()) {
@@ -144,7 +145,7 @@ void r::ecs::Resolver::_collect_excluded_for(std::unordered_set<Entity> &out)
     if constexpr (is_without<W>::value) {
         using Comp = typename component_of<W>::type;
         auto key = std::type_index(typeid(Comp));
-        const auto &storages = _scene->getStorages();
+        const auto &storages = _scene->get_storages();
         const auto it = storages.find(key);
 
         if (it != storages.end()) {

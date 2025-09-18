@@ -1,6 +1,7 @@
 #pragma once
 
 #include <R-Engine/Core/Error.hpp>
+#include <R-Engine/ECS/Command.hpp>
 #include <R-Engine/ECS/Query.hpp>
 #include <R-Engine/ECS/Scene.hpp>
 #include <unordered_set>
@@ -14,7 +15,7 @@ struct Resolver {
         template<typename... Wrappers>
         using Q = Query<Wrappers...>;
 
-        explicit Resolver(Scene *s);
+        explicit Resolver(Scene *s, CommandBuffer *cmd);
 
         /**
          * @brief Res<T>
@@ -41,6 +42,7 @@ struct Resolver {
 
     private:
         Scene *_scene;
+        CommandBuffer *_cmd_buffer;
 
         /**
          * @brief Collects entity list for a component if the wrapper is a requirement (Mut, Ref, With).

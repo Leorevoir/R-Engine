@@ -24,6 +24,9 @@ target_include_directories(r-engine PRIVATE
 target_link_libraries(r-engine PRIVATE
     raylib
 )
+target_compile_definitions(r-engine PRIVATE 
+    R_ENGINE_BUILDING_EXPORTS=1
+)
 
 ########################################
 # R-Engine r-engine__example

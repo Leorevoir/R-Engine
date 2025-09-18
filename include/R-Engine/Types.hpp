@@ -1,5 +1,7 @@
 #pragma once
 
+#include <R-Engine/R-EngineExport.hpp>
+
 #include <cmath>
 
 using u8 = unsigned char;
@@ -18,7 +20,7 @@ using f64 = double;
 using usize = u64;
 using isize = i64;
 
-class NonCopyable
+class R_ENGINE_API NonCopyable
 {
     protected:
         constexpr NonCopyable() = default;
@@ -29,7 +31,7 @@ class NonCopyable
         constexpr NonCopyable &operator=(NonCopyable &&) = delete;
 };
 
-#define R_ENGINE_EPSILON 1e-6f
+static constexpr f32 R_ENGINE_EPSILON = 1e-6f;
 
 namespace r {
 

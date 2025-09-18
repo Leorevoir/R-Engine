@@ -12,7 +12,7 @@ namespace r {
 
 // clang-format off
 
-enum class R_ENGINE_API WindowPluginSettings : u16 {
+enum class WindowPluginSettings : u16 {
     FOCUSED        = 1 << 0,
     RESIZABLE      = 1 << 1,
     VISIBLE        = 1 << 2,

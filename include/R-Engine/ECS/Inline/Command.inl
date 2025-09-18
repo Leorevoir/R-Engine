@@ -6,6 +6,7 @@
 
 inline r::ecs::EntityCommands::EntityCommands(r::ecs::CommandBuffer *buffer, Entity entity) noexcept : _buffer(buffer), _entity(entity)
 {
+    /* __ctor__ */
 }
 
 template<typename T>
@@ -93,6 +94,7 @@ inline void r::ecs::CommandBuffer::add_command(std::function<void(Scene &)> &&co
 
 inline r::ecs::Commands::Commands(CommandBuffer *buffer) noexcept : _buffer(buffer)
 {
+    /* __ctor__ */
 }
 
 inline r::ecs::EntityCommands r::ecs::Commands::spawn() noexcept
@@ -107,7 +109,7 @@ inline r::ecs::EntityCommands r::ecs::Commands::entity(Entity e) noexcept
 }
 
 template<typename T>
-void r::ecs::Commands::add_component(Entity e, T comp) noexcept
+inline void r::ecs::Commands::add_component(Entity e, T comp) noexcept
 {
     if (_buffer) {
         _buffer->add_component<T>(e, std::move(comp));

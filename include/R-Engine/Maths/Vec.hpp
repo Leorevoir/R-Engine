@@ -92,7 +92,7 @@ struct VecData<4, T> {
  */
 template<usize N, typename T>
     requires concepts::Vec<N, T>
-struct R_ENGINE_API Vec : public details::VecData<N, T> {
+struct Vec : public details::VecData<N, T> {
         using value_type = T;
         static constexpr usize size = N;
 

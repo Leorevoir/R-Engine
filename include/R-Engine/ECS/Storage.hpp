@@ -52,7 +52,7 @@ using StoragePtr = std::unique_ptr<IComponentStorage>;
  * @info stores components of type T mapped to Entities
  */
 template<typename T>
-struct R_ENGINE_API ComponentStorage : IComponentStorage {
+struct ComponentStorage : IComponentStorage {
     public:
         void add(Entity e, T comp) noexcept;
         T *get_ptr(Entity e) noexcept;

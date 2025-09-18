@@ -16,7 +16,7 @@ namespace ecs {
  * example: access to delta time, input state...
  */
 template<typename T>
-struct R_ENGINE_API Res {
+struct Res {
         const T *ptr = nullptr;
 };
 
@@ -26,7 +26,7 @@ struct R_ENGINE_API Res {
  * lets you write to a component (update position, change health...)
  */
 template<typename T>
-struct R_ENGINE_API Mut {
+struct Mut {
         T *ptr = nullptr;
 };
 
@@ -36,7 +36,7 @@ struct R_ENGINE_API Mut {
  * lets you read a component (read position, check health...)
  */
 template<typename T>
-struct R_ENGINE_API Ref {
+struct Ref {
         const T *ptr = nullptr;
 };
 
@@ -45,7 +45,7 @@ struct R_ENGINE_API Ref {
  * @info requires an entity to have component <T> without accessing its data.
  */
 template<typename T>
-struct R_ENGINE_API With {
+struct With {
 };
 
 /**
@@ -53,7 +53,7 @@ struct R_ENGINE_API With {
  * @info excludes entities that have component <T>.
  */
 template<typename T>
-struct R_ENGINE_API Without {
+struct Without {
 };
 
 /**
@@ -62,7 +62,7 @@ struct R_ENGINE_API Without {
  * The pointer will be nullptr if the entity does not have the component.
  */
 template<typename T>
-struct R_ENGINE_API Optional {
+struct Optional {
         const T *ptr = nullptr;
 };
 
@@ -166,7 +166,7 @@ struct component_of<Optional<T>> {
 * }
 */
 template<typename... Wrappers>
-struct R_ENGINE_API Query {
+struct Query {
     public:
         constexpr Query() = default;
         explicit Query(Scene *scene, std::vector<Entity> entities);

@@ -1,7 +1,7 @@
 #pragma once
 
 #if defined(_WIN32) || defined(__CYGWIN__)
-    #ifdef R_ENGINE_BUILDING_EXPORT
+    #ifdef R_ENGINE_BUILDING_EXPORTS
         #ifdef __GNUC__
             #define R_ENGINE_API __attribute__((dllexport))
         #else

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <R-Engine/Maths/Concepts.hpp>
+#include <R-Engine/R-EngineExport.hpp>
 #include <R-Engine/Types.hpp>
 
 #include <initializer_list>
@@ -91,7 +92,7 @@ struct VecData<4, T> {
  */
 template<usize N, typename T>
     requires concepts::Vec<N, T>
-struct Vec : public details::VecData<N, T> {
+struct R_ENGINE_API Vec : public details::VecData<N, T> {
         using value_type = T;
         static constexpr usize size = N;
 

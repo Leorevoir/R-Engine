@@ -10,7 +10,7 @@ namespace r {
 
 namespace ecs {
 
-struct Resolver {
+struct R_ENGINE_API Resolver {
     public:
         template<typename... Wrappers>
         using Q = Query<Wrappers...>;

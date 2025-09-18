@@ -1,6 +1,7 @@
 #pragma once
 
 #include <R-Engine/ECS/Entity.hpp>
+#include <R-Engine/R-EngineExport.hpp>
 #include <R-Engine/Types.hpp>
 
 #include <atomic>
@@ -32,7 +33,7 @@ static inline u64 type_id() noexcept;
  * @brief interface for component storage
  * @info used for type-erased storage in Scene
  */
-struct IComponentStorage {
+struct R_ENGINE_API IComponentStorage {
         virtual ~IComponentStorage() = default;
 
         virtual void remove(Entity) noexcept = 0;
@@ -51,7 +52,7 @@ using StoragePtr = std::unique_ptr<IComponentStorage>;
  * @info stores components of type T mapped to Entities
  */
 template<typename T>
-struct ComponentStorage : IComponentStorage {
+struct R_ENGINE_API ComponentStorage : IComponentStorage {
     public:
         void add(Entity e, T comp) noexcept;
         T *get_ptr(Entity e) noexcept;

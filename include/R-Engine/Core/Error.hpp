@@ -1,5 +1,6 @@
 #pragma once
 
+#include <R-Engine/R-EngineExport.hpp>
 #include <R-Engine/Types.hpp>
 
 #include <exception>
@@ -13,7 +14,7 @@
  * @return void
  */
 namespace r::exception {
-class Error final : public std::exception
+class R_ENGINE_API Error final : public std::exception
 {
     public:
         /**

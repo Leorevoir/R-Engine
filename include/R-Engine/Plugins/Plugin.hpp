@@ -1,5 +1,6 @@
 #pragma once
 
+#include <R-Engine/R-EngineExport.hpp>
 #include <memory>
 #include <vector>
 
@@ -14,7 +15,7 @@ class Application;
  *
  * each plugin must inherit from this class and implement the `build` method
 */
-class Plugin
+class R_ENGINE_API Plugin
 {
     public:
         Plugin() = default;
@@ -38,7 +39,7 @@ class Plugin
 * @details Plugin groups can be configured using the `.set()` method to replace
 * a default plugin with a custom-configured one.
 */
-class PluginGroup
+class R_ENGINE_API PluginGroup
 {
     public:
         PluginGroup() = default;

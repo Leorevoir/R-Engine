@@ -1,6 +1,7 @@
 #pragma once
 
 #include <R-Engine/Maths/Concepts.hpp>
+#include <R-Engine/R-EngineExport.hpp>
 #include <R-Engine/Types.hpp>
 
 #include <initializer_list>

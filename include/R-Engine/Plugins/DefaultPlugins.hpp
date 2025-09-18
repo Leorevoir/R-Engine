@@ -16,7 +16,7 @@ namespace r {
  *     WindowPluginConfig { .title = "My Game" }
  * }))
  */
-class DefaultPlugins final : public PluginGroup
+class R_ENGINE_API DefaultPlugins final : public PluginGroup
 {
     public:
         DefaultPlugins();

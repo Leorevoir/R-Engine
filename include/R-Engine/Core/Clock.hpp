@@ -1,12 +1,13 @@
 #pragma once
 
 #include <R-Engine/Core/FrameTime.hpp>
+#include <R-Engine/R-EngineExport.hpp>
 
 namespace r {
 
 namespace core {
 
-class Clock
+class R_ENGINE_API Clock
 {
     public:
         constexpr Clock() = default;

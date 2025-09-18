@@ -1,5 +1,7 @@
 #pragma once
 
+#include <R-Engine/R-EngineExport.hpp>
+
 #include <cmath>
 
 using u8 = unsigned char;
@@ -18,7 +20,7 @@ using f64 = double;
 using usize = u64;
 using isize = i64;
 
-class NonCopyable
+class R_ENGINE_API NonCopyable
 {
     protected:
         constexpr NonCopyable() = default;
@@ -29,15 +31,21 @@ class NonCopyable
         constexpr NonCopyable &operator=(NonCopyable &&) = delete;
 };
 
-#define R_ENGINE_EPSILON 1e-6f
+static constexpr f32 R_ENGINE_EPSILON = 1e-6f;
 
 namespace r {
 
 namespace F32 {
 
+/**
+* @brief compare two floating point numbers for equality within a certain epsilon
+* 
+* @param a the first number
+* @param b the second number
+*/
 static inline bool equal(const f32 a, const f32 b, const f32 epsilon = R_ENGINE_EPSILON) noexcept
 {
-    return std::fabsf(a - b) <= epsilon * fmaxf(1.0f, fmaxf(fabsf(a), fabsf(b)));
+    return std::fabs(a - b) <= epsilon * fmaxf(1.0f, fmaxf(std::fabs(a), std::fabs(b)));
 }
 
 }// namespace F32

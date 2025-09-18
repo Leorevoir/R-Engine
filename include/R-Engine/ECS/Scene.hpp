@@ -15,7 +15,7 @@ namespace ecs {
 * @brief Scene class that manages entities, components, and resources.
 * @info create & destroy entities, add & get components, insert & get resources.
 */
-class Scene : public NonCopyable
+class R_ENGINE_API Scene : public NonCopyable
 {
     public:
         Scene() = default;

@@ -16,7 +16,7 @@ struct Commands;
  * @details Returned by `Commands::spawn()` and `Commands::entity()`.
  * Allows for a chained builder pattern, e.g. `commands.spawn().insert(Pos{}).insert(Vel{});`
  */
-class EntityCommands
+class R_ENGINE_API EntityCommands
 {
     public:
         EntityCommands(CommandBuffer *buffer, Entity entity) noexcept;
@@ -51,7 +51,7 @@ class EntityCommands
  * @details This decouples structural ECS changes (spawning, despawning, adding/removing components)
  * from system execution, preventing iterator invalidation and other state-related bugs.
  */
-class CommandBuffer
+class R_ENGINE_API CommandBuffer
 {
     public:
         CommandBuffer() = default;
@@ -98,7 +98,7 @@ class CommandBuffer
  * @details This is a system parameter that can be requested by any system function.
  * All operations are deferred and applied at the end of the current schedule.
  */
-struct Commands {
+struct R_ENGINE_API Commands {
     public:
         explicit Commands(CommandBuffer *buffer = nullptr) noexcept;
 

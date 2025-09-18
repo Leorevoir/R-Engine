@@ -1,5 +1,7 @@
 #pragma once
 
+#include <R-Engine/R-EngineExport.hpp>
+
 #include <R-Engine/Core/Clock.hpp>
 #include <R-Engine/Core/Flagable.hpp>
 #include <R-Engine/ECS/Command.hpp>
@@ -20,7 +22,7 @@ enum class Schedule {
 };
 R_ENUM_FLAGABLE(Schedule)
 
-class Application
+class R_ENGINE_API Application
 {
     public:
         Application();

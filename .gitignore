@@ -110,10 +110,6 @@ TestResults/
 *.coverage
 *.coveragexml
 
-# Auto-generated files
-*.Designer.cs
-*.Generated.cs
-
 # Installer caches
 [Rr]elease/
 [Rr]elease [Bb]uild/

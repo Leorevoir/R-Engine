@@ -68,3 +68,51 @@ asm_offset
 
 console.log
 assets/shaders/cache
+*.vs
+obj/
+*.user
+*.suo
+*.ncb
+*.opt
+*.cache
+*.log
+appsettings.json
+*.vscode/
+*.exe
+*.dll
+*.pdb
+
+# --- Visual Studio / C# specific ---
+
+# Build results
+bin/
+obj/
+[Bb]uild/
+[Ll]og/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+*.pidb
+*.svclog
+
+# Visual Studio settings
+.vs/
+*.user
+*.suo
+*.ncb
+*.opt
+
+# Test results
+TestResults/
+*.coverage
+*.coveragexml
+
+# Installer caches
+[Rr]elease/
+[Rr]elease [Bb]uild/
+publish/
+
+out

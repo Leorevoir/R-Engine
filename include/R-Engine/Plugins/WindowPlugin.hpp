@@ -3,6 +3,7 @@
 #include <R-Engine/Core/Flagable.hpp>
 #include <R-Engine/Maths/Vec.hpp>
 #include <R-Engine/Plugins/Plugin.hpp>
+#include <R-Engine/R-EngineExport.hpp>
 #include <R-Engine/Types.hpp>
 
 #include <string>
@@ -28,7 +29,7 @@ enum class WindowPluginSettings : u16 {
 };
 R_ENUM_FLAGABLE(WindowPluginSettings)
 
-struct WindowPluginConfig {
+struct R_ENGINE_API WindowPluginConfig {
     Vec2u size = {1280, 720};
     std::string title = "R-Engine";
     WindowPluginSettings settings = WindowPluginSettings::DEFAULT;
@@ -38,7 +39,7 @@ struct WindowPluginConfig {
 
 // clang-format on
 
-class WindowPlugin final : public Plugin
+class R_ENGINE_API WindowPlugin final : public Plugin
 {
     public:
         explicit WindowPlugin(const WindowPluginConfig &config = WindowPluginConfig());

@@ -1,8 +1,10 @@
+#include <R-Engine/R-EngineExport.hpp>
+
 #include <string_view>
 
 namespace r {
 
-class Logger
+class R_ENGINE_API Logger
 {
     public:
         enum class Level { Debug, Info, Warn, Error };

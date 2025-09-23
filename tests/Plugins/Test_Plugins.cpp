@@ -27,7 +27,8 @@ Test(Plugins, AddPluginByType, .init = _redirect_all_stdout)
     r::Application app;
 
     app.add_plugins<TestPlugin>();
-    app.add_systems(r::Schedule::STARTUP, [](r::ecs::Res<int> res, r::ecs::Commands /*cmds*/) {
+    // Test that the system runner now correctly handles reference parameters like Commands&
+    app.add_systems(r::Schedule::STARTUP, [](r::ecs::Res<int> res, r::ecs::Commands& /*cmds*/) {
         cr_assert(res.ptr != nullptr, "Resource should have been inserted by the plugin.");
         cr_assert_eq(*res.ptr, 42, "Resource value is incorrect.");
     });

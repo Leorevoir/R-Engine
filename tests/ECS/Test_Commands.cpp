@@ -9,6 +9,11 @@ struct TestPosition {
         f32 z = 0;
 };
 
+struct TestVelocity {
+        f32 vx = 0;
+        f32 vy = 0;
+};
+
 Test(Commands, CommandSpawn)
 {
     auto scene = std::make_unique<r::ecs::Scene>();
@@ -37,8 +42,8 @@ Test(Commands, CommandAddComponent)
     auto buffer = std::make_unique<r::ecs::CommandBuffer>();
     auto commands = r::ecs::Commands(buffer.get());
 
-    // Chain commands using the EntityCommands builder pattern.
-    const auto placeholder_entity = commands.spawn().insert(TestPosition{1.0f, 2.0f, 3.0f}).id();
+    // Use the new bundle spawn syntax for single components.
+    const auto placeholder_entity = commands.spawn(TestPosition{1.0f, 2.0f, 3.0f}).id();
 
     // Before applying, the component does not exist.
     cr_assert(scene->has_component<TestPosition>(1) == false, "Component should not exist before applying buffer.");
@@ -51,6 +56,27 @@ Test(Commands, CommandAddComponent)
     cr_assert(scene->get_component_ptr<TestPosition>(real_entity)->x == 1.0f);
     cr_assert(scene->get_component_ptr<TestPosition>(real_entity)->y == 2.0f);
     cr_assert(scene->get_component_ptr<TestPosition>(real_entity)->z == 3.0f);
+}
+
+Test(Commands, CommandBundleSpawn)
+{
+    auto scene = std::make_unique<r::ecs::Scene>();
+    auto buffer = std::make_unique<r::ecs::CommandBuffer>();
+    auto commands = r::ecs::Commands(buffer.get());
+
+    // Spawn an entity with a bundle of components.
+    const auto placeholder_entity = commands.spawn(TestPosition{10.f, 20.f, 30.f}, TestVelocity{1.f, 2.f}).id();
+
+    buffer->apply(*scene);
+
+    const auto real_entity = scene->get_command_buffer_placeholder_map().at(placeholder_entity);
+    cr_assert(scene->has_component<TestPosition>(real_entity), "Position component should exist after bundle spawn.");
+    cr_assert(scene->has_component<TestVelocity>(real_entity), "Velocity component should exist after bundle spawn.");
+
+    auto pos = scene->get_component_ptr<TestPosition>(real_entity);
+    auto vel = scene->get_component_ptr<TestVelocity>(real_entity);
+    cr_assert_eq(pos->x, 10.f);
+    cr_assert_eq(vel->vx, 1.f);
 }
 
 Test(Commands, CommandDespawn)
@@ -91,5 +117,5 @@ Test(Commands, CommandAddComponentNoBuffer)
     cr_assert(entity_cmd.id() == 0);
 
     entity_cmd.insert(TestPosition{1.0f, 2.0f, 3.0f});
-    cr_assert(true); // Test passes if it doesn't crash.
+    cr_assert(true);
 }

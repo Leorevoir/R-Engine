@@ -24,7 +24,7 @@ Test(Query, QuerySingleComponent)
     auto buffer = std::make_unique<r::ecs::CommandBuffer>();
     auto commands = r::ecs::Commands(buffer.get());
 
-    commands.spawn().insert(Position{1.0f, 2.0f});
+    commands.spawn(Position{1.0f, 2.0f});
     buffer->apply(*scene);
 
     const r::ecs::Entity entity = 1;
@@ -42,7 +42,7 @@ Test(Query, QueryMutAndRef)
     auto buffer = std::make_unique<r::ecs::CommandBuffer>();
     auto commands = r::ecs::Commands(buffer.get());
 
-    commands.spawn().insert(Position{1.0f, 2.0f}).insert(Velocity{0.5f, 1.5f});
+    commands.spawn(Position{1.0f, 2.0f}, Velocity{0.5f, 1.5f});
     buffer->apply(*scene);
 
     const r::ecs::Entity entity = 1;
@@ -68,8 +68,8 @@ Test(Query, QueryMultipleEntities)
     auto buffer = std::make_unique<r::ecs::CommandBuffer>();
     auto commands = r::ecs::Commands(buffer.get());
 
-    commands.spawn().insert(Position{1.0f, 1.0f});
-    commands.spawn().insert(Position{2.0f, 2.0f});
+    commands.spawn(Position{1.0f, 1.0f});
+    commands.spawn(Position{2.0f, 2.0f});
     buffer->apply(*scene);
 
     const r::ecs::Entity e1 = 1, e2 = 2;

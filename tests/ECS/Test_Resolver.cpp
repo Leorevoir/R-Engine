@@ -60,7 +60,7 @@ Test(Resolver, ResolveQuerySingleEntity)
     auto buffer = std::make_unique<r::ecs::CommandBuffer>();
     auto cmds = r::ecs::Commands(buffer.get());
 
-    cmds.spawn().insert(Position{1.0f, 2.0f});
+    cmds.spawn(Position{1.0f, 2.0f});
     buffer->apply(*scene);
 
     r::ecs::Resolver resolver(scene.get(), buffer.get());
@@ -81,8 +81,8 @@ Test(Resolver, ResolveQueryMultipleEntities)
     auto buffer = std::make_unique<r::ecs::CommandBuffer>();
     auto cmds = r::ecs::Commands(buffer.get());
 
-    cmds.spawn().insert(Position{1.0f, 1.0f}).insert(Velocity{0.5f, 0.5f});
-    cmds.spawn().insert(Position{2.0f, 2.0f}).insert(Velocity{1.5f, 1.5f});
+    cmds.spawn(Position{1.0f, 1.0f}, Velocity{0.5f, 0.5f});
+    cmds.spawn(Position{2.0f, 2.0f}, Velocity{1.5f, 1.5f});
     buffer->apply(*scene);
 
     r::ecs::Resolver resolver(scene.get(), buffer.get());
@@ -124,7 +124,7 @@ Test(Resolver, CombinedResAndQuery)
     scene->insert_resource<FrameTime>(FrameTime{1.0f});
 
     auto cmds = r::ecs::Commands(buffer.get());
-    cmds.spawn().insert(Position{0.0f, 0.0f}).insert(Velocity{2.0f, 3.0f});
+    cmds.spawn(Position{0.0f, 0.0f}, Velocity{2.0f, 3.0f});
     buffer->apply(*scene);
 
     r::ecs::Resolver resolver(scene.get(), buffer.get());
@@ -157,8 +157,8 @@ Test(Resolver, ResolveQueryWithFilter)
     auto buffer = std::make_unique<r::ecs::CommandBuffer>();
     auto cmds = r::ecs::Commands(buffer.get());
 
-    cmds.spawn().insert(Position{10, 10}).insert(PlayerTag{});
-    cmds.spawn().insert(Position{20, 20});
+    cmds.spawn(Position{10, 10}, PlayerTag{});
+    cmds.spawn(Position{20, 20});
     buffer->apply(*scene);
 
     r::ecs::Resolver resolver(scene.get(), buffer.get());
@@ -178,8 +178,8 @@ Test(Resolver, ResolveQueryWithoutFilter)
     auto buffer = std::make_unique<r::ecs::CommandBuffer>();
     auto cmds = r::ecs::Commands(buffer.get());
 
-    cmds.spawn().insert(Position{10, 10}).insert(Velocity{1, 1});
-    cmds.spawn().insert(Position{20, 20});
+    cmds.spawn(Position{10, 10}, Velocity{1, 1});
+    cmds.spawn(Position{20, 20});
     buffer->apply(*scene);
 
     r::ecs::Resolver resolver(scene.get(), buffer.get());
@@ -199,8 +199,8 @@ Test(Resolver, ResolveQueryOptionalFilter)
     auto buffer = std::make_unique<r::ecs::CommandBuffer>();
     auto cmds = r::ecs::Commands(buffer.get());
 
-    cmds.spawn().insert(Position{10, 10}).insert(Health{80});
-    cmds.spawn().insert(Position{20, 20});
+    cmds.spawn(Position{10, 10}, Health{80});
+    cmds.spawn(Position{20, 20});
     buffer->apply(*scene);
 
     r::ecs::Resolver resolver(scene.get(), buffer.get());
@@ -232,11 +232,11 @@ Test(Resolver, ResolveQueryCombinedFilters)
     auto cmds = r::ecs::Commands(buffer.get());
 
     // e1: Player with Position but no Velocity (should be found)
-    cmds.spawn().insert(Position{1, 1}).insert(PlayerTag{});
+    cmds.spawn(Position{1, 1}, PlayerTag{});
     // e2: Player with Position and Velocity (should be excluded by Without)
-    cmds.spawn().insert(Position{2, 2}).insert(PlayerTag{}).insert(Velocity{1, 1});
+    cmds.spawn(Position{2, 2}, PlayerTag{}, Velocity{1, 1});
     // e3: Non-player with Position (should be excluded by With)
-    cmds.spawn().insert(Position{3, 3});
+    cmds.spawn(Position{3, 3});
     buffer->apply(*scene);
 
     r::ecs::Resolver resolver(scene.get(), buffer.get());

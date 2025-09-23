@@ -8,18 +8,26 @@ template<typename T>
 class Handle
 {
     public:
-        static constexpr u32 InvalidId = 0;
+        using IdType = u32;
+        static constexpr IdType InvalidId = 0;
 
-        explicit constexpr Handle(const u32 id = InvalidId) noexcept;
+        explicit constexpr Handle(const IdType id = InvalidId) noexcept;
 
+        /**
+        * @brief check if handle is valid do i really need to explain....
+        */
         bool valid() const noexcept;
-        u32 id() const noexcept;
+
+        /**
+        * @brief get the id quite litteral right....
+        */
+        IdType id() const noexcept;
 
         bool operator==(const Handle<T> &other) const noexcept;
         bool operator!=(const Handle<T> &other) const noexcept;
 
     private:
-        u32 _id;
+        IdType _id;
 };
 
 #include "Inline/Handle.inl"

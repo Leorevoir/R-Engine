@@ -1,7 +1,7 @@
 #pragma once
 
 template<typename T>
-constexpr Handle<T>::Handle(const u32 id) noexcept : _id(id)
+constexpr Handle<T>::Handle(const IdType id) noexcept : _id(id)
 {
     /* __ctor__ */
 }

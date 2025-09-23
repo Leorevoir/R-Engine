@@ -1,24 +1,51 @@
 #include <R-Engine/ECS/Command.hpp>
 #include <R-Engine/ECS/Scene.hpp>
 
-/**
-* public
-*/
-
-r::ecs::Scene::StorageMap &r::ecs::Scene::get_storages() noexcept
+r::ecs::Scene::Scene()
 {
-    return _storages;
+    /** Create the initial empty archetype at index 0 */
+    _archetypes.emplace_back();
+    _archetype_map[{}] = 0;
 }
 
-r::ecs::Entity r::ecs::Scene::create_entity() noexcept
+const std::vector<r::ecs::Archetype> &r::ecs::Scene::get_archetypes() const
 {
-    return _next_entity++;
+    return _archetypes;
+}
+
+const r::ecs::EntityLocation *r::ecs::Scene::get_entity_location(r::ecs::Entity e) const
+{
+    auto it = _entity_locations.find(e);
+    if (it == _entity_locations.end()) {
+        return nullptr;
+    }
+    return &it->second;
+}
+
+r::ecs::Entity r::ecs::Scene::create_entity()
+{
+    const Entity new_entity = _next_entity++;
+    Archetype &empty_archetype = _archetypes[0];
+    const usize row = empty_archetype.table.add_entity(new_entity);
+    _entity_locations[new_entity] = {0, row};
+    return new_entity;
 }
 
 void r::ecs::Scene::destroy_entity(r::ecs::Entity e) noexcept
 {
-    for (const auto &kv : _storages) {
-        kv.second->remove(e);
+    const auto it = _entity_locations.find(e);
+    if (it == _entity_locations.end()) {
+        return;
+    }
+
+    const EntityLocation loc = it->second;
+    Archetype &archetype = _archetypes[loc.archetype_index];
+
+    Entity swapped_entity = archetype.table.remove_entity_swap_back(loc.table_row);
+
+    _entity_locations.erase(e);
+    if (swapped_entity != 0) {
+        _entity_locations[swapped_entity].table_row = loc.table_row;
     }
 }
 

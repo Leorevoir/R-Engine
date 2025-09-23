@@ -29,12 +29,23 @@ enum class WindowPluginSettings : u16 {
 };
 R_ENUM_FLAGABLE(WindowPluginSettings)
 
+enum class WindowCursorState {
+    Visible,
+    Hidden,
+    Locked
+};
+
 struct R_ENGINE_API WindowPluginConfig {
     Vec2u size = {1280, 720};
     std::string title = "R-Engine";
     WindowPluginSettings settings = WindowPluginSettings::DEFAULT;
+    WindowCursorState cursor = WindowCursorState::Visible;
     u32 frame_per_second = 60;
     u8 antialiasing_samples_count = 1;
+};
+
+struct Cursor {
+    WindowCursorState state = WindowCursorState::Visible;
 };
 
 // clang-format on

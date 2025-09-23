@@ -101,6 +101,15 @@ inline r::ecs::EntityCommands r::ecs::Commands::spawn() noexcept
     return EntityCommands(_buffer, placeholder);
 }
 
+template<typename... Components>
+inline r::ecs::EntityCommands r::ecs::Commands::spawn(Components &&...components) noexcept
+{
+    EntityCommands entity_cmds = this->spawn();
+
+    (entity_cmds.insert(std::forward<Components>(components)), ...);
+    return entity_cmds;
+}
+
 inline r::ecs::EntityCommands r::ecs::Commands::entity(Entity e) noexcept
 {
     return EntityCommands(_buffer, e);

@@ -21,7 +21,7 @@ target_include_directories(r-engine PRIVATE
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/external
 )
-target_link_libraries(r-engine PRIVATE
+target_link_libraries(r-engine PUBLIC
     raylib
 )
 

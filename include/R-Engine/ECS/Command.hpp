@@ -103,10 +103,19 @@ struct Commands {
         explicit Commands(CommandBuffer *buffer = nullptr) noexcept;
 
         /**
-         * @brief Schedules an entity to be spawned.
+         * @brief Schedules an entity to be spawned with no initial components.
          * @return An EntityCommands handle to chain further commands like `insert`.
          */
         EntityCommands spawn() noexcept;
+
+        /**
+         * @brief Schedules an entity to be spawned with a set of initial components.
+         * @details This is the preferred way to create entities with their starting components.
+         * @param components The components to insert into the new entity.
+         * @return An EntityCommands handle to chain further commands.
+         */
+        template<typename... Components>
+        EntityCommands spawn(Components &&...components) noexcept;
 
         /**
          * @brief Returns an EntityCommands handle for an existing entity.

@@ -1,4 +1,3 @@
-#include "raylib.h"
 #include <R-Engine/Plugins/WindowPlugin.hpp>
 
 #include <R-Engine/Application.hpp>

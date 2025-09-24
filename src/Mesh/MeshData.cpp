@@ -5,12 +5,12 @@
 */
 // clang-format off
 
-u64 r::MeshData::vertex_count() const noexcept
+u64 r::mesh::MeshData::vertex_count() const noexcept
 {
     return positions.size();
 }
 
-u64 r::MeshData::triangle_count() const noexcept
+u64 r::mesh::MeshData::triangle_count() const noexcept
 {
     switch (topology) {
         case Topology::Triangles:
@@ -22,7 +22,7 @@ u64 r::MeshData::triangle_count() const noexcept
     }
 }
 
-r::MeshData r::MeshData::Cube() noexcept
+r::mesh::MeshData r::mesh::MeshData::Cube() noexcept
 {
     MeshData mesh;
 
@@ -50,7 +50,7 @@ r::MeshData r::MeshData::Cube() noexcept
     return mesh;
 }
 
-bool r::MeshData::valid() const noexcept
+bool r::mesh::MeshData::valid() const noexcept
 {
     if (positions.empty()) {
         return false;
@@ -90,7 +90,7 @@ bool r::MeshData::valid() const noexcept
     return true;
 }
 
-void r::MeshData::compute_normals() noexcept
+void r::mesh::MeshData::compute_normals() noexcept
 {
     if (positions.empty() || indices.empty() || topology != Topology::Triangles) {
         return;
@@ -142,7 +142,7 @@ void r::MeshData::compute_normals() noexcept
     }
 }
 
-void r::MeshData::compute_tangents() noexcept
+void r::mesh::MeshData::compute_tangents() noexcept
 {
     if (positions.empty() || uvs.empty() || indices.empty() || topology != Topology::Triangles) {
         return;
@@ -237,7 +237,7 @@ void r::MeshData::compute_tangents() noexcept
     }
 }
 
-void r::MeshData::fill_flat_buffers(std::vector<f32> &out_positions, std::vector<f32> &out_normals, std::vector<f32> &out_uvs) const
+void r::mesh::MeshData::fill_flat_buffers(std::vector<f32> &out_positions, std::vector<f32> &out_normals, std::vector<f32> &out_uvs) const
 {
     const u64 vc = vertex_count();
 
@@ -285,14 +285,14 @@ void r::MeshData::fill_flat_buffers(std::vector<f32> &out_positions, std::vector
     }
 }
 
-void r::MeshData::reserve_vertices(const u64 count) noexcept
+void r::mesh::MeshData::reserve_vertices(const u64 count) noexcept
 {
     positions.reserve(count);
     normals.reserve(count);
     uvs.reserve(count);
 }
 
-void r::MeshData::reserve_indices(const u64 count) noexcept
+void r::mesh::MeshData::reserve_indices(const u64 count) noexcept
 {
     indices.reserve(count);
 }

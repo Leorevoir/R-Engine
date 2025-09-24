@@ -2,7 +2,7 @@
 
 #include <R-Engine/Types.hpp>
 
-namespace r {
+namespace r::assets {
 
 template<typename T>
 class Handle
@@ -11,7 +11,7 @@ class Handle
         using IdType = u32;
         static constexpr IdType InvalidId = 0;
 
-        explicit constexpr Handle(const IdType id = InvalidId) noexcept;
+        constexpr Handle(const IdType id = InvalidId) noexcept;
 
         /**
         * @brief check if handle is valid do i really need to explain....
@@ -32,4 +32,4 @@ class Handle
 
 #include "Inline/Handle.inl"
 
-}// namespace r
+}// namespace r::assets

@@ -4,7 +4,7 @@
 
 #include <vector>
 
-namespace r {
+namespace r::mesh {
 
 /**
 * @brief CPU side mesh data representation:
@@ -165,4 +165,4 @@ struct MeshData {
         void reserve_indices(const u64 count) noexcept;
 };
 
-}// namespace r
+}// namespace r::mesh

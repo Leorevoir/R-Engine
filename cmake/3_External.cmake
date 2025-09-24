@@ -16,3 +16,5 @@ elseif (NOT MSVC)
     target_compile_options(raylib PRIVATE -Wno-undef)
     target_link_options(raylib PRIVATE -Wno-undef)
 endif ()
+
+add_subdirectory(external/network EXCLUDE_FROM_ALL)

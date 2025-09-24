@@ -3,6 +3,9 @@
 #include <R-Engine/Core/Logger.hpp>
 #include <R-Engine/Core/Backend.hpp>
 
+static constexpr u16 FIRST_KEY = 32;
+static constexpr u16 MAX_KEY = 348;
+
 bool r::UserInput::isKeyPressed(int key_code) const
 {
     const auto it = keys_pressed.find(key_code);
@@ -52,14 +55,15 @@ static void input_system(r::ecs::Res<r::UserInput> userInput)
     auto* mutable_state = const_cast<r::UserInput*>(userInput.ptr);
 
     mutable_state->keys_pressed.clear();
-    for (i32 key = 32; key < 348; ++key) {
+    for (u16 key = FIRST_KEY; key < MAX_KEY; ++key) {
         if (IsKeyDown(key)) {
             mutable_state->keys_pressed.insert(key);
         }
     }
 
+    /* 3 Because we count 3 buttons on the mouse */
     mutable_state->mouse_buttons_pressed.clear();
-    for (i32 button = 0; button < 3; ++button) {
+    for (u16 button = 0; button < 3; ++button) {
         if (IsMouseButtonPressed(button)) {
             mutable_state->mouse_buttons_pressed.insert(button);
         }

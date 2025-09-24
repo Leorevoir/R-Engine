@@ -97,6 +97,7 @@ x86/
 [Aa][Rr][Mm]64/
 *.pidb
 *.svclog
+*.ilk
 
 # Visual Studio settings
 .vs/

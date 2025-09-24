@@ -40,6 +40,9 @@ struct VecData<2, T> {
                         T s, t;
                 };
                 struct {
+                        T u, v;
+                };
+                struct {
                         T width, height;
                 };
                 T data[2] = {0};

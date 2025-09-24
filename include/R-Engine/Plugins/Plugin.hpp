@@ -71,7 +71,7 @@ class R_ENGINE_API PluginGroup
         void add(Args &&...args);
 
     private:
-        std::vector<std::unique_ptr<Plugin>> _plugins;
+        std::vector<std::shared_ptr<Plugin>> _plugins;
 };
 
 }// namespace r

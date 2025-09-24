@@ -4,7 +4,8 @@
 #include <R-Engine/ECS/Command.hpp>
 #include <R-Engine/ECS/Query.hpp>
 #include <R-Engine/ECS/Scene.hpp>
-#include <unordered_set>
+#include <typeindex>
+#include <vector>
 
 namespace r {
 
@@ -15,6 +16,11 @@ struct R_ENGINE_API Resolver {
         template<typename... Wrappers>
         using Q = Query<Wrappers...>;
 
+        /**
+         * @brief Construct a new Resolver object
+         * @param s A pointer to the scene.
+         * @param cmd A pointer to the command buffer.
+         */
         explicit Resolver(Scene *s, CommandBuffer *cmd);
 
         /**
@@ -45,16 +51,13 @@ struct R_ENGINE_API Resolver {
         CommandBuffer *_cmd_buffer;
 
         /**
-         * @brief Collects entity list for a component if the wrapper is a requirement (Mut, Ref, With).
+         * @brief Helper to collect required and excluded component types from a query wrapper.
+         * @tparam W The wrapper type (e.g., Mut<T>, Without<T>).
+         * @param required Vector to store required type indices.
+         * @param excluded Vector to store excluded type indices.
          */
         template<typename W>
-        void _collect_required_for(std::vector<std::vector<Entity>> &out);
-
-        /**
-         * @brief Collects entities to be excluded into a hash set if the wrapper is a `Without`.
-         */
-        template<typename W>
-        void _collect_excluded_for(std::unordered_set<Entity> &out);
+        void _collect_component_types(std::vector<std::type_index> &required, std::vector<std::type_index> &excluded);
 };
 
 }// namespace ecs

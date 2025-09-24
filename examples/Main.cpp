@@ -6,6 +6,7 @@
 #include <R-Engine/Maths/Vec.hpp>
 #include <R-Engine/Plugins/DefaultPlugins.hpp>
 #include <R-Engine/Plugins/WindowPlugin.hpp>
+#include <R-Engine/Plugins/UIPlugin.hpp>
 
 #include <cstdlib>
 #include <ctime>
@@ -230,6 +231,62 @@ void render_system(r::ecs::Query<r::ecs::Ref<Position>, r::ecs::Ref<Circle>> que
     DrawFPS(10, 30);
 }
 
+/**
+ * @brief (STARTUP) Spawns a very simple main menu UI: title + Play + Quit buttons.
+ * Play currently does nothing; Quit uses UiOnClickQuit component to exit.
+ */
+void spawn_ui_menu_system(r::ecs::Commands &commands, r::ecs::Res<r::WindowPluginConfig> win_config)
+{
+    const float screen_width = static_cast<float>(win_config.ptr->size.width);
+    const float screen_height = static_cast<float>(win_config.ptr->size.height);
+
+    // Title text centered at top
+    commands.spawn(
+        r::UiText{ .value = "R-Type", .size = 64 },
+        r::UiTextColor{ 230, 230, 255, 255 },
+        r::UiPosition{ { (screen_width - 400.f) * 0.5f, 60.f } }, // rough centering; actual centering handled by rect if present
+        r::UiZIndex{ 10 }
+    );
+
+    // Common button sizes
+    const r::Vec2f btn_size = { 220.f, 70.f };
+    const float center_x = (screen_width - btn_size.x) * 0.5f;
+    float start_y = screen_height * 0.5f - 80.f; // first button y
+
+    // Play button (no action yet)
+    commands.spawn(
+        r::UiButton{},
+        r::UiButtonState{},
+        r::UiOriginalColor{ 90, 140, 255, 255 },
+        r::UiColor{ 90, 140, 255, 255 },
+        r::UiRectSize{ btn_size },
+        r::UiPosition{ { center_x, start_y } },
+        r::UiBorderRadius{ 18.f },
+        r::UiBorderThickness{ 3.f },
+        r::UiBorderColor{ 30, 50, 120, 255 },
+        r::UiZIndex{ 11 },
+        r::UiText{ .value = "Play", .size = 32 },
+        r::UiTextColor{ 255, 255, 255, 255 }
+    );
+
+    // Quit button (adds UiOnClickQuit to trigger Application::quit)
+    commands.spawn(
+        r::UiButton{},
+        r::UiButtonState{},
+        r::UiOriginalColor{ 200, 60, 80, 255 },
+        r::UiColor{ 200, 60, 80, 255 },
+        r::UiRectSize{ btn_size },
+        r::UiPosition{ { center_x, start_y + btn_size.y + 30.f } },
+        r::UiBorderRadius{ 18.f },
+        r::UiBorderThickness{ 3.f },
+        r::UiBorderColor{ 90, 20, 30, 255 },
+        r::UiZIndex{ 11 },
+        r::UiOnClickQuit{},
+        r::UiText{ .value = "Quit", .size = 32 },
+        r::UiTextColor{ 255, 255, 255, 255 }
+    );
+}
+
 int main()
 {
     /* Seed random number generator for varied colors and velocities. */
@@ -254,6 +311,7 @@ int main()
         /* Add systems to the application schedule. */
         /* STARTUP systems run once at the beginning. */
         .add_systems(r::Schedule::STARTUP, spawn_entities_system)
+    .add_systems(r::Schedule::STARTUP, spawn_ui_menu_system)
 
         /* UPDATE systems run once every frame for game logic and physics. */
         /* The order matters here: input -> physics -> movement. */

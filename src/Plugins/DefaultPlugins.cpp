@@ -2,6 +2,7 @@
 
 #include <R-Engine/Plugins/RenderPlugin.hpp>
 #include <R-Engine/Plugins/WindowPlugin.hpp>
+#include <R-Engine/Plugins/UIPlugin.hpp>
 
 #include <R-Engine/Application.hpp>
 
@@ -13,6 +14,7 @@ r::DefaultPlugins::DefaultPlugins()
 {
     add<WindowPlugin>();
     add<RenderPlugin>();
+    add<UiPlugin>();
 }
 
 void r::DefaultPlugins::build(r::Application &app)

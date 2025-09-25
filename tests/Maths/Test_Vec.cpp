@@ -85,3 +85,17 @@ Test(Vec, equality_operator)
     cr_expect(a == b);
     cr_expect(a != c);
 }
+
+Test(Vec, static_cast)
+{
+    constexpr r::Vec3i vi{1, 2, 3};
+    constexpr r::Vec3f vf = static_cast<r::Vec3f>(vi);
+    constexpr r::Vec3u vu = vf;
+
+    cr_assert_float_eq(vf.x, 1.0f, 1e-6);
+    cr_assert_float_eq(vf.y, 2.0f, 1e-6);
+    cr_assert_float_eq(vf.z, 3.0f, 1e-6);
+    cr_assert_eq(vu.x, 1u);
+    cr_assert_eq(vu.y, 2u);
+    cr_assert_eq(vu.z, 3u);
+}

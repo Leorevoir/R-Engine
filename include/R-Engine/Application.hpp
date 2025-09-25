@@ -45,25 +45,14 @@ class R_ENGINE_API Application
         Application &insert_resource(ResT res) noexcept;
 
         /**
-         * @brief add a plugin or plugin group instance to the Application.
-         * @details This is used for pre-configured plugins.
-         * @param plugin The plugin or plugin group instance.
+         * @brief Adds one or more plugins to the application.
+         * @details This is the primary way to add functionality to an `Application`.
+         * Plugins can be added individually or in groups.
+         * This method can be chained.
+         * @param plugins Plugin instances to add.
          */
-        template<typename PluginT>
-        Application &add_plugins(PluginT &&plugin) noexcept;
-
-        /**
-        * @brief add a plugin or a plugin group to the Application by type, with optional constructor arguments.
-        * @param args the arguments to pass to the plugin or plugin group constructor (can be empty)
-        */
-        template<typename PluginT, typename... Args>
-        Application &add_plugins(Args &&...args) noexcept;
-
-        /**
-        * @brief add multiple plugins or plugin groups to the Application by type (without constructor arguments).
-        */
-        template<typename PluginT1, typename PluginT2, typename... Rest>
-        Application &add_plugins() noexcept;
+        template<typename... Plugins>
+        Application &add_plugins(Plugins &&...plugins) noexcept;
 
         /**
         * @brief run the application
@@ -91,6 +80,9 @@ class R_ENGINE_API Application
 
         template<typename Func>
         void _add_one_system(Schedule when, Func &&func) noexcept;
+
+        template<typename PluginT>
+        void _add_one_plugin(PluginT &&plugin) noexcept;
 
         using SystemFunc = std::function<void(ecs::Scene &, ecs::CommandBuffer &)>;
         using ScheduleMap = std::unordered_map<Schedule, std::vector<SystemFunc>>;

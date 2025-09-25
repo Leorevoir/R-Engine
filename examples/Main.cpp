@@ -5,8 +5,8 @@
 #include <R-Engine/ECS/Query.hpp>
 #include <R-Engine/Maths/Vec.hpp>
 #include <R-Engine/Plugins/DefaultPlugins.hpp>
-#include <R-Engine/Plugins/WindowPlugin.hpp>
 #include <R-Engine/Plugins/InputPlugin.hpp>
+#include <R-Engine/Plugins/WindowPlugin.hpp>
 #include <iostream>
 
 #include <cstdlib>
@@ -187,7 +187,7 @@ static void player_control_system(
     if (input_map.ptr->isActionPressed("HideCursor", *userInput.ptr)) {
         mutable_cursor->state = r::WindowCursorState::Hidden;
     }
-    
+
     //Show the cursor
     if (input_map.ptr->isActionPressed("ShowCursor", *userInput.ptr)) {
         mutable_cursor->state = r::WindowCursorState::Visible;
@@ -284,7 +284,8 @@ int main()
                     }
                 })
         )
-        .add_plugins(r::InputPlugin{})
+        /* Example of adding plugins separately */
+        /* .add_plugins(r::InputPlugin{}) */
 
         /* Insert global resources. These can be accessed by systems. */
         .insert_resource(Gravity{})

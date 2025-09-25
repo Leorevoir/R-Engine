@@ -24,6 +24,12 @@ struct R_ENGINE_API Resolver {
         Res<T> resolve(std::type_identity<Res<T>>);
 
         /**
+         * @brief ResMut<T>
+         */
+        template<typename T>
+        ResMut<T> resolve(std::type_identity<ResMut<T>>);
+
+        /**
         * @brief Commands
         */
         Commands resolve(std::type_identity<Commands>);

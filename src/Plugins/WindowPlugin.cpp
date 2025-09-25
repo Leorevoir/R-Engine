@@ -36,6 +36,39 @@ static void _init_window_system(r::ecs::Res<r::WindowPluginConfig> config)
     SetConfigFlags(config_flags);
     InitWindow(size.width, size.height, title.c_str());
     SetTargetFPS(fps);
+
+    switch (config.ptr->cursor) {
+        case r::WindowCursorState::Visible:
+            ShowCursor();
+            break;
+        case r::WindowCursorState::Hidden:
+            HideCursor();
+            break;
+        case r::WindowCursorState::Locked:
+            DisableCursor();
+            break;
+        default:
+            ShowCursor();
+            break;
+    }
+}
+
+static void _update_cursor_system(r::ecs::Res<r::Cursor> cursor)
+{
+    switch (cursor.ptr->state) {
+        case r::WindowCursorState::Visible:
+            ShowCursor();
+            break;
+        case r::WindowCursorState::Hidden:
+            HideCursor();
+            break;
+        case r::WindowCursorState::Locked:
+            DisableCursor();
+            break;
+        default:
+            ShowCursor();
+            break;
+    }
 }
 
 static void _update_window_system()
@@ -62,10 +95,14 @@ r::WindowPlugin::WindowPlugin(const WindowPluginConfig &config) : _config(config
 // clang-format off
 void r::WindowPlugin::build(r::Application &app)
 {
+    Cursor initial_cursor_state;
+    initial_cursor_state.state = _config.cursor;
+
     app
         .insert_resource(_config)
+        .insert_resource(initial_cursor_state)
         .add_systems(Schedule::STARTUP, _init_window_system)
-        .add_systems(Schedule::UPDATE, _update_window_system)
+        .add_systems(Schedule::UPDATE, _update_window_system, _update_cursor_system)
         .add_systems(Schedule::SHUTDOWN, _destroy_window_system);
 
     Logger::info("WindowPlugin built");

@@ -6,6 +6,8 @@
 #include <R-Engine/Maths/Vec.hpp>
 #include <R-Engine/Plugins/DefaultPlugins.hpp>
 #include <R-Engine/Plugins/WindowPlugin.hpp>
+#include <R-Engine/Plugins/InputPlugin.hpp>
+#include <iostream>
 
 #include <cstdlib>
 #include <ctime>
@@ -112,9 +114,10 @@ void spawn_entities_system(r::ecs::Commands &commands, r::ecs::Res<r::WindowPlug
 /**
  * @brief (UPDATE) Spawns a new ball on mouse click.
  */
-void spawn_on_click_system(r::ecs::Commands &commands)
+void spawn_on_click_system(r::ecs::Commands &commands, r::ecs::Res<r::UserInput> userInput,
+    r::ecs::Res<r::InputMap> input_map)
 {
-    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+    if (input_map.ptr->isActionPressed("LeftClick", *userInput.ptr)) {
         Vector2 mouse_pos = GetMousePosition();
         float radius = static_cast<float>((rand() % 15) + 5);
 
@@ -134,22 +137,43 @@ void spawn_on_click_system(r::ecs::Commands &commands)
 }
 
 /**
- * @brief (UPDATE) Moves the player entity based on keyboard input.
+ * @brief (UPDATE) Setup all inputs in the input_map
+ * @details This system adds inputs actions to a specific key
+ */
+static void setup_input_system(r::ecs::Res<r::InputMap> input_map) {
+    auto* mutable_map = const_cast<r::InputMap*>(input_map.ptr);
+
+    std::cout << "Binding actions to keys..." << std::endl;
+    mutable_map->bindAction("LeftClick", r::MOUSE, MOUSE_LEFT_BUTTON);
+    mutable_map->bindAction("MoveForward", r::KEYBOARD, KEY_W);
+    mutable_map->bindAction("MoveForward", r::KEYBOARD, KEY_UP);
+    mutable_map->bindAction("MoveBackward", r::KEYBOARD ,KEY_S);
+    mutable_map->bindAction("MoveLeft", r::KEYBOARD, KEY_A);
+    mutable_map->bindAction("MoveRight", r::KEYBOARD, KEY_D);
+    mutable_map->bindAction("HideCursor", r::KEYBOARD, KEY_H);
+    mutable_map->bindAction("ShowCursor", r::KEYBOARD, KEY_V);
+}
+
+
+/**
+ * @brief (UPDATE) Moves the player entity and modifiy the cursor based on keyboard input.
  * @details This system queries for the single entity that has both a `Velocity`
  * component and the `Controllable` marker component.
  */
-void player_control_system(r::ecs::Query<r::ecs::Mut<Velocity>, r::ecs::With<Controllable>> query)
+static void player_control_system(
+    r::ecs::Res<r::UserInput> userInput, r::ecs::Res<r::InputMap> input_map,
+    r::ecs::Res<r::Cursor> cursor, r::ecs::Query<r::ecs::Mut<Velocity>, r::ecs::With<Controllable>> query)
 {
     const float speed = 500.0f;
     for (auto [velocity, _] : query) {
         r::Vec2f direction = {0.0f, 0.0f};
-        if (IsKeyDown(KEY_W) || IsKeyDown(KEY_UP))
+        if (input_map.ptr->isActionPressed("MoveForward", *userInput.ptr))
             direction.y -= 1.0f;
-        if (IsKeyDown(KEY_S) || IsKeyDown(KEY_DOWN))
+        if (input_map.ptr->isActionPressed("MoveBackward", *userInput.ptr))
             direction.y += 1.0f;
-        if (IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT))
+        if (input_map.ptr->isActionPressed("MoveLeft", *userInput.ptr))
             direction.x -= 1.0f;
-        if (IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT))
+        if (input_map.ptr->isActionPressed("MoveRight", *userInput.ptr))
             direction.x += 1.0f;
 
         if (direction.length() > 0.0f) {
@@ -157,6 +181,16 @@ void player_control_system(r::ecs::Query<r::ecs::Mut<Velocity>, r::ecs::With<Con
         } else {
             velocity.ptr->value = {0.0f, 0.0f};
         }
+    }
+
+    auto* mutable_cursor = const_cast<r::Cursor*>(cursor.ptr);
+    if (input_map.ptr->isActionPressed("HideCursor", *userInput.ptr)) {
+        mutable_cursor->state = r::WindowCursorState::Hidden;
+    }
+    
+    //Show the cursor
+    if (input_map.ptr->isActionPressed("ShowCursor", *userInput.ptr)) {
+        mutable_cursor->state = r::WindowCursorState::Visible;
     }
 }
 
@@ -230,6 +264,8 @@ void render_system(r::ecs::Query<r::ecs::Ref<Position>, r::ecs::Ref<Circle>> que
     DrawFPS(10, 30);
 }
 
+// clang-format off
+
 int main()
 {
     /* Seed random number generator for varied colors and velocities. */
@@ -242,18 +278,20 @@ int main()
             r::DefaultPlugins{}
                 .set(r::WindowPlugin{
                     r::WindowPluginConfig{
-                        .size = {1280, 720},
-                        .title = "R-Engine: Bundle Spawn Demo",
+                        .size = {800, 600},
+                        .title = "Bevy Style Configuration!",
+                        .cursor = r::WindowCursorState::Visible,
                     }
                 })
         )
+        .add_plugins(r::InputPlugin{})
 
         /* Insert global resources. These can be accessed by systems. */
         .insert_resource(Gravity{})
 
         /* Add systems to the application schedule. */
         /* STARTUP systems run once at the beginning. */
-        .add_systems(r::Schedule::STARTUP, spawn_entities_system)
+        .add_systems(r::Schedule::STARTUP, spawn_entities_system, setup_input_system)
 
         /* UPDATE systems run once every frame for game logic and physics. */
         /* The order matters here: input -> physics -> movement. */

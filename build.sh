@@ -56,7 +56,7 @@ function _debug()
 function _tests_run()
 {
     _base_run "-DCMAKE_BUILD_TYPE=Debug -DENABLE_DEBUG=ON -DENABLE_TESTS=ON" "$UNIT_TESTS_NAME"
-    if ! ./$UNIT_TESTS_NAME; then 
+    if ! ./$UNIT_TESTS_NAME; then
         _error "unit tests error" "unit tests failed!"
     fi
     _success "unit tests succeed!"

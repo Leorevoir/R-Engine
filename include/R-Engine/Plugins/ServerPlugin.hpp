@@ -25,7 +25,7 @@ enum class ServerPluginProtocol : u16 {
 struct R_ENGINE_API ServerPluginConfig {
     std::optional<u16> port = std::nullopt;
     std::optional<std::array<u8, ip_bytes_len>> ip = std::nullopt;
-    ServerPluginProtocol settings = ServerPluginProtocol::DEFAULT;
+    ServerPluginProtocol protocol = ServerPluginProtocol::DEFAULT;
 };
 
 // clang-format on

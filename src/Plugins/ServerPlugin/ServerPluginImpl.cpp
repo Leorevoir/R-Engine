@@ -67,7 +67,7 @@ static std::string ipToStr(const std::array<u8, 16> &b)
 
     std::string out = os.str();
     if (out.empty())
-        out = "::";// covers the all-zero address
+        out = "::";
     return out;
 }
 
@@ -79,7 +79,7 @@ void r::ServerPluginImpl::start(const ecs::Res<ServerPluginConfig> config)
     }
     const rtype::network::Endpoint e{.ip = config.ptr->ip.value(), .port = config.ptr->port.value()};
     auto protocol = rtype::network::Protocol::UDP;
-    if (config.ptr->settings == ServerPluginProtocol::TCP) {
+    if (config.ptr->protocol == ServerPluginProtocol::TCP) {
         protocol = rtype::network::Protocol::TCP;
     }
     try {

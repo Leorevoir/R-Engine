@@ -21,6 +21,16 @@ struct Res {
 };
 
 /**
+ * @brief ResMut
+ * @info mutable global access to resource <T>
+ * example: modifying a global game state resource
+ */
+template<typename T>
+struct ResMut {
+        T *ptr = nullptr;
+};
+
+/**
  * @brief Mut
  * @info mutable access to component <T>
  * lets you write to a component (update position, change health...)
@@ -75,6 +85,10 @@ struct is_res : std::false_type {
 };
 
 template<typename>
+struct is_resmut : std::false_type {
+};
+
+template<typename>
 struct is_mut : std::false_type {
 };
 
@@ -96,6 +110,10 @@ struct is_optional : std::false_type {
 
 template<typename T>
 struct is_res<Res<T>> : std::true_type {
+};
+
+template<typename T>
+struct is_resmut<ResMut<T>> : std::true_type {
 };
 
 template<typename T>

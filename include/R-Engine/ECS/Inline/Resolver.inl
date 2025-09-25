@@ -21,6 +21,18 @@ r::ecs::Res<T> r::ecs::Resolver::resolve(std::type_identity<r::ecs::Res<T>>)
 }
 
 /**
+ * ResMut<T>
+ */
+template<typename T>
+r::ecs::ResMut<T> r::ecs::Resolver::resolve(std::type_identity<r::ecs::ResMut<T>>)
+{
+    r::ecs::ResMut<T> r;
+
+    r.ptr = _scene->get_resource_ptr<T>();
+    return r;
+}
+
+/**
  * Query<Wrappers...>
  */
 template<typename... Wrappers>
@@ -115,7 +127,7 @@ template<typename T>
 T r::ecs::Resolver::resolve(std::type_identity<T>)
 {
     static_assert(!std::is_same_v<T, T>,
-        "r::ecs::Resolver::resolve: Unsupported system parameter type. Use Res<T>, Query<...>, or Commands.");
+        "r::ecs::Resolver::resolve: Unsupported system parameter type. Use Res<T>, ResMut<T>, Query<...>, or Commands.");
     return T{};
 }
 

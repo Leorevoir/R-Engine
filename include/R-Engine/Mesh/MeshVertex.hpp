@@ -13,7 +13,7 @@ namespace r::mesh {
  *  - tangent
  *  - bitangent
  */
-struct Vertex {
+struct R_ENGINE_API Vertex {
     public:
         Vec3f position{};
         Vec3f normal{};

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <RTypeNet/Accept.hpp>
+#include <RTypeNet/Cleanup.hpp>
 #include <RTypeNet/Clock.hpp>
 #include <RTypeNet/Disconnect.hpp>
 #include <RTypeNet/Interfaces.hpp>
@@ -8,3 +9,4 @@
 #include <RTypeNet/Poll.hpp>
 #include <RTypeNet/Recv.hpp>
 #include <RTypeNet/Send.hpp>
+#include <RTypeNet/Startup.hpp>

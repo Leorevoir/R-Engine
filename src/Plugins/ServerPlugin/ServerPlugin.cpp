@@ -4,7 +4,7 @@
 
 #include "ServerPluginImpl.hpp"
 
-std::array<u8, r::ip_bytes_len> r::buildIpv4(const std::array<u8, 4> &b) noexcept
+R_ENGINE_API std::array<u8, r::ip_bytes_len> r::buildIpv4(const std::array<u8, 4> &b) noexcept
 {
     return {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, b[0], b[1], b[2], b[3]};
 }
@@ -22,15 +22,21 @@ void r::ServerPlugin::build(Application &app)
 
     app
         .insert_resource(_config)
-        .add_systems(Schedule::STARTUP, [impl](ecs::Res<ServerPluginConfig> config) {
-            impl->start(config);
-        })
-        .add_systems(Schedule::UPDATE, [impl]() {
-            impl->update();
-        })
-        .add_systems(Schedule::SHUTDOWN, [impl]() {
-            impl->stop();
-        });
+        .add_systems(Schedule::STARTUP,
+            [impl](ecs::Res<ServerPluginConfig> config) {
+                impl->start(config);
+            }
+        )
+        .add_systems(Schedule::UPDATE,
+            [impl]() {
+                impl->update();
+            }
+        )
+        .add_systems(Schedule::SHUTDOWN,
+            [impl]() {
+                impl->stop();
+            }
+        );
 
     Logger::info("Server Plugin built");
 }

@@ -27,7 +27,7 @@ static std::string ipToStr(const std::array<u8, 16> &b)
 
     u16 w[8];
     for (u8 i = 0; i < 8; ++i) {
-        w[i] = (static_cast<u16>(b[2 * i] << 8) | b[2 * i + 1]);
+        w[i] = (static_cast<u16>(b[2 * i] << 8) | b[static_cast<u16>(2 * i + 1)]);
     }
 
     int bestStart = -1, bestLen = 0;
@@ -73,6 +73,7 @@ static std::string ipToStr(const std::array<u8, 16> &b)
 
 void r::ServerPluginImpl::start(const ecs::Res<ServerPluginConfig> config)
 {
+    rtype::network::startup();
     if (!config.ptr->ip.has_value() || !config.ptr->port.has_value()) {
         throw exception::Error("ServerPluginImpl::start", "ServerPlugin requires both IP and port to be set in its configuration");
     }
@@ -99,10 +100,11 @@ void r::ServerPluginImpl::update()
 void r::ServerPluginImpl::stop() noexcept
 {
     for (auto &sock : _sockets | std::views::values) {
-        rtype::network::subplatform::disconnect(sock);
+        disconnect(sock);
     }
     _sockets.clear();
     disconnect(_serverSock);
     _running = false;
+    rtype::network::cleanup();
     Logger::info("Server stopped");
 }

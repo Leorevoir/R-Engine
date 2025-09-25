@@ -15,7 +15,7 @@ class R_ENGINE_LOCAL ServerPluginImpl final : public NonCopyable
 {
     public:
         constexpr explicit ServerPluginImpl() = default;
-        constexpr ~ServerPluginImpl() noexcept = default;
+        ~ServerPluginImpl() noexcept = default;
 
         void start(ecs::Res<ServerPluginConfig> config);
         void update();

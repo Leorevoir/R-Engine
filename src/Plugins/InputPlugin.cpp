@@ -1,3 +1,4 @@
+#include "R-Engine/ECS/Query.hpp"
 #include <R-Engine/Plugins/InputPlugin.hpp>
 #include <R-Engine/Application.hpp>
 #include <R-Engine/Core/Logger.hpp>
@@ -50,22 +51,20 @@ bool r::InputMap::isActionPressed(const std::string& action_name, const r::UserI
     return false;
 }
 
-static void input_system(r::ecs::Res<r::UserInput> userInput)
+static void input_system(r::ecs::ResMut<r::UserInput> userInput)
 {
-    auto* mutable_state = const_cast<r::UserInput*>(userInput.ptr);
-
-    mutable_state->keys_pressed.clear();
+    userInput.ptr->keys_pressed.clear();
     for (u16 key = FIRST_KEY; key < MAX_KEY; ++key) {
         if (IsKeyDown(key)) {
-            mutable_state->keys_pressed.insert(key);
+            userInput.ptr->keys_pressed.insert(key);
         }
     }
 
     /* 3 Because we count 3 buttons on the mouse */
-    mutable_state->mouse_buttons_pressed.clear();
+    userInput.ptr->mouse_buttons_pressed.clear();
     for (u16 button = 0; button < 3; ++button) {
         if (IsMouseButtonPressed(button)) {
-            mutable_state->mouse_buttons_pressed.insert(button);
+            userInput.ptr->mouse_buttons_pressed.insert(button);
         }
     }
 }

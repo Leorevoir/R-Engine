@@ -7,7 +7,7 @@
 
 u64 r::mesh::MeshData::vertex_count() const noexcept
 {
-    return positions.size();
+    return vertices.size();
 }
 
 u64 r::mesh::MeshData::triangle_count() const noexcept
@@ -29,61 +29,61 @@ r::mesh::MeshData r::mesh::MeshData::Cube() noexcept
     mesh.reserve_vertices(8);
     mesh.reserve_indices(36);
 
-    mesh.positions = {
-        Vec3f{-0.5f, -0.5f, -0.5f}, Vec3f{ 0.5f, -0.5f, -0.5f},
-        Vec3f{ 0.5f,  0.5f, -0.5f}, Vec3f{-0.5f,  0.5f, -0.5f},
-        Vec3f{-0.5f, -0.5f,  0.5f}, Vec3f{ 0.5f, -0.5f,  0.5f},
-        Vec3f{ 0.5f,  0.5f,  0.5f}, Vec3f{-0.5f,  0.5f,  0.5f}
+    mesh.vertices = {
+        Vertex{Vec3f{-0.5f, -0.5f, -0.5f}}, ///<< 0
+        Vertex{Vec3f{ 0.5f, -0.5f, -0.5f}}, ///<< 1
+        Vertex{Vec3f{ 0.5f,  0.5f, -0.5f}}, ///<< 2
+        Vertex{Vec3f{-0.5f,  0.5f, -0.5f}}, ///<< 3
+        Vertex{Vec3f{-0.5f, -0.5f,  0.5f}}, ///<< 4
+        Vertex{Vec3f{ 0.5f, -0.5f,  0.5f}}, ///<< 5
+        Vertex{Vec3f{ 0.5f,  0.5f,  0.5f}}, ///<< 6
+        Vertex{Vec3f{-0.5f,  0.5f,  0.5f}}  ///<< 7
     };
+
     mesh.indices = {
         0,1,2, 0,2,3, 4,6,5, 4,7,6,
         4,3,7, 4,0,3, 1,5,6, 1,6,2,
         4,1,0, 4,5,1, 3,2,6, 3,6,7
     };
-    mesh.topology = Topology::Triangles;
-    mesh.compute_normals();
 
-    mesh.uvs.resize(8);
+    mesh.topology = MeshData::Topology::Triangles;
+
     for (u8 i = 0; i < 8; ++i) {
-        mesh.uvs[i] = Vec2f{static_cast<f32>(i & 1), static_cast<f32>((i >> 1) & 1)};
+        mesh.vertices[i].uv = Vec2f{static_cast<f32>(i & 1), static_cast<f32>((i >> 1) & 1)};
     }
+
+    mesh.compute_normals();
+    mesh.compute_tangents();
+
     return mesh;
 }
 
 bool r::mesh::MeshData::valid() const noexcept
 {
-    if (positions.empty()) {
+    if (vertices.empty()) {
         return false;
     }
-
-    const auto indice_size = indices.size();
-    const auto position_size = positions.size();
+    const auto ic = indices.size();
 
     switch (topology) {
         case Topology::Triangles:
-            if (indice_size % 3 != 0) {
+            if (ic % 3u != 0u) {
                 return false;
             }
             break;
         case Topology::Lines:
-            if (indice_size % 2 != 0) {
+            if (ic % 2u != 0u) {
                 return false;
             }
             break;
         default:
             return false;
     }
-    if (!normals.empty() && normals.size() != position_size) {
-        return false;
-    }
-    if (!uvs.empty() && uvs.size() != position_size) {
-        return false;
-    }
-    if (!tangents.empty() && tangents.size() != position_size) {
-        return false;
-    }
-    for (u32 i = 0; i < indice_size; ++i) {
-        if (indices[i] >= position_size) {
+
+    const u64 vc = vertex_count();
+
+    for (u64 i = 0; i < ic; ++i) {
+        if (indices[i] >= vc) {
             return false;
         }
     }
@@ -92,7 +92,7 @@ bool r::mesh::MeshData::valid() const noexcept
 
 void r::mesh::MeshData::compute_normals() noexcept
 {
-    if (positions.empty() || indices.empty() || topology != Topology::Triangles) {
+    if (vertices.empty() || indices.empty() || topology != Topology::Triangles) {
         return;
     }
 
@@ -100,66 +100,20 @@ void r::mesh::MeshData::compute_normals() noexcept
     const u64 tc = triangle_count();
     const u64 ic = indices.size();
 
-    normals.assign(vc, Vec3f{0.f, 0.f, 0.f});
+    for (auto &v : vertices) {
+        v.normal = Vec3f{0.f, 0.f, 0.f};
+    }
 
+    /**
+    * @brief Newell's method for computing face normals
+    */
     for (u64 t = 0; t < tc; ++t) {
-        const u64 base_idx = 3 * t;
+        const u64 base_idx = 3u * t;
 
         if (base_idx + 2 >= ic) {
             break;
         }
 
-        const u32 i0 = indices[base_idx];
-        const u32 i1 = indices[base_idx + 1];
-        const u32 i2 = indices[base_idx + 2];
-
-        if (i0 >= vc || i1 >= vc || i2 >= vc) {
-            continue;
-        }
-
-        const Vec3f &A = positions[i0];
-        const Vec3f &B = positions[i1];
-        const Vec3f &C = positions[i2];
-
-        const Vec3f AB = B - A;
-        const Vec3f AC = C - A;
-        const Vec3f N = AB.cross(AC);
-
-        normals[i0] = normals[i0] + N;
-        normals[i1] = normals[i1] + N;
-        normals[i2] = normals[i2] + N;
-    }
-
-    /** @info normalize & handle zero-length normals */
-    for (auto &n : normals) {
-        const f32 len = n.length();
-
-        if (F32::equal(len, 0.f)) {
-            n = Vec3f{0.f, 1.f, 0.f};
-        } else {
-            n = n / len;
-        }
-    }
-}
-
-void r::mesh::MeshData::compute_tangents() noexcept
-{
-    if (positions.empty() || uvs.empty() || indices.empty() || topology != Topology::Triangles) {
-        return;
-    }
-
-    if (normals.size() != positions.size()) {
-        compute_normals();
-    }
-
-    const u64 vc = vertex_count();
-    const u64 tc = triangle_count();
-
-    tangents.assign(static_cast<size_t>(vc), Vec3f{0.f, 0.f, 0.f});
-    bitangents.assign(static_cast<size_t>(vc), Vec3f{0.f, 0.f, 0.f});
-
-    for (u64 t = 0; t < tc; ++t) {
-        const u64 base_idx = 3ull * t;
         const u32 i0 = indices[base_idx + 0];
         const u32 i1 = indices[base_idx + 1];
         const u32 i2 = indices[base_idx + 2];
@@ -168,13 +122,64 @@ void r::mesh::MeshData::compute_tangents() noexcept
             continue;
         }
 
-        const Vec3f &v0 = positions[i0];
-        const Vec3f &v1 = positions[i1];
-        const Vec3f &v2 = positions[i2];
+        const Vec3f &A = vertices[i0].position;
+        const Vec3f &B = vertices[i1].position;
+        const Vec3f &C = vertices[i2].position;
 
-        const Vec2f &uv0 = uvs[i0];
-        const Vec2f &uv1 = uvs[i1];
-        const Vec2f &uv2 = uvs[i2];
+        const Vec3f AB = B - A;
+        const Vec3f AC = C - A;
+        const Vec3f N = AB.cross(AC);
+
+        vertices[i0].normal = vertices[i0].normal + N;
+        vertices[i1].normal = vertices[i1].normal + N;
+        vertices[i2].normal = vertices[i2].normal + N;
+    }
+
+    for (auto &v : vertices) {
+        const f32 len = v.normal.length();
+
+        if (F32::equal(len, 0.f)) {
+            v.normal = Vec3f{0.f, 1.f, 0.f};
+        } else {
+            v.normal = v.normal / len;
+        }
+    }
+
+}
+
+void r::mesh::MeshData::compute_tangents() noexcept
+{
+    if (vertices.empty() || indices.empty() || topology != Topology::Triangles) {
+        return;
+    }
+
+    compute_normals();
+
+    const u64 vc = vertex_count();
+    const u64 tc = triangle_count();
+
+    for (auto &v : vertices) {
+        v.tangent = Vec3f{0.f, 0.f, 0.f};
+        v.bitangent = Vec3f{0.f, 0.f, 0.f};
+    }
+
+    for (u64 t = 0; t < tc; ++t) {
+        const u64 base_idx = 3u * t;
+        const u32 i0 = indices[base_idx + 0];
+        const u32 i1 = indices[base_idx + 1];
+        const u32 i2 = indices[base_idx + 2];
+
+        if (i0 >= vc || i1 >= vc || i2 >= vc) {
+            continue;
+        }
+
+        const Vec3f &v0 = vertices[i0].position;
+        const Vec3f &v1 = vertices[i1].position;
+        const Vec3f &v2 = vertices[i2].position;
+
+        const Vec2f &uv0 = vertices[i0].uv;
+        const Vec2f &uv1 = vertices[i1].uv;
+        const Vec2f &uv2 = vertices[i2].uv;
 
         const Vec3f E1 = v1 - v0;
         const Vec3f E2 = v2 - v0;
@@ -200,41 +205,41 @@ void r::mesh::MeshData::compute_tangents() noexcept
         bitangent.y = f * (-Duv2.x * E1.y + Duv1.x * E2.y);
         bitangent.z = f * (-Duv2.x * E1.z + Duv1.x * E2.z);
 
-        tangents[static_cast<size_t>(i0)] += tangent;
-        tangents[static_cast<size_t>(i1)] += tangent;
-        tangents[static_cast<size_t>(i2)] += tangent;
+        vertices[i0].tangent = vertices[i0].tangent + tangent;
+        vertices[i1].tangent = vertices[i1].tangent + tangent;
+        vertices[i2].tangent = vertices[i2].tangent + tangent;
 
-        bitangents[static_cast<size_t>(i0)] += bitangent;
-        bitangents[static_cast<size_t>(i1)] += bitangent;
-        bitangents[static_cast<size_t>(i2)] += bitangent;
+        vertices[i0].bitangent = vertices[i0].bitangent + bitangent;
+        vertices[i1].bitangent = vertices[i1].bitangent + bitangent;
+        vertices[i2].bitangent = vertices[i2].bitangent + bitangent;
     }
 
-    /** @brief Gram-Schmidt orthogonalization & normalization for tangents */
+    /**
+    * @brief Gram-Schmidt orthogonalization & normalization
+    */
     for (u64 i = 0; i < vc; ++i) {
-        Vec3f &t = tangents[static_cast<size_t>(i)];
-        const Vec3f &n = normals[static_cast<size_t>(i)];
+        Vec3f &t = vertices[static_cast<size_t>(i)].tangent;
+        const Vec3f &n = vertices[static_cast<size_t>(i)].normal;
 
         const f32 ndot = n.dot(t);
-        Vec3f ortho = t - n * ndot;
+        const Vec3f ortho = t - n * ndot;
         const f32 len = ortho.length();
 
         if (F32::equal(len, 0.f) == false) {
             t = ortho / len;
-
         } else {
             const Vec3f up = (std::fabs(n.y) < 0.999f) ? Vec3f{0.f, 1.f, 0.f} : Vec3f{1.f, 0.f, 0.f};
 
             t = n.cross(up);
-
             const f32 tlen = t.length();
 
             if (F32::equal(tlen, 0.f) == false) {
                 t = t / tlen;
             } else {
-                t = Vec3f{1.f, 0.f, 0.f}; ///<< last resort but should never happen
+                t = Vec3f{1.f, 0.f, 0.f};
             }
         }
-    }
+}
 }
 
 void r::mesh::MeshData::fill_flat_buffers(std::vector<f32> &out_positions, std::vector<f32> &out_normals, std::vector<f32> &out_uvs) const
@@ -249,47 +254,25 @@ void r::mesh::MeshData::fill_flat_buffers(std::vector<f32> &out_positions, std::
     f32 *norm_ptr = out_normals.data();
     f32 *uv_ptr = out_uvs.data();
 
-    const bool has_normals = (normals.size() == vc);
-    const bool has_uvs = (uvs.size() == vc);
-
     for (u64 i = 0; i < vc; ++i) {
-        const Vec3f &pos = positions[i];
+        const auto &v = vertices[i];
 
-        *pos_ptr++ = pos.x;
-        *pos_ptr++ = pos.y;
-        *pos_ptr++ = pos.z;
+        *pos_ptr++ = v.position.x;
+        *pos_ptr++ = v.position.y;
+        *pos_ptr++ = v.position.z;
 
-        if (has_normals) {
-            const Vec3f &norm = normals[i];
+        *norm_ptr++ = v.normal.x;
+        *norm_ptr++ = v.normal.y;
+        *norm_ptr++ = v.normal.z;
 
-            *norm_ptr++ = norm.x;
-            *norm_ptr++ = norm.y;
-            *norm_ptr++ = norm.z;
-
-        } else {
-            *norm_ptr++ = 0.f;
-            *norm_ptr++ = 0.f;
-            *norm_ptr++ = 0.f;
-        }
-
-        if (has_uvs) {
-            const Vec2f &uv = uvs[i];
-
-            *uv_ptr++ = uv.x;
-            *uv_ptr++ = uv.y;
-
-        } else {
-            *uv_ptr++ = 0.f;
-            *uv_ptr++ = 0.f;
-        }
+        *uv_ptr++ = v.uv.x;
+        *uv_ptr++ = v.uv.y;
     }
 }
 
 void r::mesh::MeshData::reserve_vertices(const u64 count) noexcept
 {
-    positions.reserve(count);
-    normals.reserve(count);
-    uvs.reserve(count);
+    vertices.reserve(count);
 }
 
 void r::mesh::MeshData::reserve_indices(const u64 count) noexcept

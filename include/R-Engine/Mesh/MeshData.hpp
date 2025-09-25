@@ -1,6 +1,6 @@
 #pragma once
 
-#include <R-Engine/Maths/Vec.hpp>
+#include <R-Engine/Mesh/MeshVertex.hpp>
 
 #include <vector>
 
@@ -10,10 +10,7 @@ namespace r::mesh {
 * @brief CPU side mesh data representation:
 *
 *   - vertices
-*   - normals
-*   - uvs
 *   - indices
-*   - tanents
 *
 * @details
 *   - compute_normals() -> fills `normals` from `positions` and `indices`
@@ -23,12 +20,8 @@ namespace r::mesh {
 struct MeshData {
 
     public:
-        std::vector<Vec3f> positions;
-        std::vector<Vec3f> normals;
-        std::vector<Vec2f> uvs;
+        std::vector<Vertex> vertices;
         std::vector<u32> indices;
-        std::vector<Vec3f> tangents;
-        std::vector<Vec3f> bitangents;
 
         enum class Topology { Triangles, Lines } topology = Topology::Triangles;
         static constexpr float Invalid = std::numeric_limits<float>::quiet_NaN();

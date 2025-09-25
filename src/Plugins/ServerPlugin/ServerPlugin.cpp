@@ -4,6 +4,11 @@
 
 #include "ServerPluginImpl.hpp"
 
+std::array<u8, r::ip_bytes_len> r::buildIpv4(const std::array<u8, 4> &b) noexcept
+{
+    return {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, b[0], b[1], b[2], b[3]};
+}
+
 r::ServerPlugin::ServerPlugin(const ServerPluginConfig &config) : _config(config)
 {
     /* ctor */

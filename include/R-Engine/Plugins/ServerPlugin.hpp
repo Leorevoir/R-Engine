@@ -9,9 +9,11 @@
 
 namespace r {
 
-static constexpr u8 ip_bytes_len = 16;
+inline constexpr u8 ip_bytes_len = 16;
 
 // clang-format off
+
+std::array<u8, ip_bytes_len> buildIpv4(const std::array<u8, 4> &b) noexcept;
 
 enum class ServerPluginProtocol : u16 {
     TCP     = 1 << 0,

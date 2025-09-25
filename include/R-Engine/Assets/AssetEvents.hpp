@@ -4,7 +4,7 @@
 
 #include <vector>
 
-namespace r {
+namespace r::assets {
 
 /**
 * @brief AssetEvent is used to notify the system about changes to assets
@@ -48,4 +48,4 @@ struct AssetEvents {
 
 #include "Inline/AssetEvents.inl"
 
-}// namespace r
+}// namespace r::assets

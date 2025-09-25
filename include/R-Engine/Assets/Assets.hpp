@@ -11,7 +11,7 @@ template<typename T>
 class Assets
 {
     public:
-        using HandleT = Handle<T>;
+        using HandleT = assets::Handle<T>;
         using HandleId = typename HandleT::IdType;
 
         Assets() = default;

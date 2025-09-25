@@ -146,6 +146,8 @@ using Mat4u = Mat4<u32>;
 * helper functions for 4x4f
 */
 
+namespace mat {
+
 /**
 * @brief creates a translation matrix
 * @param t translation vector
@@ -235,6 +237,8 @@ inline R_ENGINE_API Mat4f rotation_y(const f32 angle);
 *        ○─────→ z (rotation axis)
 */
 inline R_ENGINE_API Mat4f rotation_z(const f32 angle);
+
+}// namespace mat
 
 #include "Inline/Mat.inl"
 

@@ -111,7 +111,7 @@ Test(Mat, equality_operator)
 Test(Mat, translation_matrix)
 {
     constexpr r::Vec3f t{2.0f, 3.0f, 4.0f};
-    constexpr r::Mat4f trans_mat = r::translation(t);
+    constexpr r::Mat4f trans_mat = r::mat::translation(t);
 
     cr_expect_eq(trans_mat(0, 0), 1.0f);
     cr_expect_eq(trans_mat(1, 1), 1.0f);
@@ -133,7 +133,7 @@ Test(Mat, translation_matrix)
 Test(Mat, scale_matrix)
 {
     constexpr r::Vec3f s{2.0f, 3.0f, 4.0f};
-    constexpr r::Mat4f scale_mat = r::scale(s);
+    constexpr r::Mat4f scale_mat = r::mat::scale(s);
 
     cr_expect_eq(scale_mat(0, 0), 2.0f);
     cr_expect_eq(scale_mat(1, 1), 3.0f);
@@ -164,7 +164,7 @@ std::ostream &operator<<(std::ostream &os, const r::Mat4f &mat)
 Test(Mat, rotation_x_matrix)
 {
     constexpr f32 angle = M_PI / 2.0f;
-    const r::Mat4f rot_mat = r::rotation_x(angle);
+    const r::Mat4f rot_mat = r::mat::rotation_x(angle);
 
     cr_expect_float_eq(rot_mat(0, 0), 1.0f, 1e-6f);
     cr_expect_float_eq(rot_mat(1, 1), 0.0f, 1e-6f);
@@ -185,7 +185,7 @@ Test(Mat, rotation_x_matrix)
 Test(Mat, rotation_y_matrix)
 {
     constexpr f32 angle = M_PI / 2.0f;
-    const r::Mat4f rot_mat = r::rotation_y(angle);
+    const r::Mat4f rot_mat = r::mat::rotation_y(angle);
 
     cr_expect_float_eq(rot_mat(0, 0), 0.0f, 1e-6f);
     cr_expect_float_eq(rot_mat(0, 2), 1.0f, 1e-6f);
@@ -206,7 +206,7 @@ Test(Mat, rotation_y_matrix)
 Test(Mat, rotation_z_matrix)
 {
     constexpr f32 angle = M_PI / 2.0f;
-    const r::Mat4f rot_mat = r::rotation_z(angle);
+    const r::Mat4f rot_mat = r::mat::rotation_z(angle);
 
     cr_expect_float_eq(rot_mat(0, 0), 0.0f, 1e-6f);
     cr_expect_float_eq(rot_mat(0, 1), -1.0f, 1e-6f);
@@ -227,9 +227,9 @@ Test(Mat, rotation_z_matrix)
 Test(Mat, composition)
 {
 
-    constexpr r::Mat4f translate = r::translation(r::Vec3f{1.0f, 2.0f, 3.0f});
-    constexpr r::Mat4f scale_mat = r::scale(r::Vec3f{2.0f, 2.0f, 2.0f});
-    const r::Mat4f rotate = r::rotation_z(M_PI / 2.0f);
+    constexpr r::Mat4f translate = r::mat::translation(r::Vec3f{1.0f, 2.0f, 3.0f});
+    constexpr r::Mat4f scale_mat = r::mat::scale(r::Vec3f{2.0f, 2.0f, 2.0f});
+    const r::Mat4f rotate = r::mat::rotation_z(M_PI / 2.0f);
 
     const r::Mat4f composite = rotate * scale_mat * translate;
 

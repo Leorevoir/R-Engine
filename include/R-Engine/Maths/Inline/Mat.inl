@@ -132,7 +132,7 @@ constexpr bool Mat<N, T>::operator==(const Mat &other) const
  * public mat 4x4f helpers implementation
  */
 
-constexpr inline Mat4f translation(const Vec3f &t)
+constexpr inline Mat4f mat::translation(const Vec3f &t)
 {
     Mat4f m = Mat4f::identity();
     m(0, 3) = t.data[0];
@@ -141,7 +141,7 @@ constexpr inline Mat4f translation(const Vec3f &t)
     return m;
 }
 
-constexpr inline Mat4f scale(const Vec3f &s)
+constexpr inline Mat4f mat::scale(const Vec3f &s)
 {
     Mat4f m{};
 
@@ -152,7 +152,7 @@ constexpr inline Mat4f scale(const Vec3f &s)
     return m;
 }
 
-inline Mat4f rotation_x(const f32 angle)
+inline Mat4f mat::rotation_x(const f32 angle)
 {
     Mat4f m = Mat4f::identity();
     const f32 c = std::cos(angle), s = std::sin(angle);
@@ -164,7 +164,7 @@ inline Mat4f rotation_x(const f32 angle)
     return m;
 }
 
-inline Mat4f rotation_y(const f32 angle)
+inline Mat4f mat::rotation_y(const f32 angle)
 {
     Mat4f m = Mat4f::identity();
     const f32 c = std::cos(angle), s = std::sin(angle);
@@ -176,7 +176,7 @@ inline Mat4f rotation_y(const f32 angle)
     return m;
 }
 
-inline Mat4f rotation_z(const f32 angle)
+inline Mat4f mat::rotation_z(const f32 angle)
 {
     Mat4f m = Mat4f::identity();
     const f32 c = std::cos(angle), s = std::sin(angle);

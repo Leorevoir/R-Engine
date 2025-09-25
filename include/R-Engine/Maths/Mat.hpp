@@ -4,6 +4,7 @@
 #include <R-Engine/Maths/Vec.hpp>
 #include <R-Engine/R-EngineExport.hpp>
 
+#include <cassert>
 #include <initializer_list>
 
 namespace r {
@@ -47,9 +48,9 @@ using Mat3 = Mat<3, T>;
 template<typename T>
 using Mat4 = Mat<4, T>;
 
-using Mat2f = Mat2<const f32>;
-using Mat3f = Mat3<const f32>;
-using Mat4f = Mat4<const f32>;
+using Mat2f = Mat2<f32>;
+using Mat3f = Mat3<f32>;
+using Mat4f = Mat4<f32>;
 
 using Mat2d = Mat2<f64>;
 using Mat3d = Mat3<f64>;
@@ -83,20 +84,19 @@ constexpr inline R_ENGINE_API Mat4f scale(const r::Vec3f &s);
 * @brief creates a rotation matrix around the X axis
 * @param angle angle in radians
 */
-
-constexpr inline R_ENGINE_API Mat4f rotation_x(const f32 angle);
-
-/**
-* @brief creates a rotation matrix around the X axis
-* @param angle angle in radians
-*/
-constexpr inline R_ENGINE_API Mat4f rotation_y(const f32 angle);
+inline R_ENGINE_API Mat4f rotation_x(const f32 angle);
 
 /**
-* @brief creates a rotation matrix around the X axis
+* @brief creates a rotation matrix around the Y axis
 * @param angle angle in radians
 */
-constexpr inline R_ENGINE_API Mat4f rotation_z(const f32 angle);
+inline R_ENGINE_API Mat4f rotation_y(const f32 angle);
+
+/**
+* @brief creates a rotation matrix around the Z axis
+* @param angle angle in radians
+*/
+inline R_ENGINE_API Mat4f rotation_z(const f32 angle);
 
 #include "Inline/Mat.inl"
 

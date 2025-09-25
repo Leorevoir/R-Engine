@@ -1,8 +1,11 @@
 #pragma once
 
+#include <cassert>
+#include <cmath>
+
 /**
-* public Mat struct implementation
-*/
+ * public Mat struct implementation
+ */
 
 template<usize N, typename T>
     requires concepts::Vec<N, T>
@@ -28,7 +31,7 @@ template<usize N, typename T>
     requires concepts::Vec<N, T>
 constexpr T &Mat<N, T>::operator()(usize r, usize c)
 {
-    static_assert(r < N && c < N, "Matrix indices out of bounds");
+    assert(r < N && c < N && "Matrix indices out of bounds");
     return data[r * N + c];
 }
 
@@ -36,7 +39,7 @@ template<usize N, typename T>
     requires concepts::Vec<N, T>
 constexpr const T &Mat<N, T>::operator()(usize r, usize c) const
 {
-    static_assert(r < N && c < N, "Matrix indices out of bounds");
+    assert(r < N && c < N && "Matrix indices out of bounds");
     return data[r * N + c];
 }
 
@@ -126,15 +129,15 @@ constexpr bool Mat<N, T>::operator==(const Mat &other) const
 }
 
 /**
-* public mat 4x4f helpers implementation
-*/
+ * public mat 4x4f helpers implementation
+ */
 
 constexpr inline Mat4f translation(const Vec3f &t)
 {
     Mat4f m = Mat4f::identity();
-    m(0, 3) = t.x;
-    m(1, 3) = t.y;
-    m(2, 3) = t.z;
+    m(0, 3) = t.data[0];
+    m(1, 3) = t.data[1];
+    m(2, 3) = t.data[2];
     return m;
 }
 
@@ -142,9 +145,9 @@ constexpr inline Mat4f scale(const Vec3f &s)
 {
     Mat4f m{};
 
-    m(0, 0) = s.x;
-    m(1, 1) = s.y;
-    m(2, 2) = s.z;
+    m(0, 0) = s.data[0];
+    m(1, 1) = s.data[1];
+    m(2, 2) = s.data[2];
     m(3, 3) = 1.0f;
     return m;
 }

@@ -285,7 +285,7 @@ int main()
                 })
         )
         /* Example of adding plugins separately */
-        /* .add_plugins(r::InputPlugin{}) */
+        /* .add_plugins(r::InputPlugin{}, r::RenderPlugin{}, r::WindowPlugin{}) */
 
         /* Insert global resources. These can be accessed by systems. */
         .insert_resource(Gravity{})

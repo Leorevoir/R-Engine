@@ -284,7 +284,7 @@ int main()
                     }
                 })
         )
-        .add_plugins<r::InputPlugin>() 
+        .add_plugins(r::InputPlugin{})
 
         /* Insert global resources. These can be accessed by systems. */
         .insert_resource(Gravity{})

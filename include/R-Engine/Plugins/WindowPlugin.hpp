@@ -44,7 +44,7 @@ struct R_ENGINE_API WindowPluginConfig {
     u8 antialiasing_samples_count = 1;
 };
 
-struct Cursor {
+struct R_ENGINE_API Cursor {
     WindowCursorState state = WindowCursorState::Visible;
 };
 

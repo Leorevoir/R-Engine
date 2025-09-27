@@ -239,6 +239,9 @@ using Vec4d = Vec4<f64>;
 using Vec4i = Vec4<i32>;
 using Vec4u = Vec4<u32>;
 
+using Vec4u8 = Vec4<u8>;
+using Color = Vec4u8;
+
 }// namespace r
 
 #include "Inline/Vec.inl"

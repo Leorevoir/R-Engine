@@ -8,7 +8,7 @@
 namespace r {
 
 template<typename T>
-class Assets
+class R_ENGINE_API Assets final
 {
     public:
         using HandleT = assets::Handle<T>;

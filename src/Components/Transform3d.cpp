@@ -1,15 +1,15 @@
-#include <R-Engine/Maths/Transform.hpp>
+#include <R-Engine/Components/Components3d.hpp>
 
 /**
 * public
 */
 
-r::Transform r::Transform::Identity() noexcept
+r::Transform3d r::Transform3d::Identity() noexcept
 {
-    return Transform{};
+    return Transform3d{};
 }
 
-r::Mat4f r::Transform::to_matrix() const noexcept
+r::Mat4f r::Transform3d::to_matrix() const noexcept
 {
     const Mat4f mat_scale = r::mat::scale(scale);///<< S
 

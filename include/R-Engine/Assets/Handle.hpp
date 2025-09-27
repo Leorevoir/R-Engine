@@ -5,7 +5,7 @@
 namespace r::assets {
 
 template<typename T>
-class Handle
+class R_ENGINE_API Handle
 {
     public:
         using IdType = u32;

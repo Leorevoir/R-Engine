@@ -5,8 +5,8 @@
 #include <R-Engine/ECS/Query.hpp>
 #include <R-Engine/Maths/Vec.hpp>
 #include <R-Engine/Plugins/DefaultPlugins.hpp>
-#include <R-Engine/Plugins/WindowPlugin.hpp>
 #include <R-Engine/Plugins/InputPlugin.hpp>
+#include <R-Engine/Plugins/WindowPlugin.hpp>
 #include <iostream>
 
 #include <cstdlib>
@@ -140,8 +140,8 @@ void spawn_on_click_system(r::ecs::Commands &commands, r::ecs::Res<r::UserInput>
  * @brief (UPDATE) Setup all inputs in the input_map
  * @details This system adds inputs actions to a specific key
  */
-static void setup_input_system(r::ecs::Res<r::InputMap> input_map) {
-    auto* mutable_map = const_cast<r::InputMap*>(input_map.ptr);
+static void setup_input_system(r::ecs::ResMut<r::InputMap> input_map) {
+    auto* mutable_map = input_map.ptr;
 
     std::cout << "Binding actions to keys..." << std::endl;
     mutable_map->bindAction("LeftClick", r::MOUSE, MOUSE_LEFT_BUTTON);
@@ -162,7 +162,7 @@ static void setup_input_system(r::ecs::Res<r::InputMap> input_map) {
  */
 static void player_control_system(
     r::ecs::Res<r::UserInput> userInput, r::ecs::Res<r::InputMap> input_map,
-    r::ecs::Res<r::Cursor> cursor, r::ecs::Query<r::ecs::Mut<Velocity>, r::ecs::With<Controllable>> query)
+    r::ecs::ResMut<r::Cursor> cursor, r::ecs::Query<r::ecs::Mut<Velocity>, r::ecs::With<Controllable>> query)
 {
     const float speed = 500.0f;
     for (auto [velocity, _] : query) {
@@ -183,7 +183,7 @@ static void player_control_system(
         }
     }
 
-    auto* mutable_cursor = const_cast<r::Cursor*>(cursor.ptr);
+    auto* mutable_cursor = cursor.ptr;
     if (input_map.ptr->isActionPressed("HideCursor", *userInput.ptr)) {
         mutable_cursor->state = r::WindowCursorState::Hidden;
     }

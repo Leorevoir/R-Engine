@@ -1,66 +1,107 @@
 #pragma once
 
 #include "R-Engine/ECS/Scene.hpp"
-
-/**
-* Scene Implementation
-*/
+#include <algorithm>
 
 template<typename T>
-r::ecs::ComponentStorage<T> &r::ecs::Scene::storage() noexcept
+void r::ecs::Scene::add_component(Entity e, T comp)
 {
-    const auto key = std::type_index(typeid(T));
-    const auto it = _storages.find(key);
+    auto loc_it = _entity_locations.find(e);
+    if (loc_it == _entity_locations.end())
+        return;
 
-    if (it == _storages.end()) {
-        auto ptr = std::make_unique<ComponentStorage<T>>();
-        ComponentStorage<T> *raw = ptr.get();
+    auto &loc = loc_it->second;
+    const usize old_archetype_idx = loc.archetype_index;
+    const std::type_index comp_type = typeid(T);
 
-        _storages.emplace(key, std::move(ptr));
-        return *raw;
+    /** If the component already exists, just update it. */
+    if (_archetypes[old_archetype_idx].has_component(comp_type)) {
+        Archetype &arch = _archetypes[old_archetype_idx];
+        *static_cast<T *>(arch.table.columns[arch.component_map.at(comp_type)]->get_ptr(loc.table_row)) = std::move(comp);
+        return;
     }
-    return *static_cast<ComponentStorage<T> *>(_storages[key].get());
+
+    /** --- Find or Create Destination Archetype (this may reallocate _archetypes) --- */
+    usize new_archetype_idx;
+    auto edge_it = _archetypes[old_archetype_idx].add_edge.find(comp_type);
+
+    if (edge_it != _archetypes[old_archetype_idx].add_edge.end()) {
+        new_archetype_idx = edge_it->second;
+    } else {
+        auto new_types = _archetypes[old_archetype_idx].component_types;
+        new_types.push_back(comp_type);
+        std::sort(new_types.begin(), new_types.end());
+        new_archetype_idx = _find_or_create_archetype(new_types);
+        _archetypes[old_archetype_idx].add_edge[comp_type] = new_archetype_idx;
+        _archetypes[new_archetype_idx].remove_edge[comp_type] = old_archetype_idx;
+    }
+
+    /** --- Move entity and common components to the new archetype --- */
+    _move_entity_between_archetypes(e, loc, new_archetype_idx);
+
+    /** --- Add the new component to the new location --- */
+    Archetype &new_archetype = _archetypes[new_archetype_idx];
+    const usize new_comp_col_idx = new_archetype.component_map.at(comp_type);
+    if (!new_archetype.table.columns[new_comp_col_idx]) {
+        new_archetype.table.columns[new_comp_col_idx] = std::make_unique<Column<T>>();
+    }
+    new_archetype.table.columns[new_comp_col_idx]->push_back(std::move(comp));
 }
 
 template<typename T>
-void r::ecs::Scene::add_component(Entity e, T comp) noexcept
+void r::ecs::Scene::remove_component(Entity e)
 {
-    storage<T>().add(e, std::move(comp));
+    auto loc_it = _entity_locations.find(e);
+    if (loc_it == _entity_locations.end()) return;
+
+    auto &loc = loc_it->second;
+    const usize old_archetype_idx = loc.archetype_index;
+    const std::type_index comp_type = typeid(T);
+
+    if (!_archetypes[old_archetype_idx].has_component(comp_type)) return;
+
+    /** --- Find or Create Destination Archetype (this may reallocate _archetypes) --- */
+    usize new_archetype_idx;
+    auto edge_it = _archetypes[old_archetype_idx].remove_edge.find(comp_type);
+
+    if (edge_it != _archetypes[old_archetype_idx].remove_edge.end()) {
+        new_archetype_idx = edge_it->second;
+    } else {
+        auto new_types = _archetypes[old_archetype_idx].component_types;
+        new_types.erase(std::remove(new_types.begin(), new_types.end(), comp_type), new_types.end());
+        new_archetype_idx = _find_or_create_archetype(new_types);
+        _archetypes[old_archetype_idx].remove_edge[comp_type] = new_archetype_idx;
+        _archetypes[new_archetype_idx].add_edge[comp_type] = old_archetype_idx;
+    }
+
+    /** --- Move entity and common components to the new archetype --- */
+    _move_entity_between_archetypes(e, loc, new_archetype_idx);
 }
 
 template<typename T>
-void r::ecs::Scene::remove_component(Entity e) noexcept
+T *r::ecs::Scene::get_component_ptr(Entity e)
 {
-    const auto key = std::type_index(typeid(T));
-    const auto it = _storages.find(key);
+    const auto *loc = get_entity_location(e);
+    if (!loc) return nullptr;
 
-    if (it != _storages.end()) {
-        it->second->remove(e);
-    }
+    const Archetype &archetype = _archetypes[loc->archetype_index];
+    const std::type_index comp_type = typeid(T);
+
+    auto comp_it = archetype.component_map.find(comp_type);
+    if (comp_it == archetype.component_map.end()) return nullptr;
+
+    const usize col_idx = comp_it->second;
+    return static_cast<T *>(archetype.table.columns[col_idx]->get_ptr(loc->table_row));
 }
 
 template<typename T>
-T *r::ecs::Scene::get_component_ptr(Entity e) noexcept
+bool r::ecs::Scene::has_component(Entity e) const
 {
-    const auto key = std::type_index(typeid(T));
-    const auto it = _storages.find(key);
+    const auto *loc = get_entity_location(e);
+    if (!loc) return false;
 
-    if (it == _storages.end()) {
-        return nullptr;
-    }
-    return static_cast<ComponentStorage<T> *>(it->second.get())->get_ptr(e);
-}
-
-template<typename T>
-bool r::ecs::Scene::has_component(Entity e) const noexcept
-{
-    const auto key = std::type_index(typeid(T));
-    const auto it = _storages.find(key);
-
-    if (it == _storages.end()) {
-        return false;
-    }
-    return it->second->has(e);
+    const Archetype &archetype = _archetypes[loc->archetype_index];
+    return archetype.has_component(typeid(T));
 }
 
 template<typename T>

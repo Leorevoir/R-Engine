@@ -39,7 +39,6 @@ void r::Application::Application::run()
             _run_schedule(Schedule::FIXED_UPDATE);
             _apply_commands();
         }
-
         _run_schedule(Schedule::RENDER);
     }
 

@@ -1,5 +1,6 @@
 #include <R-Engine/Plugins/DefaultPlugins.hpp>
 
+#include <R-Engine/Plugins/InputPlugin.hpp>
 #include <R-Engine/Plugins/RenderPlugin.hpp>
 #include <R-Engine/Plugins/WindowPlugin.hpp>
 
@@ -13,6 +14,7 @@ r::DefaultPlugins::DefaultPlugins()
 {
     add<WindowPlugin>();
     add<RenderPlugin>();
+    add<InputPlugin>();
 }
 
 void r::DefaultPlugins::build(r::Application &app)

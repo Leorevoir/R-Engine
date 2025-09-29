@@ -253,38 +253,41 @@ void spawn_ui_menu_system(r::ecs::Commands &commands, r::ecs::Res<r::WindowPlugi
     const float center_x = (screen_width - btn_size.x) * 0.5f;
     float start_y = screen_height * 0.5f - 80.f; // first button y
 
-    // Play button (no action yet)
-    commands.spawn(
-        r::UiButton{},
-        r::UiButtonState{},
-        r::UiOriginalColor{ 90, 140, 255, 255 },
-        r::UiColor{ 90, 140, 255, 255 },
-        r::UiRectSize{ btn_size },
-        r::UiPosition{ { center_x, start_y } },
-        r::UiBorderRadius{ 18.f },
-        r::UiBorderThickness{ 3.f },
-        r::UiBorderColor{ 30, 50, 120, 255 },
-        r::UiZIndex{ 11 },
-        r::UiText{ .value = "Play", .size = 32 },
-        r::UiTextColor{ 255, 255, 255, 255 }
-    );
+    /* Play button via bundle helper */
+    {
+        r::UiButtonBundle play_bundle{};
+    play_bundle.text.value = "Play";
+    play_bundle.original_color = {90,140,255,255};
+    play_bundle.color = {play_bundle.original_color.r, play_bundle.original_color.g, play_bundle.original_color.b, play_bundle.original_color.a};
+        play_bundle.rect.size = btn_size;
+        r::spawn_ui_button(commands, play_bundle, r::UiPosition{{center_x, start_y}});
+    }
 
-    // Quit button (adds UiOnClickQuit to trigger Application::quit)
-    commands.spawn(
-        r::UiButton{},
-        r::UiButtonState{},
-        r::UiOriginalColor{ 200, 60, 80, 255 },
-        r::UiColor{ 200, 60, 80, 255 },
-        r::UiRectSize{ btn_size },
-        r::UiPosition{ { center_x, start_y + btn_size.y + 30.f } },
-        r::UiBorderRadius{ 18.f },
-        r::UiBorderThickness{ 3.f },
-        r::UiBorderColor{ 90, 20, 30, 255 },
-        r::UiZIndex{ 11 },
-        r::UiOnClickQuit{},
-        r::UiText{ .value = "Quit", .size = 32 },
-        r::UiTextColor{ 255, 255, 255, 255 }
-    );
+    /* Quit button via bundle helper + explicit quit action */
+    {
+        r::UiButtonBundle quit_bundle{};
+    quit_bundle.text.value = "Quit";
+    quit_bundle.original_color = {200,60,80,255};
+    quit_bundle.color = {quit_bundle.original_color.r, quit_bundle.original_color.g, quit_bundle.original_color.b, quit_bundle.original_color.a};
+        quit_bundle.border = {90,20,30,255};
+        quit_bundle.rect.size = btn_size;
+        auto e = r::spawn_ui_button(commands, quit_bundle, r::UiPosition{{center_x, start_y + btn_size.y + 30.f}});
+        /* Add the quit action component */
+        commands.entity(e).insert(r::UiOnClickQuit{});
+    }
+}
+
+/* ========================================================================== */
+/* (UPDATE) Example consumer of the UiClickEvents bus                         */
+/* ========================================================================== */
+void ui_click_events_logger(r::ecs::Res<r::UiClickEvents> events)
+{
+    for (const auto &ev : events.ptr->events) {
+        if (ev.type == r::UiClickEventType::Quit) {
+            /* Simple demonstration: log to raylib trace (could use engine logger) */
+            TraceLog(LOG_INFO, "[UI] Quit button clicked (label=%s)", ev.label.c_str());
+        }
+    }
 }
 
 int main()
@@ -320,7 +323,8 @@ int main()
             player_control_system,
             apply_gravity_system,
             move_system,
-            bounce_system
+            bounce_system,
+            ui_click_events_logger /* placed after UI plugin systems so events are populated */
         )
 
         /* RENDER systems run after UPDATE systems for drawing. */

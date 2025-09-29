@@ -1,31 +1,46 @@
-#include <R-Engine/Plugins/UIPlugin.hpp>
+/* New refactored UiPlugin implementation inspired by Bevy's UiPlugin layout. */
+/* We split responsibilities into: interaction update, visual style (color */
+/* transitions), action handling (quit), and rendering. We keep previous */
+/* behavior while introducing UiInteraction + UiPendingQuit resource. */
 
+#include <R-Engine/Plugins/UIPlugin.hpp>
 #include <R-Engine/Application.hpp>
 #include <R-Engine/ECS/Query.hpp>
 #include <R-Engine/Core/FrameTime.hpp>
-
-#include <raylib.h>
+#include <R-Engine/Core/Backend.hpp>
 #include <algorithm>
+#include <cstring>
 
-using namespace r;
+namespace r {
 
-static bool _ui_pending_quit_active = false;
-static float _ui_pending_quit_timer = 0.f;
+/* ---------------------------------------------------------------------------- */
+/* Rendering helpers (unchanged logic, reorganized)                          */
+/* ---------------------------------------------------------------------------- */
 
-struct _UiRenderableText { ecs::Entity e; UiPosition *pos; UiText *text; UiTextColor *color; UiZIndex *z; UiRectSize *rect_size; };
-struct _UiRenderableRect { ecs::Entity e; UiPosition *pos; UiRectSize *size; UiColor *color; UiBorderColor *border_color; UiBorderThickness *border_thickness; UiBorderRadius *radius; UiZIndex *z; };
+struct _UiRenderableText { UiPosition *pos; UiText *text; UiTextColor *color; UiZIndex *z; UiRectSize *rect_size; };
+struct _UiRenderableRect { UiPosition *pos; UiRectSize *size; UiColor *color; UiBorderColor *border_color; UiBorderThickness *border_thickness; UiBorderRadius *radius; UiZIndex *z; };
 
-static void _render_ui_text(ecs::Query<ecs::Mut<UiText>, ecs::Mut<UiPosition>, ecs::Ref<UiTextColor>, ecs::Optional<UiZIndex>, ecs::Optional<UiRectSize>> q)
+/* --- helpers: generic sorting by z --------------------------------------- */
+template<typename T>
+static void _ui_sort_by_z(std::vector<T> &items)
 {
-    std::vector<_UiRenderableText> items;
-    for (auto [text_w, pos_w, col_w, z_w, rect_w] : q) {
-        items.push_back({0, pos_w.ptr, text_w.ptr, const_cast<UiTextColor *>(col_w.ptr), const_cast<UiZIndex *>(z_w.ptr), const_cast<UiRectSize *>(rect_w.ptr)});
-    }
-    std::sort(items.begin(), items.end(), [] (const _UiRenderableText &a, const _UiRenderableText &b) {
+    std::sort(items.begin(), items.end(), [] (const T &a, const T &b) {
         const i32 za = a.z ? a.z->value : 0;
         const i32 zb = b.z ? b.z->value : 0;
         return za < zb;
     });
+}
+
+/* --- text helpers --------------------------------------------------------- */
+static void _ui_collect_text_items(ecs::Query<ecs::Mut<UiText>, ecs::Mut<UiPosition>, ecs::Ref<UiTextColor>, ecs::Optional<UiZIndex>, ecs::Optional<UiRectSize>> &q, std::vector<_UiRenderableText> &out)
+{
+    for (auto [text_w, pos_w, col_w, z_w, rect_w] : q) {
+        out.push_back({pos_w.ptr, text_w.ptr, const_cast<UiTextColor *>(col_w.ptr), const_cast<UiZIndex *>(z_w.ptr), const_cast<UiRectSize *>(rect_w.ptr)});
+    }
+}
+
+static void _ui_draw_text_items(const std::vector<_UiRenderableText> &items)
+{
     for (auto &it : items) {
         const Color c = {it.color->r, it.color->g, it.color->b, it.color->a};
         float draw_x = it.pos->pos.x;
@@ -40,17 +55,24 @@ static void _render_ui_text(ecs::Query<ecs::Mut<UiText>, ecs::Mut<UiPosition>, e
     }
 }
 
-static void _render_ui_rect(ecs::Query<ecs::Mut<UiRectSize>, ecs::Mut<UiPosition>, ecs::Ref<UiColor>, ecs::Optional<UiBorderColor>, ecs::Optional<UiBorderThickness>, ecs::Optional<UiBorderRadius>, ecs::Optional<UiZIndex>> q)
+static void _ui_render_text_system(ecs::Query<ecs::Mut<UiText>, ecs::Mut<UiPosition>, ecs::Ref<UiTextColor>, ecs::Optional<UiZIndex>, ecs::Optional<UiRectSize>> q)
 {
-    std::vector<_UiRenderableRect> items;
+    std::vector<_UiRenderableText> items; items.reserve(64);
+    _ui_collect_text_items(q, items);
+    _ui_sort_by_z(items);
+    _ui_draw_text_items(items);
+}
+
+/* --- rect helpers --------------------------------------------------------- */
+static void _ui_collect_rect_items(ecs::Query<ecs::Mut<UiRectSize>, ecs::Mut<UiPosition>, ecs::Ref<UiColor>, ecs::Optional<UiBorderColor>, ecs::Optional<UiBorderThickness>, ecs::Optional<UiBorderRadius>, ecs::Optional<UiZIndex>> &q, std::vector<_UiRenderableRect> &out)
+{
     for (auto [size_w, pos_w, col_w, bcol_w, bthick_w, radius_w, z_w] : q) {
-        items.push_back({0, pos_w.ptr, size_w.ptr, const_cast<UiColor *>(col_w.ptr), const_cast<UiBorderColor *>(bcol_w.ptr), const_cast<UiBorderThickness *>(bthick_w.ptr), const_cast<UiBorderRadius *>(radius_w.ptr), const_cast<UiZIndex *>(z_w.ptr)});
+        out.push_back({pos_w.ptr, size_w.ptr, const_cast<UiColor *>(col_w.ptr), const_cast<UiBorderColor *>(bcol_w.ptr), const_cast<UiBorderThickness *>(bthick_w.ptr), const_cast<UiBorderRadius *>(radius_w.ptr), const_cast<UiZIndex *>(z_w.ptr)});
     }
-    std::sort(items.begin(), items.end(), [] (const _UiRenderableRect &a, const _UiRenderableRect &b) {
-        const i32 za = a.z ? a.z->value : 0;
-        const i32 zb = b.z ? b.z->value : 0;
-        return za < zb;
-    });
+}
+
+static void _ui_draw_rect_items(const std::vector<_UiRenderableRect> &items)
+{
     for (auto &it : items) {
         const Rectangle rect = {it.pos->pos.x, it.pos->pos.y, it.size->size.x, it.size->size.y};
         const Color c = {it.color->r, it.color->g, it.color->b, it.color->a};
@@ -72,104 +94,198 @@ static void _render_ui_rect(ecs::Query<ecs::Mut<UiRectSize>, ecs::Mut<UiPosition
     }
 }
 
-static void _ui_button_interaction(ecs::Query<ecs::Mut<UiPosition>, ecs::Mut<UiRectSize>, ecs::Mut<UiColor>, ecs::Optional<UiButton>, ecs::Optional<UiButtonState>, ecs::Optional<UiOriginalColor>, ecs::Optional<UiOnClickQuit>> q, ecs::Res<UiTheme> theme)
+static void _ui_render_rect_system(ecs::Query<ecs::Mut<UiRectSize>, ecs::Mut<UiPosition>, ecs::Ref<UiColor>, ecs::Optional<UiBorderColor>, ecs::Optional<UiBorderThickness>, ecs::Optional<UiBorderRadius>, ecs::Optional<UiZIndex>> q)
 {
-    const Vector2 mouse = GetMousePosition();
-    const bool mouse_down = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
+    std::vector<_UiRenderableRect> items; items.reserve(64);
+    _ui_collect_rect_items(q, items);
+    _ui_sort_by_z(items);
+    _ui_draw_rect_items(items);
+}
+
+/* ---------------------------------------------------------------------------- */
+/* Interaction system (updates UiButtonState & UiInteraction)                  */
+/* ---------------------------------------------------------------------------- */
+
+struct _UiPointerState { Vector2 pos; bool down; bool pressed; bool released; };
+
+static _UiPointerState _ui_pointer_state()
+{
+    return { GetMousePosition(), IsMouseButtonDown(MOUSE_BUTTON_LEFT), IsMouseButtonPressed(MOUSE_BUTTON_LEFT), IsMouseButtonReleased(MOUSE_BUTTON_LEFT) };
+}
+
+static void _ui_process_one_interaction(const _UiPointerState &ptr, UiPosition *pos, UiRectSize *size, UiButtonState *legacy, UiInteraction *interaction)
+{
+    const Rectangle rect = {pos->pos.x, pos->pos.y, size->size.x, size->size.y};
+    const bool inside = ptr.pos.x >= rect.x && ptr.pos.x <= rect.x + rect.width && ptr.pos.y >= rect.y && ptr.pos.y <= rect.y + rect.height;
+    bool hovered = inside;
+    bool pressed_logic = false;
+    if (legacy) {
+        legacy->hovered = hovered;
+        if (inside && ptr.pressed) legacy->pressed = true;
+        if (legacy->pressed && ptr.released) legacy->pressed = false;
+        if (!ptr.down && !inside && !legacy->hovered) legacy->pressed = false;
+        pressed_logic = legacy->pressed && inside && ptr.down;
+    } else {
+        pressed_logic = inside && ptr.down;
+    }
+    if (interaction) {
+        if (pressed_logic) interaction->state = UiInteractionState::Pressed;
+        else if (hovered) interaction->state = UiInteractionState::Hovered;
+        else interaction->state = UiInteractionState::None;
+    }
+}
+
+static void _ui_interaction_system(ecs::Query<ecs::Mut<UiPosition>, ecs::Mut<UiRectSize>, ecs::Optional<UiButton>, ecs::Optional<UiButtonState>, ecs::Optional<UiInteraction>> q)
+{
+    const _UiPointerState ptr = _ui_pointer_state();
+    for (auto [pos_w, size_w, button_w, state_w, interaction_w] : q) {
+        if (!button_w.ptr) continue;
+        if (!state_w.ptr && !interaction_w.ptr) continue;
+        _ui_process_one_interaction(ptr, pos_w.ptr, size_w.ptr, const_cast<UiButtonState *>(state_w.ptr), const_cast<UiInteraction *>(interaction_w.ptr));
+    }
+}
+
+/* ---------------------------------------------------------------------------- */
+/* Visual style (color transitions) - adapted from previous button logic      */
+/* ---------------------------------------------------------------------------- */
+
+static unsigned char _ui_lerp_u8(unsigned char from, unsigned char to, f32 spd)
+{
+    f32 f = static_cast<f32>(from);
+    f32 t = static_cast<f32>(to);
+    f32 v = f + (t - f) * std::clamp(spd * 0.016f, 0.f, 1.f);
+    return static_cast<unsigned char>(std::clamp(static_cast<int>(v), 0, 255));
+}
+
+static void _ui_apply_hover_flash(UiColor *col, const UiOriginalColor *orig, bool hovered, bool pressed, bool just_pressed, const UiTheme *theme)
+{
+    const f32 target_dark_factor = 1.f - std::clamp(theme->hover_dark_percent, 0.f, 0.95f);
+    const f32 flash_factor = 1.f + std::clamp(theme->flash_percent, 0.f, 1.f);
+    const int dark_r = static_cast<int>(orig->r * target_dark_factor);
+    const int dark_g = static_cast<int>(orig->g * target_dark_factor);
+    const int dark_b = static_cast<int>(orig->b * target_dark_factor);
+    const int flash_r = static_cast<int>(std::min<f32>(255.f, orig->r * flash_factor));
+    const int flash_g = static_cast<int>(std::min<f32>(255.f, orig->g * flash_factor));
+    const int flash_b = static_cast<int>(std::min<f32>(255.f, orig->b * flash_factor));
+    if (hovered && !pressed) {
+        col->r = _ui_lerp_u8(col->r, static_cast<unsigned char>(dark_r), theme->hover_speed);
+        col->g = _ui_lerp_u8(col->g, static_cast<unsigned char>(dark_g), theme->hover_speed);
+        col->b = _ui_lerp_u8(col->b, static_cast<unsigned char>(dark_b), theme->hover_speed);
+    } else if (!pressed) {
+        col->r = _ui_lerp_u8(col->r, orig->r, theme->restore_speed);
+        col->g = _ui_lerp_u8(col->g, orig->g, theme->restore_speed);
+        col->b = _ui_lerp_u8(col->b, orig->b, theme->restore_speed);
+    }
+    if (hovered && just_pressed) {
+        col->r = _ui_lerp_u8(col->r, static_cast<unsigned char>(flash_r), theme->flash_speed);
+        col->g = _ui_lerp_u8(col->g, static_cast<unsigned char>(flash_g), theme->flash_speed);
+        col->b = _ui_lerp_u8(col->b, static_cast<unsigned char>(flash_b), theme->flash_speed);
+    }
+}
+
+static void _ui_button_color_system(ecs::Query<ecs::Mut<UiColor>, ecs::Ref<UiOriginalColor>, ecs::Optional<UiButtonState>, ecs::Optional<UiInteraction>> q, ecs::Res<UiTheme> theme)
+{
     const bool mouse_pressed = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
-    const bool mouse_released = IsMouseButtonReleased(MOUSE_BUTTON_LEFT);
-
-    for (auto [pos_w, size_w, color_w, button_w, state_w, original_w, quit_w] : q) {
-        if (!button_w.ptr) {
-            continue;
-        }
-        UiButtonState *state = nullptr;
-        if (!state_w.ptr) {
-            continue;
-        } else {
-            state = const_cast<UiButtonState *>(state_w.ptr);
-        }
-        UiOriginalColor *orig = nullptr;
-        if (original_w.ptr) {
-            orig = const_cast<UiOriginalColor *>(original_w.ptr);
-        } else {
-        }
-        const Rectangle rect = {pos_w.ptr->pos.x, pos_w.ptr->pos.y, size_w.ptr->size.x, size_w.ptr->size.y};
-        const bool inside = mouse.x >= rect.x && mouse.x <= rect.x + rect.width && mouse.y >= rect.y && mouse.y <= rect.y + rect.height;
-        state->hovered = inside;
-        if (inside && mouse_pressed) {
-            state->pressed = true;
-        }
-        if (state->pressed && mouse_released) {
-            if (inside && quit_w.ptr) {
-                if (theme.ptr->quit_delay <= 0.f) {
-                    r::Application::quit = true;
-                } else {
-                    _ui_pending_quit_timer = theme.ptr->quit_delay;
-                    _ui_pending_quit_active = true;
-                }
-            }
-            state->pressed = false;
-        }
-        if (!mouse_down && !inside && !state->hovered) {
-            state->pressed = false;
-        }
-
-        if (orig) {
-            const f32 target_dark_factor = 1.f - std::clamp(theme.ptr->hover_dark_percent, 0.f, 0.95f);
-            const f32 flash_factor = 1.f + std::clamp(theme.ptr->flash_percent, 0.f, 1.f);
-            const f32 hover_speed = theme.ptr->hover_speed;
-            const f32 restore_speed = theme.ptr->restore_speed;
-            const f32 flash_speed = theme.ptr->flash_speed;
-
-            auto lerp_u8 = [] (unsigned char from, unsigned char to, f32 spd) {
-                f32 f = static_cast<f32>(from);
-                f32 t = static_cast<f32>(to);
-                f32 v = f + (t - f) * std::clamp(spd * 0.016f, 0.f, 1.f);
-                return static_cast<unsigned char>(std::clamp(static_cast<int>(v), 0, 255));
-            };
-
-            const int dark_r = static_cast<int>(orig->r * target_dark_factor);
-            const int dark_g = static_cast<int>(orig->g * target_dark_factor);
-            const int dark_b = static_cast<int>(orig->b * target_dark_factor);
-            const int flash_r = static_cast<int>(std::min<f32>(255.f, orig->r * flash_factor));
-            const int flash_g = static_cast<int>(std::min<f32>(255.f, orig->g * flash_factor));
-            const int flash_b = static_cast<int>(std::min<f32>(255.f, orig->b * flash_factor));
-
-            if (state->hovered && !state->pressed) {
-                color_w.ptr->r = lerp_u8(color_w.ptr->r, static_cast<unsigned char>(dark_r), hover_speed);
-                color_w.ptr->g = lerp_u8(color_w.ptr->g, static_cast<unsigned char>(dark_g), hover_speed);
-                color_w.ptr->b = lerp_u8(color_w.ptr->b, static_cast<unsigned char>(dark_b), hover_speed);
-            } else if (!state->hovered && !state->pressed) {
-                color_w.ptr->r = lerp_u8(color_w.ptr->r, orig->r, restore_speed);
-                color_w.ptr->g = lerp_u8(color_w.ptr->g, orig->g, restore_speed);
-                color_w.ptr->b = lerp_u8(color_w.ptr->b, orig->b, restore_speed);
-            }
-
-            if (inside && mouse_pressed) {
-                color_w.ptr->r = lerp_u8(color_w.ptr->r, static_cast<unsigned char>(flash_r), flash_speed);
-                color_w.ptr->g = lerp_u8(color_w.ptr->g, static_cast<unsigned char>(flash_g), flash_speed);
-                color_w.ptr->b = lerp_u8(color_w.ptr->b, static_cast<unsigned char>(flash_b), flash_speed);
-            }
-        }
+    for (auto [color_w, original_w, state_w, interaction_w] : q) {
+        const UiOriginalColor *orig = original_w.ptr;
+        const UiButtonState *legacy = state_w.ptr;
+        const UiInteraction *interaction = interaction_w.ptr;
+        bool hovered = false, pressed = false;
+        if (legacy) { hovered = legacy->hovered; pressed = legacy->pressed; }
+        if (interaction) { hovered = hovered || interaction->state == UiInteractionState::Hovered || interaction->state == UiInteractionState::Pressed; pressed = pressed || interaction->state == UiInteractionState::Pressed; }
+        _ui_apply_hover_flash(color_w.ptr, orig, hovered, pressed, mouse_pressed, theme.ptr);
     }
 }
 
-static void _ui_quit_delay_system(ecs::Res<core::FrameTime> ft)
+/* ---------------------------------------------------------------------------- */
+/* Action system (quit button)                                                */
+/* ---------------------------------------------------------------------------- */
+
+static void _ui_button_action_system(ecs::Query<ecs::Ref<UiButton>, ecs::Optional<UiOnClickQuit>, ecs::Optional<UiButtonState>, ecs::Optional<UiInteraction>> q,
+                                     ecs::Res<UiTheme> theme, ecs::Res<UiPendingQuit> pending, ecs::Res<UiClickEvents> events)
 {
-    if (_ui_pending_quit_active) {
-        _ui_pending_quit_timer -= ft.ptr->delta_time;
-        if (_ui_pending_quit_timer <= 0.f) {
-            r::Application::quit = true;
-            _ui_pending_quit_active = false;
+    const bool mouse_released = IsMouseButtonReleased(MOUSE_BUTTON_LEFT);
+    for (auto [button_w, quit_w, state_w, interaction_w] : q) {
+        if (!quit_w.ptr) continue; /* only interested in quit buttons here */
+
+        bool trigger = false;
+        if (state_w.ptr) {
+            /* Legacy: a release inside while previously pressed */
+            /* (Interaction release detection already covered by state machine above) */
+            trigger = mouse_released && state_w.ptr->hovered; /* approximate previous logic */
+        }
+        if (interaction_w.ptr) {
+            /* If interaction was pressed and mouse released inside (approx). We only have current state, so rely on release + hovered. */
+            if (mouse_released && (interaction_w.ptr->state == UiInteractionState::Hovered || interaction_w.ptr->state == UiInteractionState::Pressed)) {
+                trigger = true;
+            }
+        }
+
+        if (trigger) {
+            if (theme.ptr->quit_delay <= 0.f) {
+                r::Application::quit = true;
+            } else {
+                auto *res = const_cast<UiPendingQuit *>(pending.ptr);
+                res->active = true;
+                res->timer = theme.ptr->quit_delay;
+            }
+            /* Emit click event (Quit type) */
+            auto *ev = const_cast<UiClickEvents *>(events.ptr);
+            ev->events.push_back(UiClickEvent{UiClickEventType::Quit, "Quit"});
         }
     }
 }
+
+static void _ui_pending_quit_system(ecs::Res<core::FrameTime> ft, ecs::Res<UiPendingQuit> pending)
+{
+    if (pending.ptr->active) {
+        auto *res = const_cast<UiPendingQuit *>(pending.ptr);
+        res->timer -= ft.ptr->delta_time;
+        if (res->timer <= 0.f) {
+            r::Application::quit = true;
+            res->active = false;
+        }
+    }
+}
+
+/* ---------------------------------------------------------------------------- */
+/* Event clear system (runs each frame before interactions)                     */
+/* ---------------------------------------------------------------------------- */
+static void _ui_click_events_clear_system(ecs::Res<UiClickEvents> events)
+{
+    auto *ev = const_cast<UiClickEvents *>(events.ptr);
+    ev->events.clear();
+}
+
+/* ---------------------------------------------------------------------------- */
+/* Layout stub system (placeholder - no hierarchy logic yet)                   */
+/* ---------------------------------------------------------------------------- */
+static void _ui_layout_stub_system(ecs::Query<ecs::Mut<UiPosition>, ecs::Optional<UiNode>> q)
+{
+    /* Intentionally does nothing for now; positions remain as authored. */
+    (void)q;
+}
+
+/* ---------------------------------------------------------------------------- */
+/* Plugin build                                                               */
+/* ---------------------------------------------------------------------------- */
 
 void UiPlugin::build(Application &app)
 {
     app
         .insert_resource(UiTheme{})
-        .add_systems(Schedule::UPDATE, _ui_button_interaction, _ui_quit_delay_system)
-        .add_systems(Schedule::RENDER, _render_ui_rect, _render_ui_text);
+        .insert_resource(UiPendingQuit{})
+        .insert_resource(UiClickEvents{})
+        /* Update: interaction, visuals, action, delayed quit */
+        .add_systems(Schedule::UPDATE,
+            _ui_click_events_clear_system,
+            _ui_layout_stub_system,
+            _ui_interaction_system,
+            _ui_button_color_system,
+            _ui_button_action_system,
+            _ui_pending_quit_system)
+        /* Render */
+        .add_systems(Schedule::RENDER, _ui_render_rect_system, _ui_render_text_system);
 }
+
+} /* namespace r */

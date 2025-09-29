@@ -6,7 +6,7 @@ ILC="\033[3m"
 ORG="\033[1;33m"
 RST="\033[0m"
 
-PROGRAM_NAME="r-engine r-engine__example"
+PROGRAM_NAME="r-engine examples"
 UNIT_TESTS_NAME="unit_tests"
 
 function _error()
@@ -56,7 +56,7 @@ function _debug()
 function _tests_run()
 {
     _base_run "-DCMAKE_BUILD_TYPE=Debug -DENABLE_DEBUG=ON -DENABLE_TESTS=ON" "$UNIT_TESTS_NAME"
-    if ! ./$UNIT_TESTS_NAME; then 
+    if ! ./$UNIT_TESTS_NAME; then
         _error "unit tests error" "unit tests failed!"
     fi
     _success "unit tests succeed!"
@@ -71,7 +71,7 @@ function _clean()
 function _fclean()
 {
     _clean
-    rm -rf $PROGRAM_NAME $UNIT_TESTS_NAME plugins code_coverage.txt $UNIT_TESTS_NAME-*.profraw $UNIT_TESTS_NAME.profdata vgcore* cmake-build-debug *.a libr*
+    rm -rf r-engine r-engine__* $UNIT_TESTS_NAME plugins code_coverage.txt $UNIT_TESTS_NAME-*.profraw $UNIT_TESTS_NAME.profdata vgcore* cmake-build-debug *.a libr*
 }
 
 for args in "$@"

@@ -27,49 +27,29 @@ r::Application &r::Application::add_systems(Schedule when, Funcs &&...funcs) noe
     return *this;
 }
 
-// clang-format on
-
 template<typename ResT>
 r::Application &r::Application::insert_resource(ResT res) noexcept
 {
     _scene.insert_resource<ResT>(std::move(res));
     return *this;
 }
+// clang-format on
 
 template<typename PluginT>
-r::Application &r::Application::add_plugins(PluginT &&plugin) noexcept
+void r::Application::_add_one_plugin(PluginT &&plugin) noexcept
 {
     using DecayedPluginT = std::decay_t<PluginT>;
+
     if constexpr (std::is_base_of_v<Plugin, DecayedPluginT> || std::is_base_of_v<PluginGroup, DecayedPluginT>) {
         plugin.build(*this);
     } else {
-        static_assert(always_false<PluginT>, "Argument must be a Plugin or PluginGroup instance.");
+        static_assert(always_false<PluginT>, "Arguments to add_plugins must be instances of r::Plugin or r::PluginGroup.");
     }
-    return *this;
 }
 
-template<typename PluginT, typename... Args>
-r::Application &r::Application::add_plugins(Args &&...args) noexcept
+template<typename... Plugins>
+r::Application &r::Application::add_plugins(Plugins &&...plugins) noexcept
 {
-    if constexpr (std::is_base_of_v<Plugin, PluginT>) {
-        PluginT plugin{std::forward<Args>(args)...};
-        plugin.build(*this);
-    } else if constexpr (std::is_base_of_v<PluginGroup, PluginT>) {
-        PluginT group{std::forward<Args>(args)...};
-        group.build(*this);
-    } else {
-        static_assert(always_false<PluginT>, "PluginT must be a Plugin or a PluginGroup");
-    }
-    return *this;
-}
-
-template<typename PluginT1, typename PluginT2, typename... Rest>
-r::Application &r::Application::add_plugins() noexcept
-{
-    add_plugins<PluginT1>();
-    add_plugins<PluginT2>();
-    if constexpr (sizeof...(Rest) > 0) {
-        add_plugins<Rest...>();
-    }
+    (_add_one_plugin(std::forward<Plugins>(plugins)), ...);
     return *this;
 }

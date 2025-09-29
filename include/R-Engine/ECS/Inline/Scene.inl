@@ -31,62 +31,21 @@ void r::ecs::Scene::add_component(Entity e, T comp)
         auto new_types = _archetypes[old_archetype_idx].component_types;
         new_types.push_back(comp_type);
         std::sort(new_types.begin(), new_types.end());
-
-        auto arch_it = _archetype_map.find(new_types);
-        if (arch_it != _archetype_map.end()) {
-            new_archetype_idx = arch_it->second;
-        } else {
-            new_archetype_idx = _archetypes.size();
-            auto &new_arch = _archetypes.emplace_back();
-            new_arch.component_types = new_types;
-            for (size_t i = 0; i < new_types.size(); ++i) {
-                new_arch.component_map[new_types[i]] = i;
-            }
-            _archetype_map[new_types] = new_archetype_idx;
-        }
-        /** Get a fresh reference after potential emplace_back */
+        new_archetype_idx = _find_or_create_archetype(new_types);
         _archetypes[old_archetype_idx].add_edge[comp_type] = new_archetype_idx;
         _archetypes[new_archetype_idx].remove_edge[comp_type] = old_archetype_idx;
     }
 
-    /** --- Get fresh references now that the vector is stable --- */
-    Archetype &old_archetype = _archetypes[old_archetype_idx];
+    /** --- Move entity and common components to the new archetype --- */
+    _move_entity_between_archetypes(e, loc, new_archetype_idx);
+
+    /** --- Add the new component to the new location --- */
     Archetype &new_archetype = _archetypes[new_archetype_idx];
-    Table &old_table = old_archetype.table;
-    Table &new_table = new_archetype.table;
-
-    /** --- Move The Entity and its Components --- */
-    const usize new_row = new_table.add_entity(e);
-    if (new_table.columns.empty()) {
-        new_table.columns.resize(new_archetype.component_types.size());
-    }
-
-    /** Move existing components */
-    for (size_t i = 0; i < old_archetype.component_types.size(); ++i) {
-        const auto &type_idx = old_archetype.component_types[i];
-        const usize new_col_idx = new_archetype.component_map.at(type_idx);
-        if (!new_table.columns[new_col_idx]) {
-            new_table.columns[new_col_idx] = old_table.columns[i]->clone_empty();
-        }
-        old_table.columns[i]->move_to(loc.table_row, *new_table.columns[new_col_idx]);
-    }
-
-    /** Add the new component */
     const usize new_comp_col_idx = new_archetype.component_map.at(comp_type);
-    if (!new_table.columns[new_comp_col_idx]) {
-        new_table.columns[new_comp_col_idx] = std::make_unique<Column<T>>();
+    if (!new_archetype.table.columns[new_comp_col_idx]) {
+        new_archetype.table.columns[new_comp_col_idx] = std::make_unique<Column<T>>();
     }
-    new_table.columns[new_comp_col_idx]->push_back(std::move(comp));
-
-    /** Clean up the old table */
-    Entity swapped_entity = old_table.remove_entity_swap_back(loc.table_row);
-
-    /** Update entity locations */
-    loc.archetype_index = new_archetype_idx;
-    loc.table_row = new_row;
-    if (swapped_entity != 0) {
-        _entity_locations.at(swapped_entity).table_row = loc.table_row;
-    }
+    new_archetype.table.columns[new_comp_col_idx]->push_back(std::move(comp));
 }
 
 template<typename T>
@@ -110,56 +69,13 @@ void r::ecs::Scene::remove_component(Entity e)
     } else {
         auto new_types = _archetypes[old_archetype_idx].component_types;
         new_types.erase(std::remove(new_types.begin(), new_types.end(), comp_type), new_types.end());
-
-        auto arch_it = _archetype_map.find(new_types);
-        if (arch_it != _archetype_map.end()) {
-            new_archetype_idx = arch_it->second;
-        } else {
-            new_archetype_idx = _archetypes.size();
-            auto &new_arch = _archetypes.emplace_back();
-            new_arch.component_types = new_types;
-            for (size_t i = 0; i < new_types.size(); ++i) {
-                new_arch.component_map[new_types[i]] = i;
-            }
-            _archetype_map[new_types] = new_archetype_idx;
-        }
-
-        /** Get fresh references after potential emplace_back */
+        new_archetype_idx = _find_or_create_archetype(new_types);
         _archetypes[old_archetype_idx].remove_edge[comp_type] = new_archetype_idx;
         _archetypes[new_archetype_idx].add_edge[comp_type] = old_archetype_idx;
     }
 
-    /** --- Get fresh references now that the vector is stable --- */
-    Archetype &old_archetype = _archetypes[old_archetype_idx];
-    Archetype &new_archetype = _archetypes[new_archetype_idx];
-    Table &old_table = old_archetype.table;
-    Table &new_table = new_archetype.table;
-
-    /** --- Move The Entity and its Components --- */
-    const usize new_row = new_table.add_entity(e);
-    if (new_table.columns.empty()) {
-        new_table.columns.resize(new_archetype.component_types.size());
-    }
-
-    for (size_t i = 0; i < old_archetype.component_types.size(); ++i) {
-        const auto &type_idx = old_archetype.component_types[i];
-        if (type_idx == comp_type) continue;
-        const usize new_col_idx = new_archetype.component_map.at(type_idx);
-        if (!new_table.columns[new_col_idx]) {
-            new_table.columns[new_col_idx] = old_table.columns[i]->clone_empty();
-        }
-        old_table.columns[i]->move_to(loc.table_row, *new_table.columns[new_col_idx]);
-    }
-
-    /** Clean up the old table */
-    Entity swapped_entity = old_table.remove_entity_swap_back(loc.table_row);
-
-    /** Update entity locations */
-    loc.archetype_index = new_archetype_idx;
-    loc.table_row = new_row;
-    if (swapped_entity != 0) {
-        _entity_locations.at(swapped_entity).table_row = loc.table_row;
-    }
+    /** --- Move entity and common components to the new archetype --- */
+    _move_entity_between_archetypes(e, loc, new_archetype_idx);
 }
 
 template<typename T>

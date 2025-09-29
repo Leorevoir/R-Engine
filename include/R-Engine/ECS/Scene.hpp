@@ -159,6 +159,9 @@ class R_ENGINE_API Scene : public NonCopyable
         std::unordered_map<Entity, Entity> _placeholder_map;
 
         Entity _next_entity = 1;
+
+        usize _find_or_create_archetype(const std::vector<std::type_index>& types);
+        void _move_entity_between_archetypes(Entity e, EntityLocation& loc, usize new_archetype_idx);
 };
 
 }// namespace ecs

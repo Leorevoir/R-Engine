@@ -15,7 +15,7 @@ static void startup_system(r::ecs::Commands &cmd, r::ecs::ResMut<r::Meshes> mesh
             meshes.ptr->add(r::Mesh3d::Cube(1.f), texture_path),
             r::Color{ 0, 128, 0}
         },
-        r::Transform3d{.translation = {0,0,0}, .scale = {1,1,1}}
+        r::Transform3d{.translation = {0, 0, 0}, .scale = {1, 1, 1}}
     );
 }
 

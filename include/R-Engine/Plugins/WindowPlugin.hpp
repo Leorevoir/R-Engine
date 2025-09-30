@@ -42,6 +42,7 @@ struct R_ENGINE_API WindowPluginConfig {
     WindowCursorState cursor = WindowCursorState::Visible;
     u32 frame_per_second = 60;
     u8 antialiasing_samples_count = 1;
+    bool disable_raylib_log = true;
 };
 
 struct R_ENGINE_API Cursor {

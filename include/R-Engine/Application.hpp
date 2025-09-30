@@ -13,16 +13,22 @@
 
 namespace r {
 
+// clang-format off
+
 enum class Schedule {
-    STARTUP = 1 << 0,
-    UPDATE = 1 << 1,
-    FIXED_UPDATE = 1 << 2,
-    RENDER = 1 << 3,
-    SHUTDOWN = 1 << 4,
+    STARTUP         = 1 << 0,
+    UPDATE          = 1 << 1,
+    FIXED_UPDATE    = 1 << 2,
+    BEFORE_RENDER   = 1 << 3,
+    RENDER          = 1 << 4,
+    AFTER_RENDER    = 1 << 5,
+    SHUTDOWN        = 1 << 6,
 };
 R_ENUM_FLAGABLE(Schedule)
 
-class R_ENGINE_API Application
+// clang-format on
+
+class R_ENGINE_API Application final
 {
     public:
         Application();

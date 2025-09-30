@@ -89,7 +89,9 @@ static void _destroy_window_system()
 
 r::WindowPlugin::WindowPlugin(const WindowPluginConfig &config) : _config(config)
 {
-    /* __ctor__ */
+    if (_config.disable_raylib_log) {
+        SetTraceLogLevel(LOG_NONE);
+    }
 }
 
 // clang-format off

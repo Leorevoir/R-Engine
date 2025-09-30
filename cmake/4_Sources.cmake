@@ -10,7 +10,7 @@ if(ENABLE_TESTS)
     )
 endif()
 
-file(GLOB_RECURSE SRC_EXAMPLE "examples/*.cpp")
+file(GLOB_RECURSE SRC_EXAMPLE "examples/Main.cpp")
 set(INCLUDE_EXAMPLES
     "${CMAKE_SOURCE_DIR}/examples"
     )

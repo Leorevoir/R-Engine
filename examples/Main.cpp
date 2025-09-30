@@ -240,38 +240,64 @@ void spawn_ui_menu_system(r::ecs::Commands &commands, r::ecs::Res<r::WindowPlugi
     const float screen_width = static_cast<float>(win_config.ptr->size.width);
     const float screen_height = static_cast<float>(win_config.ptr->size.height);
 
-    // Title text centered at top
+    /* Title text centered at top */
     commands.spawn(
         r::UiText{ .value = "R-Type", .size = 64 },
-        r::UiTextColor{ 230, 230, 255, 255 },
-        r::UiPosition{ { (screen_width - 400.f) * 0.5f, 60.f } }, // rough centering; actual centering handled by rect if present
+        r::UiTextColor{ 0, 0, 0, 255 },
+        r::UiPosition{ { (screen_width - 400.f) * 0.5f, 60.f } }, /* rough centering; actual centering handled by rect if present */
         r::UiZIndex{ 10 }
     );
 
-    // Common button sizes
+    /* Common button sizes */
     const r::Vec2f btn_size = { 220.f, 70.f };
     const float center_x = (screen_width - btn_size.x) * 0.5f;
-    float start_y = screen_height * 0.5f - 80.f; // first button y
+    float start_y = screen_height * 0.5f - 80.f; /* first button y */
 
     /* Play button via bundle helper */
     {
         r::UiButtonBundle play_bundle{};
-    play_bundle.text.value = "Play";
-    play_bundle.original_color = {90,140,255,255};
-    play_bundle.color = {play_bundle.original_color.r, play_bundle.original_color.g, play_bundle.original_color.b, play_bundle.original_color.a};
+        play_bundle.text.value = "Play";
+        play_bundle.original_color = {90,140,255,255};
+        play_bundle.color = {play_bundle.original_color.r, play_bundle.original_color.g, play_bundle.original_color.b, play_bundle.original_color.a};
+        /* Style override example: faster hover darkening & stronger flash */
+        play_bundle.style.hover_dark_percent = 0.65f;
+        play_bundle.style.flash_percent = 1.3f;
         play_bundle.rect.size = btn_size;
         r::spawn_ui_button(commands, play_bundle, r::UiPosition{{center_x, start_y}});
+    }
+
+    /* Options button with a different base color (shows style override) */
+    {
+        r::UiButtonBundle options_bundle{};
+        options_bundle.text.value = "Options";
+        options_bundle.original_color = {60, 180, 110, 255};
+        options_bundle.color = {options_bundle.original_color.r, options_bundle.original_color.g, options_bundle.original_color.b, options_bundle.original_color.a};
+        options_bundle.style.hover_dark_percent = 0.4f; /* lighter darkening */
+        options_bundle.style.flash_percent = 0.8f;      /* smaller flash */
+        options_bundle.rect.size = btn_size;
+        r::spawn_ui_button(commands, options_bundle, r::UiPosition{{center_x, start_y + btn_size.y + 30.f}});
+    }
+
+    /* Disabled button example (non-interactive, styled via disabled flag) */
+    {
+        r::UiButtonBundle disabled_bundle{};
+        disabled_bundle.text.value = "Disabled";
+        disabled_bundle.original_color = {120, 120, 120, 255};
+        disabled_bundle.color = {disabled_bundle.original_color.r, disabled_bundle.original_color.g, disabled_bundle.original_color.b, disabled_bundle.original_color.a};
+        disabled_bundle.style.disabled = true;
+        disabled_bundle.rect.size = btn_size;
+        r::spawn_ui_button(commands, disabled_bundle, r::UiPosition{{center_x, start_y + (btn_size.y + 30.f) * 2.f}});
     }
 
     /* Quit button via bundle helper + explicit quit action */
     {
         r::UiButtonBundle quit_bundle{};
-    quit_bundle.text.value = "Quit";
-    quit_bundle.original_color = {200,60,80,255};
-    quit_bundle.color = {quit_bundle.original_color.r, quit_bundle.original_color.g, quit_bundle.original_color.b, quit_bundle.original_color.a};
+        quit_bundle.text.value = "Quit";
+        quit_bundle.original_color = {200,60,80,255};
+        quit_bundle.color = {quit_bundle.original_color.r, quit_bundle.original_color.g, quit_bundle.original_color.b, quit_bundle.original_color.a};
         quit_bundle.border = {90,20,30,255};
         quit_bundle.rect.size = btn_size;
-        auto e = r::spawn_ui_button(commands, quit_bundle, r::UiPosition{{center_x, start_y + btn_size.y + 30.f}});
+        auto e = r::spawn_ui_button(commands, quit_bundle, r::UiPosition{{center_x, start_y + (btn_size.y + 30.f) * 3.f}});
         /* Add the quit action component */
         commands.entity(e).insert(r::UiOnClickQuit{});
     }
@@ -280,14 +306,66 @@ void spawn_ui_menu_system(r::ecs::Commands &commands, r::ecs::Res<r::WindowPlugi
 /* ========================================================================== */
 /* (UPDATE) Example consumer of the UiClickEvents bus                         */
 /* ========================================================================== */
-void ui_click_events_logger(r::ecs::Res<r::UiClickEvents> events)
+void ui_click_events_logger(r::ecs::Res<r::UiEvents> events)
 {
-    for (const auto &ev : events.ptr->events) {
-        if (ev.type == r::UiClickEventType::Quit) {
-            /* Simple demonstration: log to raylib trace (could use engine logger) */
+    /* Manual consumer example (logger system built-in can also be enabled via UiEventLoggerConfig). */
+    for (const auto &ev : events.ptr->current) {
+        if (ev.type == r::UiEventType::QuitClick) {
             TraceLog(LOG_INFO, "[UI] Quit button clicked (label=%s)", ev.label.c_str());
         }
     }
+}
+
+/* ========================================================================== */
+/* (STARTUP) Configure UI logger & tweak global theme                         */
+/* ========================================================================== */
+void configure_ui_logger_and_theme(r::ecs::Res<r::UiEventLoggerConfig> logger_cfg, r::ecs::Res<r::UiTheme> theme)
+{
+    auto *cfg = const_cast<r::UiEventLoggerConfig*>(logger_cfg.ptr);
+    cfg->enabled = true;
+    cfg->log_hover = true;
+    cfg->log_press = true;
+    cfg->log_release = true;
+    cfg->log_click = true;
+    cfg->log_quit = true;
+
+    /* Light theme tweaks (faster hover & stronger flash globally) */
+    auto *th = const_cast<r::UiTheme*>(theme.ptr);
+    th->hover_speed = 18.f;
+    th->flash_percent = 1.1f;
+}
+
+/* ========================================================================== */
+/* (RENDER) UI Stats & Event overlay (demonstrates UiStats + UiEvents)        */
+/* ========================================================================== */
+void ui_debug_overlay_render(r::ecs::Res<r::UiStats> stats, r::ecs::Res<r::UiEvents> events)
+{
+    const int x = 10;
+    int y = 70; /* below existing debug text */
+    char buf[256];
+    std::snprintf(buf, sizeof(buf), "UI Frame %llu", (unsigned long long)stats.ptr->frame_index);
+    DrawText(buf, x, y, 16, DARKGREEN); y += 18;
+    std::snprintf(buf, sizeof(buf), "Events: %u (curr) Rects: %u Texts: %u", stats.ptr->events_emitted, stats.ptr->rects_drawn, stats.ptr->texts_drawn);
+    DrawText(buf, x, y, 14, DARKGREEN); y += 16;
+    std::snprintf(buf, sizeof(buf), "Interaction Ent: %u", stats.ptr->interaction_entities);
+    DrawText(buf, x, y, 14, DARKGREEN); y += 16;
+    std::snprintf(buf, sizeof(buf), "Times ms I%.2f S%.2f Rr%.2f Rt%.2f", stats.ptr->interaction_ms, stats.ptr->style_ms, stats.ptr->render_rect_ms, stats.ptr->render_text_ms);
+    DrawText(buf, x, y, 14, DARKGREEN); y += 18;
+    /* Count event types this frame */
+    unsigned hoverEnter=0, hoverLeave=0, pressed=0, released=0, click=0, quitClick=0;
+    for (auto &e : events.ptr->current) {
+        switch (e.type) {
+            case r::UiEventType::HoverEnter: ++hoverEnter; break;
+            case r::UiEventType::HoverLeave: ++hoverLeave; break;
+            case r::UiEventType::Pressed: ++pressed; break;
+            case r::UiEventType::Released: ++released; break;
+            case r::UiEventType::Click: ++click; break;
+            case r::UiEventType::QuitClick: ++quitClick; break;
+            default: break;
+        }
+    }
+    std::snprintf(buf, sizeof(buf), "Ev H+%u H-%u P%u R%u C%u Q%u", hoverEnter, hoverLeave, pressed, released, click, quitClick);
+    DrawText(buf, x, y, 14, DARKGREEN);
 }
 
 int main()
@@ -314,7 +392,8 @@ int main()
         /* Add systems to the application schedule. */
         /* STARTUP systems run once at the beginning. */
         .add_systems(r::Schedule::STARTUP, spawn_entities_system)
-    .add_systems(r::Schedule::STARTUP, spawn_ui_menu_system)
+        .add_systems(r::Schedule::STARTUP, spawn_ui_menu_system)
+        .add_systems(r::Schedule::STARTUP, configure_ui_logger_and_theme)
 
         /* UPDATE systems run once every frame for game logic and physics. */
         /* The order matters here: input -> physics -> movement. */
@@ -329,7 +408,8 @@ int main()
 
         /* RENDER systems run after UPDATE systems for drawing. */
         /* The RenderPlugin already adds systems to begin and end the drawing context. */
-        .add_systems(r::Schedule::RENDER, render_system)
+    .add_systems(r::Schedule::RENDER, render_system)
+    .add_systems(r::Schedule::RENDER, ui_debug_overlay_render)
 
         /* Start the main application loop. */
         .run();

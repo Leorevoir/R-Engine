@@ -62,6 +62,9 @@ struct R_ENGINE_API UiTheme {
     f32 flash_percent = 1.0f;
     f32 flash_speed = 28.f;
     f32 quit_delay = 0.25f;
+    /* New global style knobs */
+    f32 press_flash_percent = 1.15f; /* multiplicative brighten when pressed */
+    f32 disabled_alpha = 0.4f;       /* alpha multiplier for disabled */
 };
 
 struct R_ENGINE_API UiButton {
@@ -79,6 +82,7 @@ enum class UiInteractionState : unsigned char { None = 0, Hovered, Pressed };
 
 struct R_ENGINE_API UiInteraction {
     UiInteractionState state = UiInteractionState::None;
+    UiInteractionState previous = UiInteractionState::None; /* preserved last frame for event diff */
 };
 
 /* Internal resource replacing previous static globals controlling delayed quit. */
@@ -112,13 +116,78 @@ struct R_ENGINE_API UiChildren {
 
 enum class UiClickEventType : unsigned char { Generic, Quit };
 
-struct R_ENGINE_API UiClickEvent {
-    UiClickEventType type = UiClickEventType::Generic;
-    std::string label; /* optional button text snapshot */
+/* ------------------------------------------------------------------------- */
+/* Unified Event Bus                                                         */
+/* ------------------------------------------------------------------------- */
+
+/* High level UI event kinds (extensible). */
+enum class UiEventType : unsigned char {
+    HoverEnter,
+    HoverLeave,
+    Pressed,
+    Released,
+    Click,
+    QuitClick,   /* specialized click leading to quit */
+    ValueChanged /* reserved for future widgets */
 };
 
-struct R_ENGINE_API UiClickEvents {
-    std::vector<UiClickEvent> events; /* cleared each frame */
+struct R_ENGINE_API UiEvent {
+    UiEventType type = UiEventType::Click;
+    std::string label; /* optional textual label (e.g. button text) */
+};
+
+/* Double buffered storage so consumers (potentially later in frame) can still */
+/* reference last frame events if needed. For now we only use current. */
+struct R_ENGINE_API UiEvents {
+    std::vector<UiEvent> current;
+    std::vector<UiEvent> previous;
+};
+
+/* Backward compatibility typedef (old name). */
+using UiClickEvent = UiEvent; /* deprecated */
+using UiClickEvents = UiEvents; /* deprecated */
+
+/* Logger configuration resource allowing filtering. */
+struct R_ENGINE_API UiEventLoggerConfig {
+    bool enabled = false;
+    bool log_hover = false;
+    bool log_press = true;
+    bool log_release = true;
+    bool log_click = true;
+    bool log_quit = true;
+};
+
+/* ------------------------------------------------------------------------- */
+/* Style system                                                              */
+/* ------------------------------------------------------------------------- */
+
+/* Declarative style for a widget. Drives final UiColor. */
+struct R_ENGINE_API UiStyle {
+    unsigned char base_r = 90, base_g = 140, base_b = 255, base_a = 255;
+    f32 hover_dark_percent = 0.5f;  /* overrides global if >= 0 */
+    f32 flash_percent = 1.0f;       /* overrides global if >= 0 */
+    bool disabled = false;
+    /* Internal target color (computed on interaction transitions). */
+    unsigned char target_r = base_r, target_g = base_g, target_b = base_b, target_a = base_a;
+};
+
+/* Dirty flags allow selective recomputation; kept minimal for now. */
+struct R_ENGINE_API UiDirty {
+    bool style = true;  /* when true, UiStyle target will be recomputed or animation kept */
+    bool layout = false; /* reserved */
+};
+
+/* Frame statistics (reset each frame). */
+struct R_ENGINE_API UiStats {
+    u64 frame_index = 0;
+    u32 events_emitted = 0;
+    u32 rects_drawn = 0;
+    u32 texts_drawn = 0;
+    u32 interaction_entities = 0;
+    double interaction_ms = 0.0;
+    double style_ms = 0.0;
+    double render_rect_ms = 0.0;
+    double render_text_ms = 0.0;
 };
 
 /* ------------------------------------------------------------------------- */
@@ -128,8 +197,11 @@ struct R_ENGINE_API UiClickEvents {
 struct R_ENGINE_API UiButtonBundle {
     UiButton button = {};
     UiButtonState state = {};
+    UiInteraction interaction = {}; /* required for new interaction system */
     UiOriginalColor original_color = {90, 140, 255, 255};
     UiColor color = {90, 140, 255, 255};
+    UiStyle style = {};
+    UiDirty dirty = {};
     UiRectSize rect = { {220.f, 70.f} };
     UiBorderRadius radius = {18.f};
     UiBorderThickness thickness = {3.f};
@@ -160,8 +232,11 @@ inline r::ecs::Entity r::spawn_ui_button(r::ecs::Commands &commands, const UiBut
     auto ec = commands.spawn(
         b.button,
         b.state,
+        b.interaction,
         b.original_color,
         b.color,
+        b.style,
+        b.dirty,
         b.rect,
         pos,
         b.radius,

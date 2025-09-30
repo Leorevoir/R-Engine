@@ -8,6 +8,10 @@
 
 namespace r {
 
+/**
+* @brief Mesh entry structure
+* @details holds a mesh, model, texture, and ownership/validity flags.
+*/
 struct R_ENGINE_API MeshEntry {
     public:
         ~MeshEntry();
@@ -19,6 +23,10 @@ struct R_ENGINE_API MeshEntry {
         bool valid = false;
 };
 
+/**
+* @brief Meshes manager
+* @details manages a collection of MeshEntry objects, allowing addition, retrieval, drawing, and removal of meshes.
+*/
 struct R_ENGINE_API Meshes final {
     public:
         ~Meshes();

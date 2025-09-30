@@ -7,7 +7,7 @@ $ILC = "`e[3m"
 $ORG = "`e[1;33m"
 $RST = "`e[0m"
 
-$PROGRAM_NAME = "r-engine r-engine__example"
+$PROGRAM_NAME = "r-engine examples"
 $UNIT_TESTS_NAME = "unit_tests"
 
 function Write-Error-Exit {
@@ -35,29 +35,29 @@ function Invoke-BaseRun {
         [string]$CmakeArgs,
         [string]$BuildType
     )
-    
+
     & git submodule update --init --recursive
-    
+
     if (-not (Test-Path "build")) {
         New-Item -ItemType Directory -Path "build" -Force | Out-Null
     }
-    
+
     Push-Location "build"
     if (-not $?) {
         Write-Error-Exit "mkdir failed" "failed to create build directory"
     }
-    
+
     try {
         & cmake .. -G Ninja $CmakeArgs.Split(' ')
         if ($LASTEXITCODE -ne 0) {
             throw "cmake failed"
         }
-        
+
         & ninja $BuildType.Split(' ')
         if ($LASTEXITCODE -ne 0) {
             Write-Error-Exit "compilation error" "failed to compile $BuildType"
         }
-        
+
         Write-Success "compiled $BuildType"
     }
     finally {
@@ -77,7 +77,7 @@ function Invoke-Debug {
 
 function Invoke-TestsRun {
     Invoke-BaseRun "-DCMAKE_BUILD_TYPE=Debug -DENABLE_DEBUG=ON -DENABLE_TESTS=ON" $UNIT_TESTS_NAME
-    
+
     Push-Location "build"
     try {
         if (Test-Path ".\$UNIT_TESTS_NAME.exe") {
@@ -87,11 +87,11 @@ function Invoke-TestsRun {
         } else {
             Write-Error-Exit "unit tests executable not found" "$UNIT_TESTS_NAME not found in build directory"
         }
-        
+
         if ($LASTEXITCODE -ne 0) {
             Write-Error-Exit "unit tests error" "unit tests failed!"
         }
-        
+
         Write-Success "unit tests succeed!"
     }
     finally {
@@ -108,26 +108,25 @@ function Invoke-Clean {
 
 function Invoke-FClean {
     Invoke-Clean
-    
+
     $itemsToRemove = @(
-        $PROGRAM_NAME.Split(' ')[0] + ".exe",
-        $PROGRAM_NAME.Split(' ')[1] + ".exe", 
-        $UNIT_TESTS_NAME + ".exe",
-        $PROGRAM_NAME.Split(' ')[0],
-        $PROGRAM_NAME.Split(' ')[1],
-        $UNIT_TESTS_NAME,
+        "r-engine.exe",
+        "r-engine",
+        "$UNIT_TESTS_NAME.exe",
+        "$UNIT_TESTS_NAME",
         "plugins",
         "code_coverage.txt",
         "cmake-build-debug"
     )
-    
+
     foreach ($item in $itemsToRemove) {
         if (Test-Path $item) {
             Remove-Item -Recurse -Force $item
         }
     }
-    
+
     # Remove pattern-based files
+    Get-ChildItem -Path "." -Filter "r-engine__*" -ErrorAction SilentlyContinue | Remove-Item -Force
     Get-ChildItem -Path "." -Filter "$UNIT_TESTS_NAME-*.profraw" -ErrorAction SilentlyContinue | Remove-Item -Force
     Get-ChildItem -Path "." -Filter "$UNIT_TESTS_NAME.profdata" -ErrorAction SilentlyContinue | Remove-Item -Force
     Get-ChildItem -Path "." -Filter "vgcore*" -ErrorAction SilentlyContinue | Remove-Item -Force
@@ -138,7 +137,7 @@ function Invoke-FClean {
 function Show-Help {
     $scriptName = $MyInvocation.ScriptName
     if (-not $scriptName) { $scriptName = "build.ps1" }
-    
+
     Write-Host @"
 USAGE:
       $scriptName    builds $PROGRAM_NAME project

@@ -17,27 +17,15 @@ include(4_Sources)
 ########################################
 
 add_library(r-engine SHARED ${SRC_ENGINE})
-target_include_directories(r-engine PRIVATE 
+target_include_directories(r-engine PRIVATE
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/external
 )
 target_link_libraries(r-engine PUBLIC
     raylib
 )
-target_compile_definitions(r-engine PRIVATE 
+target_compile_definitions(r-engine PRIVATE
     R_ENGINE_BUILDING_EXPORTS=1
-)
-
-########################################
-# R-Engine r-engine__example
-########################################
-
-add_executable(r-engine__example ${SRC_EXAMPLE})
-target_include_directories(r-engine__example PRIVATE
-    ${CMAKE_SOURCE_DIR}/include
-)
-target_link_libraries(r-engine__example PRIVATE
-    r-engine
 )
 
 ########################################
@@ -63,7 +51,7 @@ if(ENABLE_TESTS)
     enable_testing()
     add_test(NAME unit_tests COMMAND unit_tests)
 
-    target_include_directories(unit_tests PRIVATE 
+    target_include_directories(unit_tests PRIVATE
         ${CMAKE_SOURCE_DIR}/include
     )
 

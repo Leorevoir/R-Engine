@@ -1,6 +1,10 @@
 #include <R-Engine/Core/Logger.hpp>
 #include <R-Engine/Plugins/MeshPlugin.hpp>
 
+/**
+ * public MeshEntry
+ */
+
 r::MeshEntry::~MeshEntry()
 {
     if (!valid) {

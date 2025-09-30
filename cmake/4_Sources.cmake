@@ -10,7 +10,6 @@ if(ENABLE_TESTS)
     )
 endif()
 
-# Discover and build examples from subdirectories
 file(GLOB EXAMPLE_SUBDIRS LIST_DIRECTORIES true "${CMAKE_SOURCE_DIR}/examples/*")
 
 set(EXAMPLE_TARGETS "")

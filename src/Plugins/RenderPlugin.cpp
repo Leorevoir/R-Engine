@@ -4,17 +4,30 @@
 #include <R-Engine/Core/Backend.hpp>
 
 /**
- * helpers
+ * static helpers
  */
 
-static void _begin_frame(void)
+static constexpr inline const ::Camera to_raylib(const r::Camera3d &c)
+{
+    return {
+        .position = {c.position.x, c.position.y, c.position.z},
+        .target = {c.target.x, c.target.y, c.target.z},
+        .up = {c.up.x, c.up.y, c.up.z},
+        .fovy = c.fovy,
+        .projection = static_cast<i32>(c.projection),
+    };
+}
+
+static void render_plugin_before_render_system(r::ecs::Res<r::Camera3d> camera)
 {
     BeginDrawing();
     ClearBackground(RAYWHITE);
+    BeginMode3D(to_raylib(*camera.ptr));
 }
 
-static void _end_frame(void)
+static void render_plugin_after_render_system(void)
 {
+    EndMode3D();
     EndDrawing();
 }
 
@@ -22,7 +35,14 @@ static void _end_frame(void)
 * public
 */
 
+r::RenderPlugin::RenderPlugin(const r::Camera3d &camera3d) : camera(camera3d)
+{
+    /* __ctor__ */
+}
+
 void r::RenderPlugin::build(r::Application &app)
 {
-    app.add_systems(Schedule::RENDER, _begin_frame, _end_frame);
+    app.insert_resource(camera)
+        .add_systems(Schedule::BEFORE_RENDER, render_plugin_before_render_system)
+        .add_systems(Schedule::AFTER_RENDER, render_plugin_after_render_system);
 }

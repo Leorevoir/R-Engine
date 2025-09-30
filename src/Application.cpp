@@ -39,7 +39,9 @@ void r::Application::Application::run()
             _run_schedule(Schedule::FIXED_UPDATE);
             _apply_commands();
         }
+        _run_schedule(Schedule::BEFORE_RENDER);
         _run_schedule(Schedule::RENDER);
+        _run_schedule(Schedule::AFTER_RENDER);
     }
 
     Logger::debug("Main loop exited. Running shutdown schedule...");

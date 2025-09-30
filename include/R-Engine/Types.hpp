@@ -43,6 +43,11 @@ namespace r {
     #pragma clang diagnostic ignored "-Wpedantic"
 #endif
 
+/**
+ * @brief Color structure
+ * @details holds RGBA color values and a packed u32 representation
+ * @info the order of the color channels in memory depends on the endianness of the system
+ */
 struct R_ENGINE_API Color {
     public:
         union {
@@ -56,7 +61,7 @@ struct R_ENGINE_API Color {
                 u32 rgba;
         };
 
-        constexpr inline Color(u8 red = 255, u8 green = 255, u8 blue = 255, u8 alpha = 255)
+        constexpr inline Color(u8 red = 255, u8 green = 255, u8 blue = 255, u8 alpha = 255) noexcept
 #if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
             : r(red), g(green), b(blue), a(alpha){}
 #else

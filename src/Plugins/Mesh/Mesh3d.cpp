@@ -5,7 +5,7 @@
 * public
 */
 
-r::Mesh3d::Mesh3d(const u32 mesh_handle) : id(mesh_handle)
+r::Mesh3d::Mesh3d(const u32 mesh_handle, const r::Color &mesh_color) : id(mesh_handle), color(mesh_color)
 {
     /* __ctor__ */
 }

@@ -13,19 +13,11 @@ static void mesh_plugin_startup_system()
 static void mesh_render_system(r::ecs::Query<r::ecs::Ref<r::Mesh3d>, r::ecs::Ref<r::Transform3d>> query, r::ecs::Res<r::Meshes> meshes)
 {
     for (const auto &[mesh_comp, transform] : query) {
-        const u32 id = mesh_comp.ptr->id;
-        const ::Model *model = meshes.ptr->get(id);
+        const auto *t3d = transform.ptr;
+        const auto pos = t3d->translation;
+        const auto scale = t3d->scale.x;
 
-        if (!model) {
-            continue;
-        }
-
-        const auto t3d = transform.ptr;
-        const auto tr = t3d->translation;
-        const ::Vector3 pos = {tr.x, tr.y, tr.z};
-        const f32 scale = t3d->scale.x;
-
-        DrawModel(*model, pos, scale, RED);
+        meshes.ptr->draw(mesh_comp.ptr->id, pos, scale, mesh_comp.ptr->color);
     }
 }
 

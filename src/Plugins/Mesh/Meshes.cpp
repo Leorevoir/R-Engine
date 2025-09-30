@@ -73,14 +73,14 @@ const std::vector<r::MeshEntry> *r::Meshes::data() const
     return &_data;
 }
 
-void r::Meshes::draw(const u32 handle, const Vec3f &position, const f32 scale, const ::Color tint) const
+void r::Meshes::draw(const u32 handle, const Vec3f &position, const f32 scale, const Color tint) const
 {
     const ::Model *m = get(handle);
 
     if (!m) {
         return;
     }
-    DrawModel(*m, {position.x, position.y, position.z}, scale, tint);
+    DrawModel(*m, {position.x, position.y, position.z}, scale, {tint.r, tint.g, tint.b, tint.a});
 }
 
 void r::Meshes::remove(const u32 handle)

@@ -10,6 +10,8 @@
 
 namespace r {
 
+using MeshHandle = u32;
+
 struct R_ENGINE_API TextureManager final {
     public:
         ~TextureManager();
@@ -47,17 +49,17 @@ struct R_ENGINE_API Meshes final {
     public:
         ~Meshes();
 
-        u32 add(const ::Mesh &mesh, const std::string &texture_path = "");
+        MeshHandle add(const ::Mesh &mesh, const std::string &texture_path = "");
 
         const ::Model *get(const u32 handle) const noexcept;
 
-        void draw(const u32 handle, const Vec3f &position, const f32 scale, const ::Color tint = WHITE) const;
-        void remove(const u32 handle);
+        void draw(const MeshHandle handle, const Vec3f &position, const f32 scale, const Color tint) const;
+        void remove(const MeshHandle handle);
 
         const std::vector<MeshEntry> *data() const;
 
     private:
-        u32 _allocate();
+        MeshHandle _allocate();
 
         std::vector<MeshEntry> _data;
         TextureManager _texture_manager;
@@ -72,11 +74,12 @@ struct R_ENGINE_API Transform3d {
 
 struct R_ENGINE_API Mesh3d final {
     public:
-        Mesh3d(const u32 mesh_handle = 0);
+        Mesh3d(const MeshHandle mesh_handle, const r::Color &mesh_color = {});
         static ::Mesh Cube(const f32 size, const Vec3f &center = {0.f, 0.f, 0.f});
         static ::Mesh Circle(const f32 radius, const u32 slices, const Vec3f &center = {0.f, 0.f, 0.f});
 
-        u32 id = static_cast<u32>(-1);
+        MeshHandle id = static_cast<MeshHandle>(-1);
+        r::Color color;
 };
 
 class R_ENGINE_API MeshPlugin final : public Plugin

@@ -34,6 +34,7 @@ u32 r::Meshes::add(const ::Mesh &mesh, const std::string &texture_path)
     entry.cpu_mesh = mesh;
     entry.model = LoadModelFromMesh(entry.cpu_mesh);
 
+    /** @info initialize cpu_mesh to avoid double free on destruction */
     entry.cpu_mesh.vertexCount = 0;
     entry.cpu_mesh.triangleCount = 0;
     entry.cpu_mesh.vertices = nullptr;
@@ -41,6 +42,7 @@ u32 r::Meshes::add(const ::Mesh &mesh, const std::string &texture_path)
     entry.cpu_mesh.texcoords = nullptr;
     entry.cpu_mesh.indices = nullptr;
 
+    /** @info load texture if a path is provided using the Texture Manager */
     if (!texture_path.empty()) {
         entry.texture = _texture_manager.load(texture_path);
         entry.texture_path = texture_path;

@@ -1,4 +1,19 @@
-/* Clean Phase 1 implementation (enriched events, style system, stats, logger) */
+/**
+ * @file UIPlugin.cpp
+ * @brief Implementation of Phase 1 UI systems (interaction, events, style, rendering, logging).
+ * @details UPDATE order:
+ *  1. _ui_events_frame_begin_system (swap event buffers + reset stats)
+ *  2. _ui_layout_stub_system (reserved for future layout pass)
+ *  3. _ui_interaction_system (pointer hit-test -> UiInteraction state diff)
+ *  4. _ui_interaction_events_system (derive UiEvents from interaction transitions)
+ *  5. _ui_style_system (compute target colors + animate)
+ *  6. _ui_button_action_system (quit button behavior + QuitClick event)
+ *  7. _ui_pending_quit_system (delayed quit countdown)
+ *  8. _ui_event_logger_system (optional filtered logging)
+ * RENDER order:
+ *  - _ui_render_rect_system
+ *  - _ui_render_text_system
+ */
 
 #include <R-Engine/Plugins/UIPlugin.hpp>
 #include <R-Engine/Application.hpp>
@@ -10,31 +25,34 @@
 
 namespace r {
 
-struct _UiScopedTimer {
+/* Internal utility: scope-based millisecond timer feeding UiStats field. */
+struct UiScopedTimerInternal {
     std::chrono::high_resolution_clock::time_point start;
     double *dst;
-    explicit _UiScopedTimer(double *d) : start(std::chrono::high_resolution_clock::now()), dst(d) {}
-    ~_UiScopedTimer() { if (dst) *dst = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - start).count(); }
+    explicit UiScopedTimerInternal(double *d) : start(std::chrono::high_resolution_clock::now()), dst(d) {}
+    ~UiScopedTimerInternal() { if (dst) *dst = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - start).count(); }
 };
 
-struct _UiRenderableText { UiPosition *pos; UiText *text; UiTextColor *color; UiZIndex *z; UiRectSize *rect_size; };
-struct _UiRenderableRect { UiPosition *pos; UiRectSize *size; UiColor *color; UiBorderColor *border_color; UiBorderThickness *border_thickness; UiBorderRadius *radius; UiZIndex *z; };
+/* Batched render items (collected then sorted by z). */
+struct UiRenderableTextInternal { UiPosition *pos; UiText *text; UiTextColor *color; UiZIndex *z; UiRectSize *rect_size; };
+struct UiRenderableRectInternal { UiPosition *pos; UiRectSize *size; UiColor *color; UiBorderColor *border_color; UiBorderThickness *border_thickness; UiBorderRadius *radius; UiZIndex *z; };
 
 template <typename T>
+/** @brief Helper to sort render batches by z-index ascending. */
 static void _ui_sort_by_z(std::vector<T> &items) {
     std::sort(items.begin(), items.end(), [](const T &a, const T &b){
         const i32 za = a.z ? a.z->value : 0; const i32 zb = b.z ? b.z->value : 0; return za < zb; });
 }
 
-static void _ui_collect_text_items(ecs::Query<ecs::Mut<UiText>, ecs::Mut<UiPosition>, ecs::Ref<UiTextColor>, ecs::Optional<UiZIndex>, ecs::Optional<UiRectSize>> &q, std::vector<_UiRenderableText> &out) {
+static void _ui_collect_text_items(ecs::Query<ecs::Mut<UiText>, ecs::Mut<UiPosition>, ecs::Ref<UiTextColor>, ecs::Optional<UiZIndex>, ecs::Optional<UiRectSize>> &q, std::vector<UiRenderableTextInternal> &out) {
     for (auto [text_w, pos_w, col_w, z_w, rect_w] : q) out.push_back({pos_w.ptr, text_w.ptr, const_cast<UiTextColor *>(col_w.ptr), const_cast<UiZIndex *>(z_w.ptr), const_cast<UiRectSize *>(rect_w.ptr)});
 }
 
-static void _ui_collect_rect_items(ecs::Query<ecs::Mut<UiRectSize>, ecs::Mut<UiPosition>, ecs::Ref<UiColor>, ecs::Optional<UiBorderColor>, ecs::Optional<UiBorderThickness>, ecs::Optional<UiBorderRadius>, ecs::Optional<UiZIndex>> &q, std::vector<_UiRenderableRect> &out) {
+static void _ui_collect_rect_items(ecs::Query<ecs::Mut<UiRectSize>, ecs::Mut<UiPosition>, ecs::Ref<UiColor>, ecs::Optional<UiBorderColor>, ecs::Optional<UiBorderThickness>, ecs::Optional<UiBorderRadius>, ecs::Optional<UiZIndex>> &q, std::vector<UiRenderableRectInternal> &out) {
     for (auto [size_w, pos_w, col_w, bcol_w, bthick_w, radius_w, z_w] : q) out.push_back({pos_w.ptr, size_w.ptr, const_cast<UiColor *>(col_w.ptr), const_cast<UiBorderColor *>(bcol_w.ptr), const_cast<UiBorderThickness *>(bthick_w.ptr), const_cast<UiBorderRadius *>(radius_w.ptr), const_cast<UiZIndex *>(z_w.ptr)});
 }
 
-static void _ui_draw_text_items(const std::vector<_UiRenderableText> &items) {
+static void _ui_draw_text_items(const std::vector<UiRenderableTextInternal> &items) {
     for (auto &it : items) {
         const Color c = {it.color->r, it.color->g, it.color->b, it.color->a};
         float draw_x = it.pos->pos.x, draw_y = it.pos->pos.y;
@@ -47,7 +65,7 @@ static void _ui_draw_text_items(const std::vector<_UiRenderableText> &items) {
     }
 }
 
-static void _ui_draw_rect_items(const std::vector<_UiRenderableRect> &items) {
+static void _ui_draw_rect_items(const std::vector<UiRenderableRectInternal> &items) {
     for (auto &it : items) {
         const Rectangle rect = {it.pos->pos.x, it.pos->pos.y, it.size->size.x, it.size->size.y};
         const Color c = {it.color->r, it.color->g, it.color->b, it.color->a};
@@ -64,13 +82,13 @@ static void _ui_draw_rect_items(const std::vector<_UiRenderableRect> &items) {
 }
 
 static void _ui_render_text_system(ecs::Query<ecs::Mut<UiText>, ecs::Mut<UiPosition>, ecs::Ref<UiTextColor>, ecs::Optional<UiZIndex>, ecs::Optional<UiRectSize>> q, ecs::Res<UiStats> stats) {
-    _UiScopedTimer t(const_cast<double*>(&stats.ptr->render_text_ms));
-    std::vector<_UiRenderableText> items; items.reserve(64); _ui_collect_text_items(q, items); _ui_sort_by_z(items); _ui_draw_text_items(items);
+    UiScopedTimerInternal t(const_cast<double*>(&stats.ptr->render_text_ms));
+    std::vector<UiRenderableTextInternal> items; items.reserve(64); _ui_collect_text_items(q, items); _ui_sort_by_z(items); _ui_draw_text_items(items);
     auto *st = const_cast<UiStats*>(stats.ptr); st->texts_drawn += (u32)items.size();
 }
 static void _ui_render_rect_system(ecs::Query<ecs::Mut<UiRectSize>, ecs::Mut<UiPosition>, ecs::Ref<UiColor>, ecs::Optional<UiBorderColor>, ecs::Optional<UiBorderThickness>, ecs::Optional<UiBorderRadius>, ecs::Optional<UiZIndex>> q, ecs::Res<UiStats> stats) {
-    _UiScopedTimer t(const_cast<double*>(&stats.ptr->render_rect_ms));
-    std::vector<_UiRenderableRect> items; items.reserve(64); _ui_collect_rect_items(q, items); _ui_sort_by_z(items); _ui_draw_rect_items(items);
+    UiScopedTimerInternal t(const_cast<double*>(&stats.ptr->render_rect_ms));
+    std::vector<UiRenderableRectInternal> items; items.reserve(64); _ui_collect_rect_items(q, items); _ui_sort_by_z(items); _ui_draw_rect_items(items);
     auto *st = const_cast<UiStats*>(stats.ptr); st->rects_drawn += (u32)items.size();
 }
 
@@ -86,7 +104,7 @@ static void _ui_process_one_interaction(const _UiPointerState &ptr, UiPosition *
 }
 
 static void _ui_interaction_system(ecs::Query<ecs::Mut<UiPosition>, ecs::Mut<UiRectSize>, ecs::Optional<UiButton>, ecs::Optional<UiInteraction>, ecs::Optional<UiStyle>> q, ecs::Res<UiStats> stats) {
-    _UiScopedTimer t(const_cast<double*>(&stats.ptr->interaction_ms));
+    UiScopedTimerInternal t(const_cast<double*>(&stats.ptr->interaction_ms));
     const _UiPointerState ptr = _ui_pointer_state();
     u32 count = 0;
     for (auto [pos_w, size_w, button_w, interaction_w, style_w] : q) {
@@ -129,7 +147,7 @@ static void _ui_interaction_events_system(ecs::Query<ecs::Ref<UiInteraction>, ec
 static unsigned char _ui_lerp_u8(unsigned char from, unsigned char to, f32 spd) { f32 f = (f32)from, t = (f32)to; f32 v = f + (t - f) * std::clamp(spd * 0.016f, 0.f, 1.f); return (unsigned char)std::clamp((int)v, 0, 255); }
 
 static void _ui_style_system(ecs::Query<ecs::Mut<UiColor>, ecs::Mut<UiStyle>, ecs::Optional<UiDirty>, ecs::Optional<UiInteraction>, ecs::Ref<UiOriginalColor>> q, ecs::Res<UiTheme> theme, ecs::Res<UiStats> stats) {
-    _UiScopedTimer t(const_cast<double*>(&stats.ptr->style_ms));
+    UiScopedTimerInternal t(const_cast<double*>(&stats.ptr->style_ms));
     for (auto [color_w, style_w, dirty_w, interaction_w, original_w] : q) {
         UiStyle *style = style_w.ptr; UiInteraction *inter = const_cast<UiInteraction*>(interaction_w.ptr); const UiOriginalColor *orig = original_w.ptr; UiDirty *dirty = const_cast<UiDirty*>(dirty_w.ptr);
         bool hovered = inter && (inter->state == UiInteractionState::Hovered || inter->state == UiInteractionState::Pressed);

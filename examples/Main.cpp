@@ -284,7 +284,7 @@ void spawn_ui_menu_system(r::ecs::Commands &commands, r::ecs::Res<r::WindowPlugi
         disabled_bundle.text.value = "Disabled";
         disabled_bundle.original_color = {120, 120, 120, 255};
         disabled_bundle.color = {disabled_bundle.original_color.r, disabled_bundle.original_color.g, disabled_bundle.original_color.b, disabled_bundle.original_color.a};
-        disabled_bundle.style.disabled = true;
+        disabled_bundle.style.disabled = false;
         disabled_bundle.rect.size = btn_size;
         r::spawn_ui_button(commands, disabled_bundle, r::UiPosition{{center_x, start_y + (btn_size.y + 30.f) * 2.f}});
     }

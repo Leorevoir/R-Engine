@@ -1,3 +1,4 @@
+#include <R-Engine/Core/Logger.hpp>
 #include <R-Engine/Plugins/MeshPlugin.hpp>
 
 r::MeshEntry::~MeshEntry()
@@ -8,9 +9,6 @@ r::MeshEntry::~MeshEntry()
     UnloadModel(model);
     if (cpu_mesh.vertexCount > 0) {
         UnloadMesh(cpu_mesh);
-    }
-    if (owns_texture) {
-        UnloadTexture(texture);
     }
     valid = false;
 }
@@ -24,7 +22,7 @@ r::Meshes::~Meshes()
     _data.clear();
 }
 
-u32 r::Meshes::add(const ::Mesh &mesh, const ::Texture2D *texture)
+u32 r::Meshes::add(const ::Mesh &mesh, const std::string &texture_path)
 {
     u32 handle = _allocate();
     auto &entry = _data[handle];
@@ -39,23 +37,16 @@ u32 r::Meshes::add(const ::Mesh &mesh, const ::Texture2D *texture)
     entry.cpu_mesh.texcoords = nullptr;
     entry.cpu_mesh.indices = nullptr;
 
-    entry.valid = true;
-
-    if (texture) {
-        entry.texture = *texture;
-        entry.owns_texture = true;
+    if (!texture_path.empty()) {
+        entry.texture = _texture_manager.load(texture_path);
+        entry.texture_path = texture_path;
         if (entry.model.materialCount > 0) {
-            entry.model.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = entry.texture;
+            entry.model.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = *entry.texture;
         }
     }
-    return handle;
-}
 
-u32 r::Meshes::add(const ::Mesh &mesh, const std::string &texture_path)
-{
-    ::Texture2D tex = LoadTexture(texture_path.c_str());
-    u32 handle = add(mesh, &tex);
-
+    entry.valid = true;
+    Logger::info("bind mesh with handle: " + std::to_string(handle));
     return handle;
 }
 
@@ -93,6 +84,7 @@ void r::Meshes::remove(const u32 handle)
     if (handle >= _data.size()) {
         return;
     }
+
     auto &e = _data[handle];
 
     if (!e.valid) {
@@ -103,12 +95,15 @@ void r::Meshes::remove(const u32 handle)
     if (e.cpu_mesh.vertexCount > 0) {
         UnloadMesh(e.cpu_mesh);
     }
-    if (e.owns_texture) {
-        UnloadTexture(e.texture);
+
+    if (!e.texture_path.empty()) {
+        _texture_manager.unload(e.texture_path);
+        e.texture_path.clear();
+        e.texture = nullptr;
     }
+
     e.valid = false;
 }
-
 /**
 * private
 */

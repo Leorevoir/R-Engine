@@ -6,7 +6,22 @@
 
 #include <R-Engine/Maths/Vec.hpp>
 
+#include <unordered_map>
+
 namespace r {
+
+struct R_ENGINE_API TextureManager final {
+    public:
+        ~TextureManager();
+
+        const ::Texture2D *load(const std::string &path);
+        void unload(const std::string &path);
+
+    private:
+        std::unordered_map<std::string, ::Texture2D> _textures;
+
+        const ::Texture2D *_load(const std::string &path);
+};
 
 /**
 * @brief Mesh entry structure
@@ -18,7 +33,8 @@ struct R_ENGINE_API MeshEntry {
 
         ::Mesh cpu_mesh{};
         ::Model model{};
-        ::Texture2D texture{};
+        const ::Texture2D *texture{};
+        std::string texture_path{};
         bool owns_texture = false;
         bool valid = false;
 };
@@ -31,8 +47,7 @@ struct R_ENGINE_API Meshes final {
     public:
         ~Meshes();
 
-        u32 add(const ::Mesh &mesh, const ::Texture2D *texture = nullptr);
-        u32 add(const ::Mesh &mesh, const std::string &texture_path);
+        u32 add(const ::Mesh &mesh, const std::string &texture_path = "");
 
         const ::Model *get(const u32 handle) const noexcept;
 
@@ -45,6 +60,7 @@ struct R_ENGINE_API Meshes final {
         u32 _allocate();
 
         std::vector<MeshEntry> _data;
+        TextureManager _texture_manager;
 };
 
 struct R_ENGINE_API Transform3d {

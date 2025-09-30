@@ -5,11 +5,6 @@
  * static helpers
  */
 
-static void mesh_plugin_startup_system()
-{
-    /* __nothing__ */
-}
-
 static void mesh_render_system(r::ecs::Query<r::ecs::Ref<r::Mesh3d>, r::ecs::Ref<r::Transform3d>> query, r::ecs::Res<r::Meshes> meshes)
 {
     for (const auto &[mesh_comp, transform] : query) {
@@ -37,7 +32,5 @@ r::MeshPlugin::~MeshPlugin()
 
 void r::MeshPlugin::build(r::Application &app)
 {
-    app.insert_resource(Meshes{})
-        .add_systems(Schedule::STARTUP, mesh_plugin_startup_system)
-        .add_systems(Schedule::RENDER, mesh_render_system);
+    app.insert_resource(Meshes{}).add_systems(Schedule::RENDER, mesh_render_system);
 }

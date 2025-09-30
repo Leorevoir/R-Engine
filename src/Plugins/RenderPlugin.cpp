@@ -35,14 +35,14 @@ static void render_plugin_after_render_system(void)
 * public
 */
 
-r::RenderPlugin::RenderPlugin(const r::Camera3d &camera) : _camera(camera)
+r::RenderPlugin::RenderPlugin(const r::Camera3d &camera3d) : camera(camera3d)
 {
     /* __ctor__ */
 }
 
 void r::RenderPlugin::build(r::Application &app)
 {
-    app.insert_resource(_camera)
+    app.insert_resource(camera)
         .add_systems(Schedule::BEFORE_RENDER, render_plugin_before_render_system)
         .add_systems(Schedule::AFTER_RENDER, render_plugin_after_render_system);
 }

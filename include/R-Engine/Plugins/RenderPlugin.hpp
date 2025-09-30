@@ -9,8 +9,8 @@ namespace r {
 // clang-format off
 
 enum class Projection : i32 {
-    PERSPECTIVE = 0,
-    ORTHOGRAPHIC = 1
+    PERSPECTIVE     = 0,
+    ORTHOGRAPHIC    = 1
 };
 
 struct R_ENGINE_API Camera3d {
@@ -31,7 +31,7 @@ class R_ENGINE_API RenderPlugin final : public Plugin
         void build(Application &app) override;
 
     private:
-        Camera3d _camera;
+        Camera3d camera;
 };
 
 }// namespace r

@@ -9,16 +9,16 @@ class R_ENGINE_API Logger
     public:
         enum class Level { Debug, Info, Warn, Error };
 
-        static void debug(const std::string_view message, const std::string_view file = __builtin_FILE(),
+        static constexpr void debug(const std::string_view message, const std::string_view file = __builtin_FILE(),
             int line = __builtin_LINE()) noexcept;
 
-        static void info(const std::string_view message, const std::string_view file = __builtin_FILE(),
+        static constexpr void info(const std::string_view message, const std::string_view file = __builtin_FILE(),
             int line = __builtin_LINE()) noexcept;
 
-        static void warn(const std::string_view message, const std::string_view file = __builtin_FILE(),
+        static constexpr void warn(const std::string_view message, const std::string_view file = __builtin_FILE(),
             int line = __builtin_LINE()) noexcept;
 
-        static void error(const std::string_view message, const std::string_view file = __builtin_FILE(),
+        static constexpr void error(const std::string_view message, const std::string_view file = __builtin_FILE(),
             int line = __builtin_LINE()) noexcept;
 
     private:
@@ -33,7 +33,7 @@ class R_ENGINE_API Logger
         static constexpr std::string_view _level_to_string(Level lvl) noexcept;
         static constexpr std::string_view _level_to_color(Level lvl) noexcept;
 
-        static void _emit(const std::string_view message, Level level, const std::string_view file, int line) noexcept;
+        static constexpr void _emit(const std::string_view message, Level level, const std::string_view file, int line) noexcept;
 };
 
 }// namespace r

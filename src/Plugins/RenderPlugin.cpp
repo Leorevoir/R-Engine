@@ -7,7 +7,7 @@
  * static helpers
  */
 
-static constexpr inline const ::Camera to_raylib(const r::Camera3d &c)
+static constexpr inline const ::Camera to_raylib(const r::Camera3d &c) noexcept
 {
     return {
         .position = {c.position.x, c.position.y, c.position.z},
@@ -18,14 +18,14 @@ static constexpr inline const ::Camera to_raylib(const r::Camera3d &c)
     };
 }
 
-static void render_plugin_before_render_system(r::ecs::Res<r::Camera3d> camera)
+static void render_plugin_before_render_system(r::ecs::Res<r::Camera3d> camera) noexcept
 {
     BeginDrawing();
     ClearBackground(RAYWHITE);
     BeginMode3D(to_raylib(*camera.ptr));
 }
 
-static void render_plugin_after_render_system(void)
+static void render_plugin_after_render_system(void) noexcept
 {
     EndMode3D();
     EndDrawing();

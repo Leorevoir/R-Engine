@@ -15,7 +15,7 @@ static void _redirect_all_stdout()
 
 Test(Plugins, AddPluginByType, .init = _redirect_all_stdout)
 {
-    class TestPlugin : public r::Plugin
+    class TestPlugin final : public r::Plugin
     {
         public:
             void build(r::Application &app) override
@@ -26,9 +26,8 @@ Test(Plugins, AddPluginByType, .init = _redirect_all_stdout)
 
     r::Application app;
 
-    app.add_plugins<TestPlugin>();
-    // Test that the system runner now correctly handles reference parameters like Commands&
-    app.add_systems(r::Schedule::STARTUP, [](r::ecs::Res<int> res, r::ecs::Commands& /*cmds*/) {
+    app.add_plugins(TestPlugin{});
+    app.add_systems(r::Schedule::STARTUP, [](r::ecs::Res<int> res, r::ecs::Commands & /*cmds*/) {
         cr_assert(res.ptr != nullptr, "Resource should have been inserted by the plugin.");
         cr_assert_eq(*res.ptr, 42, "Resource value is incorrect.");
     });
@@ -36,7 +35,7 @@ Test(Plugins, AddPluginByType, .init = _redirect_all_stdout)
 
 Test(Plugins, BasicPluginGroup, .init = _redirect_all_stdout)
 {
-    class TestPluginA : public r::Plugin
+    class TestPluginA final : public r::Plugin
     {
         public:
             void build(r::Application &app) override
@@ -44,7 +43,7 @@ Test(Plugins, BasicPluginGroup, .init = _redirect_all_stdout)
                 app.insert_resource<int>(42);
             }
     };
-    class TestPluginB : public r::Plugin
+    class TestPluginB final : public r::Plugin
     {
         public:
             void build(r::Application &app) override
@@ -52,7 +51,7 @@ Test(Plugins, BasicPluginGroup, .init = _redirect_all_stdout)
                 app.insert_resource<float>(3.14f);
             }
     };
-    class TestPluginGroup : public r::PluginGroup
+    class TestPluginGroup final : public r::PluginGroup
     {
         public:
             TestPluginGroup()
@@ -79,7 +78,7 @@ Test(Plugins, BevyStyleSet, .init = _redirect_all_stdout)
             int value = 10;
     };
 
-    class ConfigurablePlugin : public r::Plugin
+    class ConfigurablePlugin final : public r::Plugin
     {
         public:
             ConfigurablePlugin(MyConfig config = {}) : _config(config)
@@ -94,7 +93,7 @@ Test(Plugins, BevyStyleSet, .init = _redirect_all_stdout)
             MyConfig _config;
     };
 
-    class UntouchedPlugin : public r::Plugin
+    class UntouchedPlugin final : public r::Plugin
     {
         public:
             void build(r::Application &app) override
@@ -103,7 +102,7 @@ Test(Plugins, BevyStyleSet, .init = _redirect_all_stdout)
             }
     };
 
-    class TestGroupWithDefaults : public r::PluginGroup
+    class TestGroupWithDefaults final : public r::PluginGroup
     {
         public:
             TestGroupWithDefaults()

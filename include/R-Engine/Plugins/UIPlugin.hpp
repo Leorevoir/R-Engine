@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 #include <R-Engine/ECS/Entity.hpp>
+#include <unordered_map>
 
 namespace r {
 
@@ -76,9 +77,8 @@ struct R_ENGINE_API UiTheme {
     f32 flash_percent = 1.0f;
     f32 flash_speed = 28.f;
     f32 quit_delay = 0.25f;
-    /* New global style knobs */
-    f32 press_flash_percent = 1.15f; /* multiplicative brighten when pressed */
-    f32 disabled_alpha = 0.4f;       /* alpha multiplier for disabled */
+    f32 press_flash_percent = 1.15f;
+    f32 disabled_alpha = 0.4f;
 };
 
 /** @brief Marker component tagging an entity as a button. */
@@ -90,50 +90,37 @@ struct R_ENGINE_API UiButtonState {
     bool pressed = false;
 };
 
-/* New unified interaction component (similar to Bevy's `Interaction`). */
-/* Retained alongside UiButtonState for backward compatibility. Systems will */
-/* update both when present. Prefer using UiInteraction for new code. */
 /** @brief High-level pointer interaction phases. */
 enum class UiInteractionState : unsigned char { None = 0, Hovered, Pressed };
 
 /** @brief Runtime interaction snapshot (diffed each frame to emit events). */
 struct R_ENGINE_API UiInteraction {
     UiInteractionState state = UiInteractionState::None;
-    UiInteractionState previous = UiInteractionState::None; /* preserved last frame for event diff */
+    UiInteractionState previous = UiInteractionState::None;
 };
 
-/* Internal resource replacing previous static globals controlling delayed quit. */
 /** @brief Internal state machine for delayed quit button action. */
 struct R_ENGINE_API UiPendingQuit {
     bool  active = false;
-    float timer  = 0.f; /* seconds remaining before quitting */
+    float timer  = 0.f;
 };
 
-/* ------------------------------------------------------------------------- */
-/* Layout / Hierarchy (passive stubs for now; real layout awaits ECS changes) */
-/* ------------------------------------------------------------------------- */
 
-/* Basic node data distinct from render rect size (could later store min/max, etc.). */
 /** @brief Layout stub node (future expansion: constraints, min/max). */
 struct R_ENGINE_API UiNode {
     Vec2f size = {0.f, 0.f};
-    f32 padding = 0.f;      /* uniform padding (future use) */
-    f32 spacing = 4.f;      /* vertical spacing between children */
+    f32 padding = 0.f;
+    f32 spacing = 4.f;
 };
 
-/* Marker indicating this entity participates as a parent in a layout hierarchy. */
 /** @brief Marker: entity acts as a layout parent. */
 struct R_ENGINE_API UiParent { };
 
-/* Explicit child list (manual for now). Must be filled user-side until ECS exposes entity IDs in queries. */
 /** @brief Explicit child entity list (manually maintained until hierarchy APIs exist). */
 struct R_ENGINE_API UiChildren {
-    std::vector<ecs::Entity> list; /* maintained manually */
+    std::vector<ecs::Entity> list;
 };
 
-/* ------------------------------------------------------------------------- */
-/* Click Event Bus (lightweight)                                             */
-/* ------------------------------------------------------------------------- */
 
 /** @brief (Deprecated) legacy click event classification. */
 enum class UiClickEventType : unsigned char { Generic, Quit };
@@ -142,7 +129,6 @@ enum class UiClickEventType : unsigned char { Generic, Quit };
 /* Unified Event Bus                                                         */
 /* ------------------------------------------------------------------------- */
 
-/* High level UI event kinds (extensible). */
 /** @brief Unified high-level UI events produced from interaction diffs. */
 enum class UiEventType : unsigned char {
     HoverEnter,
@@ -150,20 +136,21 @@ enum class UiEventType : unsigned char {
     Pressed,
     Released,
     Click,
-    QuitClick,   /* specialized click leading to quit */
-    ValueChanged, /* reserved for future widgets */
-    FocusEnter,   /* keyboard focus gained */
-    FocusLeave    /* keyboard focus lost */
+    QuitClick,
+    ValueChanged,
+    FocusEnter,
+    FocusLeave,
+    PointerMove,
+    DragStart,
+    DragEnd
 };
 
 /** @brief Single UI event instance (label optional, filled when text component present). */
 struct R_ENGINE_API UiEvent {
     UiEventType type = UiEventType::Click;
-    std::string label; /* optional textual label (e.g. button text) */
+    std::string label;
 };
 
-/* Double buffered storage so consumers (potentially later in frame) can still */
-/* reference last frame events if needed. For now we only use current. */
 /** @brief Double-buffered event storage (current frame + previous frame). */
 struct R_ENGINE_API UiEvents {
     std::vector<UiEvent> current;
@@ -171,10 +158,9 @@ struct R_ENGINE_API UiEvents {
 };
 
 /* Backward compatibility typedef (old name). */
-using UiClickEvent = UiEvent; /* deprecated */
-using UiClickEvents = UiEvents; /* deprecated */
+using UiClickEvent = UiEvent;
+using UiClickEvents = UiEvents;
 
-/* Logger configuration resource allowing filtering. */
 /** @brief Runtime filtering flags for the UI event logger system. */
 struct R_ENGINE_API UiEventLoggerConfig {
     bool enabled = false;
@@ -189,7 +175,6 @@ struct R_ENGINE_API UiEventLoggerConfig {
 /* Style system                                                              */
 /* ------------------------------------------------------------------------- */
 
-/* Declarative style for a widget. Drives final UiColor. */
 /**
  * @brief Per-widget style parameters and animation targets.
  * @details If a field like hover_dark_percent or flash_percent is >= 0 it overrides the global theme.
@@ -197,23 +182,18 @@ struct R_ENGINE_API UiEventLoggerConfig {
  */
 struct R_ENGINE_API UiStyle {
     unsigned char base_r = 90, base_g = 140, base_b = 255, base_a = 255;
-    f32 hover_dark_percent = 0.5f;  /* overrides global if >= 0 */
-    f32 flash_percent = 1.0f;       /* overrides global if >= 0 */
+    f32 hover_dark_percent = 0.5f;
+    f32 flash_percent = 1.0f;
     bool disabled = false;
-    /* Internal target color (computed on interaction transitions). */
     unsigned char target_r = base_r, target_g = base_g, target_b = base_b, target_a = base_a;
 };
 
-/* Dirty flags allow selective recomputation; kept minimal for now. */
 /** @brief Dirty flags (style currently used, layout reserved for future). */
 struct R_ENGINE_API UiDirty {
-    bool style = true;  /* when true, UiStyle target will be recomputed or animation kept */
-    bool layout = false; /* reserved */
+    bool style = true;
+    bool layout = false;
 };
 
-/* ------------------------------------------------------------------------- */
-/* Phase 2: Layout / Constraints / Autosize / Focus / Clipping / Animations  */
-/* ------------------------------------------------------------------------- */
 
 /** @brief Axis for stack layout. */
 enum class UiStackAxis : unsigned char { Horizontal, Vertical };
@@ -221,12 +201,12 @@ enum class UiStackAxis : unsigned char { Horizontal, Vertical };
 /** @brief Alignment for secondary axis in stack layout. */
 enum class UiStackAlign : unsigned char { Start, Center };
 
-/** @brief Stack layout container (uses manual UiChildren list). */
+/** @brief Stack layout container. */
 struct R_ENGINE_API UiStackLayout {
     UiStackAxis axis = UiStackAxis::Vertical;
-    UiStackAlign align = UiStackAlign::Center; /* cross axis alignment */
-    f32 padding = 8.f;  /* inner padding on all sides */
-    f32 spacing = 8.f;  /* gap between children */
+    UiStackAlign align = UiStackAlign::Center;
+    f32 padding = 8.f;
+    f32 spacing = 8.f;
 };
 
 /** @brief Size constraint: minimum. */
@@ -248,7 +228,7 @@ struct R_ENGINE_API UiFocusState { bool focused = false; };
 struct R_ENGINE_API UiFocusContext {
     ecs::Entity current = 0;
     ecs::Entity previous = 0;
-    std::vector<ecs::Entity> order; /* recomputed each frame (position sort) */
+    std::vector<ecs::Entity> order;
 };
 
 /** @brief Marker: clip (scissor) all descendants listed in UiChildren to this rect. */
@@ -259,31 +239,29 @@ struct R_ENGINE_API UiClipRect { Vec2f pos{0.f,0.f}; Vec2f size{0.f,0.f}; };
 /** @brief Scale (animated) applied at render time (does not affect layout). */
 struct R_ENGINE_API UiScale { f32 value = 1.f; f32 target = 1.f; };
 
-/* ------------------------------------------------------------------------- */
-/* Phase 3: Performance & Experience                                        */
-/* ------------------------------------------------------------------------- */
 
 /** @brief Unified pointer input (mouse + gamepad virtual cursor). */
 struct R_ENGINE_API UiInputState {
     Vec2f pointer_pos {0.f,0.f};
+    Vec2f prev_pointer_pos {0.f,0.f};
     bool pointer_down = false;
     bool pointer_pressed = false;
     bool pointer_released = false;
-    bool any_gamepad = false; /* true if gamepad contributed this frame */
+    bool any_gamepad = false;
 };
 
 /** @brief Config for virtual cursor input & mappings. */
 struct R_ENGINE_API UiInputConfig {
-    f32 gamepad_cursor_speed = 600.f; /* pixels per second */
-    int gamepad_index = 0;            /* which gamepad */
-    int confirm_button = 0;           /* A button (raylib gamepad button id) */
+    f32 gamepad_cursor_speed = 600.f;
+    int gamepad_index = 0;
+    int confirm_button = 0;
 };
 
 /** @brief Simple LRU-like cache entry for text measurement. */
 struct R_ENGINE_API UiTextMeasureCacheEntry {
-    std::string key; /* text + '#' + size */
+    std::string key;
     int width = 0;
-    u64 last_used_frame = 0; /* for eviction */
+    u64 last_used_frame = 0;
 };
 
 /** @brief Cache storing measured text widths to avoid repeated MeasureText calls. */
@@ -300,12 +278,16 @@ struct R_ENGINE_API UiAdvancedLoggerConfig {
     u32 throttle_release_ms = 0;
     u32 throttle_click_ms = 0;
     u32 throttle_focus_ms = 0;
+    u32 throttle_pointer_ms = 0;
+    u32 throttle_drag_ms = 0;
     /* internal last log times */
     double last_hover_time = -1.0;
     double last_press_time = -1.0;
     double last_release_time = -1.0;
     double last_click_time = -1.0;
     double last_focus_time = -1.0;
+    double last_pointer_time = -1.0;
+    double last_drag_time = -1.0;
 };
 
 /** @brief Animation target property kinds (extendable). */
@@ -332,7 +314,7 @@ struct R_ENGINE_API UiAnimations { std::vector<UiAnimFloat> tracks; };
 
 /** @brief Profiler config + rolling samples of timings. */
 struct R_ENGINE_API UiProfiler {
-    u32 max_samples = 120; /* frames */
+    u32 max_samples = 120;
     std::vector<double> interaction_samples;
     std::vector<double> style_samples;
     std::vector<double> render_rect_samples;
@@ -340,6 +322,45 @@ struct R_ENGINE_API UiProfiler {
     std::vector<double> animation_samples;
     std::vector<double> input_samples;
 };
+
+
+/** @brief Named entity for lookup. */
+struct R_ENGINE_API UiName { std::string value; };
+
+/** @brief Global registry mapping names to entities (rebuilt each frame). */
+struct R_ENGINE_API UiNameRegistry { std::unordered_map<std::string, ecs::Entity> map; };
+
+/** @brief Checkbox / toggle state. */
+struct R_ENGINE_API UiToggle { bool value = false; };
+
+/** @brief Slider (horizontal) floating value. */
+struct R_ENGINE_API UiSlider {
+    float value = 0.f;
+    float min = 0.f;
+    float max = 1.f;
+    bool dragging = false;
+};
+
+/** @brief Marker: label text bound to a slider's value (formatted each frame). */
+struct R_ENGINE_API UiLabelBindSlider { ecs::Entity slider = 0; };
+
+/** @brief Virtual list of text items with windowing (single column). */
+struct R_ENGINE_API UiVirtualList {
+    std::vector<std::string> items;
+    i32 first_visible = 0;
+    i32 visible_count = 0;
+    f32 item_height = 20.f;
+    std::vector<ecs::Entity> item_entities;
+};
+
+/** @brief Marker: style should inherit a base color (static copy). */
+struct R_ENGINE_API UiStyleInherit { };
+
+/** @brief Stored inherited base RGBA for style inheritance. */
+struct R_ENGINE_API UiInheritedBaseColor { unsigned char r=0,g=0,b=0,a=255; };
+
+/** @brief Internal cache of slider values for label binding. */
+struct R_ENGINE_API UiSliderValueCache { std::vector<std::pair<ecs::Entity,float>> values; };
 
 /* Frame statistics (reset each frame). */
 /**
@@ -364,6 +385,30 @@ struct R_ENGINE_API UiStats {
     double animation_ms = 0.0;
 };
 
+/** @brief Marker: entity participates in drag detection. */
+struct R_ENGINE_API UiDraggable { };
+/** @brief Per-entity drag runtime state. */
+struct R_ENGINE_API UiDragState { bool dragging=false; Vec2f start_pos{0.f,0.f}; };
+
+/** @brief Timeline animation keyframe (time,value). */
+struct R_ENGINE_API UiTimelineKeyframe { float time=0.f; float value=0.f; };
+/** @brief Timeline property kinds. */
+enum class UiTimelineProperty : unsigned char { Scale, Alpha };
+/** @brief Timeline track for one property. */
+struct R_ENGINE_API UiTimelineTrack { UiTimelineProperty property=UiTimelineProperty::Scale; std::vector<UiTimelineKeyframe> keys; bool loop=false; };
+/** @brief Per-entity timeline animation set. */
+struct R_ENGINE_API UiTimeline { bool playing=false; float time=0.f; std::vector<UiTimelineTrack> tracks; };
+
+/** @brief Headless execution configuration (tests). */
+struct R_ENGINE_API UiHeadlessConfig { bool enabled=false; };
+/** @brief Scripted headless input event. */
+struct R_ENGINE_API UiHeadlessEvent { float dt=0.016f; Vec2f pointer_pos{0.f,0.f}; bool press=false; bool release=false; };
+/** @brief Sequence of headless input events consumed each frame. */
+struct R_ENGINE_API UiHeadlessScript { std::vector<UiHeadlessEvent> events; size_t index=0; };
+
+/** @brief Load theme values from a simple key=value text file. */
+bool R_ENGINE_API load_ui_theme_file(class Application &app, const std::string &path);
+
 /* ------------------------------------------------------------------------- */
 /* Pseudo Bundle Helper (manual expansion)                                   */
 /* ------------------------------------------------------------------------- */
@@ -375,7 +420,7 @@ struct R_ENGINE_API UiStats {
 struct R_ENGINE_API UiButtonBundle {
     UiButton button = {};
     UiButtonState state = {};
-    UiInteraction interaction = {}; /* required for new interaction system */
+    UiInteraction interaction = {};
     UiOriginalColor original_color = {90, 140, 255, 255};
     UiColor color = {90, 140, 255, 255};
     UiStyle style = {};
@@ -410,7 +455,6 @@ public:
 
 } /* namespace r */
 
-/* Inline helper implementation (requires Command.hpp includes in translation units using it). */
 #include <R-Engine/ECS/Command.hpp>
 
 inline r::ecs::Entity r::spawn_ui_button(r::ecs::Commands &commands, const UiButtonBundle &b, r::UiPosition pos)

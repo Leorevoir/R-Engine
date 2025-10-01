@@ -5,10 +5,12 @@
 #include <R-Engine/Core/Backend.hpp>
 #include <algorithm>
 #include <chrono>
+#include <sstream>
+#include <fstream>
+#include <cstring>
 
 namespace r {
 
-/* Internal utility: scope-based millisecond timer feeding UiStats field. */
 struct UiScopedTimerInternal {
     std::chrono::high_resolution_clock::time_point start;
     double *dst;
@@ -16,7 +18,6 @@ struct UiScopedTimerInternal {
     ~UiScopedTimerInternal() { if (dst) *dst = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - start).count(); }
 };
 
-/* Batched render items (collected then sorted by z). */
 struct UiRenderableTextInternal { UiPosition *pos; UiText *text; UiTextColor *color; UiZIndex *z; UiRectSize *rect_size; UiScale *scale; };
 struct UiRenderableRectInternal { UiPosition *pos; UiRectSize *size; UiColor *color; UiBorderColor *border_color; UiBorderThickness *border_thickness; UiBorderRadius *radius; UiZIndex *z; UiScale *scale; };
 
@@ -75,9 +76,7 @@ static void _ui_draw_rect_items(const std::vector<UiRenderableRectInternal> &ite
 static void _ui_render_text_system(ecs::Query<ecs::Mut<UiText>, ecs::Mut<UiPosition>, ecs::Ref<UiTextColor>, ecs::Optional<UiZIndex>, ecs::Optional<UiRectSize>, ecs::Optional<UiScale>> q, ecs::Res<UiStats> stats, ecs::Query<ecs::Ref<UiClipRect>> clip_q) {
     UiScopedTimerInternal t(const_cast<double*>(&stats.ptr->render_text_ms));
     std::vector<UiRenderableTextInternal> items; items.reserve(64); _ui_collect_text_items(q, items); _ui_sort_by_z(items);
-    // Apply only one clip rect for now (first). Future: hierarchical stack.
-    for (auto [clip_ref] : clip_q) { (void)clip_ref; /* future: apply scissor */ }
-    // Simple: clipping resource currently unused (placeholder for future hierarchical scissor stack).
+    for (auto [clip_ref] : clip_q) { (void)clip_ref; }
     _ui_draw_text_items(items);
     auto *st = const_cast<UiStats*>(stats.ptr); st->texts_drawn += (u32)items.size();
 }
@@ -89,7 +88,6 @@ static void _ui_render_rect_system(ecs::Query<ecs::Mut<UiRectSize>, ecs::Mut<UiP
     auto *st = const_cast<UiStats*>(stats.ptr); st->rects_drawn += (u32)items.size();
 }
 
-/* Interaction */
 struct _UiPointerState { Vector2 pos; bool down; bool pressed; bool released; };
 static void _ui_process_one_interaction(const _UiPointerState &ptr, UiPosition *pos, UiRectSize *size, UiInteraction *interaction) {
     const Rectangle rect = {pos->pos.x, pos->pos.y, size->size.x, size->size.y};
@@ -99,18 +97,16 @@ static void _ui_process_one_interaction(const _UiPointerState &ptr, UiPosition *
     interaction->previous = interaction->state; interaction->state = new_state;
 }
 
-/* Unified input state (mouse + optional gamepad virtual cursor) */
 static void _ui_input_unified_system(ecs::Res<core::FrameTime> ft, ecs::Res<UiInputState> input, ecs::Res<UiInputConfig> cfg, ecs::Res<UiStats> stats) {
     UiScopedTimerInternal t(const_cast<double*>(&stats.ptr->input_ms));
     auto *in = const_cast<UiInputState*>(input.ptr);
-    // Start from real mouse
+    in->prev_pointer_pos = in->pointer_pos;
     Vector2 mp = GetMousePosition();
     in->pointer_pos = { mp.x, mp.y };
     in->pointer_down = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
     in->pointer_pressed = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
     in->pointer_released = IsMouseButtonReleased(MOUSE_BUTTON_LEFT);
     in->any_gamepad = false;
-    // Optional gamepad virtual cursor (simple: left stick)
     if (IsGamepadAvailable(cfg.ptr->gamepad_index)) {
         float lx = GetGamepadAxisMovement(cfg.ptr->gamepad_index, GAMEPAD_AXIS_LEFT_X);
         float ly = GetGamepadAxisMovement(cfg.ptr->gamepad_index, GAMEPAD_AXIS_LEFT_Y);
@@ -122,7 +118,6 @@ static void _ui_input_unified_system(ecs::Res<core::FrameTime> ft, ecs::Res<UiIn
         if (IsGamepadButtonPressed(cfg.ptr->gamepad_index, cfg.ptr->confirm_button)) { in->pointer_pressed = true; in->pointer_down = true; }
         if (IsGamepadButtonReleased(cfg.ptr->gamepad_index, cfg.ptr->confirm_button)) { in->pointer_released = true; in->pointer_down = false; }
     }
-    // Clamp to window bounds (approx using current screen size)
     int sw = GetScreenWidth(), sh = GetScreenHeight();
     in->pointer_pos.x = std::clamp(in->pointer_pos.x, 0.f, (float)sw - 1.f);
     in->pointer_pos.y = std::clamp(in->pointer_pos.y, 0.f, (float)sh - 1.f);
@@ -130,17 +125,15 @@ static void _ui_input_unified_system(ecs::Res<core::FrameTime> ft, ecs::Res<UiIn
 
 static void _ui_interaction_system(ecs::Query<ecs::Mut<UiPosition>, ecs::Mut<UiRectSize>, ecs::Optional<UiButton>, ecs::Optional<UiInteraction>, ecs::Optional<UiStyle>> q, ecs::Res<UiStats> stats, ecs::Res<UiInputState> input) {
     UiScopedTimerInternal t(const_cast<double*>(&stats.ptr->interaction_ms));
-    // Build pointer snapshot from unified input
     _UiPointerState ptr{ { input.ptr->pointer_pos.x, input.ptr->pointer_pos.y }, input.ptr->pointer_down, input.ptr->pointer_pressed, input.ptr->pointer_released };
     u32 count = 0;
     for (auto [pos_w, size_w, button_w, interaction_w, style_w] : q) {
         if (!button_w.ptr || !interaction_w.ptr) {
             continue;
         }
-        /* Suppress interaction entirely if style marks widget disabled. */
         if (style_w.ptr && style_w.ptr->disabled) {
             auto *inter = const_cast<UiInteraction*>(interaction_w.ptr);
-            inter->previous = inter->state; /* keep previous in sync to avoid generating events */
+            inter->previous = inter->state;
             inter->state = UiInteractionState::None;
             ++count;
             continue;
@@ -152,12 +145,10 @@ static void _ui_interaction_system(ecs::Query<ecs::Mut<UiPosition>, ecs::Mut<UiR
     st->interaction_entities += count;
 }
 
-/* Interaction events */
 static void _ui_interaction_events_system(ecs::Query<ecs::Ref<UiInteraction>, ecs::Optional<UiText>, ecs::Optional<UiStyle>> q, ecs::Res<UiEvents> events, ecs::Res<UiStats> stats) {
     auto *ev = const_cast<UiEvents*>(events.ptr); u32 before = (u32)ev->current.size();
     for (auto [interaction_w, text_w, style_w] : q) {
         const UiInteraction *in = interaction_w.ptr; if (in->state == in->previous) continue; UiEvent e; e.label = text_w.ptr ? text_w.ptr->value : std::string{};
-        /* Skip all events if disabled (we still updated interaction->state to None in interaction system). */
         if (style_w.ptr && style_w.ptr->disabled) {
             continue;
         }
@@ -169,7 +160,29 @@ static void _ui_interaction_events_system(ecs::Query<ecs::Ref<UiInteraction>, ec
     auto *st = const_cast<UiStats*>(stats.ptr); st->events_emitted += ((u32)ev->current.size() - before);
 }
 
-/* Style system */
+/* Pointer move granular event */
+static void _ui_pointer_move_event_system(ecs::Res<UiInputState> input, ecs::Res<UiEvents> events, ecs::Res<UiAdvancedLoggerConfig> adv) {
+    if (input.ptr->pointer_pos.x != input.ptr->prev_pointer_pos.x || input.ptr->pointer_pos.y != input.ptr->prev_pointer_pos.y) {
+        UiEvent e; e.type = UiEventType::PointerMove; e.label = ""; const_cast<UiEvents*>(events.ptr)->current.push_back(e);
+    }
+    (void)adv;
+}
+
+/* Drag detection (per draggable). */
+static void _ui_drag_system(ecs::Query<ecs::Mut<UiDragState>, ecs::Ref<UiPosition>, ecs::Ref<UiRectSize>, ecs::Optional<UiDraggable>> q, ecs::Res<UiInputState> input, ecs::Res<UiEvents> events) {
+    for (auto [drag_w, pos_w, size_w, drag_marker] : q) {
+        if (!drag_marker.ptr) continue;
+        auto *ds = drag_w.ptr;
+        bool inside = input.ptr->pointer_pos.x >= pos_w.ptr->pos.x && input.ptr->pointer_pos.x <= pos_w.ptr->pos.x + size_w.ptr->size.x && input.ptr->pointer_pos.y >= pos_w.ptr->pos.y && input.ptr->pointer_pos.y <= pos_w.ptr->pos.y + size_w.ptr->size.y;
+        if (!ds->dragging && input.ptr->pointer_pressed && inside) {
+            ds->dragging = true; ds->start_pos = input.ptr->pointer_pos; UiEvent e; e.type = UiEventType::DragStart; e.label = ""; const_cast<UiEvents*>(events.ptr)->current.push_back(e);
+        }
+        if (ds->dragging && input.ptr->pointer_released) {
+            ds->dragging = false; UiEvent e; e.type = UiEventType::DragEnd; e.label = ""; const_cast<UiEvents*>(events.ptr)->current.push_back(e);
+        }
+    }
+}
+
 static unsigned char _ui_lerp_u8(unsigned char from, unsigned char to, f32 spd) { f32 f = (f32)from, t = (f32)to; f32 v = f + (t - f) * std::clamp(spd * 0.016f, 0.f, 1.f); return (unsigned char)std::clamp((int)v, 0, 255); }
 
 static void _ui_style_system(ecs::Query<ecs::Mut<UiColor>, ecs::Mut<UiStyle>, ecs::Optional<UiDirty>, ecs::Optional<UiInteraction>, ecs::Ref<UiOriginalColor>> q, ecs::Res<UiTheme> theme, ecs::Res<UiStats> stats) {
@@ -195,7 +208,6 @@ static void _ui_style_system(ecs::Query<ecs::Mut<UiColor>, ecs::Mut<UiStyle>, ec
     }
 }
 
-/* Button action (quit) */
 static void _ui_button_action_system(ecs::Query<ecs::Ref<UiButton>, ecs::Optional<UiOnClickQuit>, ecs::Optional<UiInteraction>, ecs::Optional<UiText>, ecs::Optional<UiStyle>> q, ecs::Res<UiTheme> theme, ecs::Res<UiPendingQuit> pending, ecs::Res<UiEvents> events, ecs::Res<UiStats> stats) {
     const bool released = IsMouseButtonReleased(MOUSE_BUTTON_LEFT);
     auto *ev = const_cast<UiEvents*>(events.ptr);
@@ -205,7 +217,7 @@ static void _ui_button_action_system(ecs::Query<ecs::Ref<UiButton>, ecs::Optiona
             continue;
         }
         if (style_w.ptr && style_w.ptr->disabled) {
-            continue; /* disabled widgets never trigger actions */
+            continue;
         }
         const UiInteraction *in = inter_w.ptr;
         bool trigger = (released && (in->state == UiInteractionState::Hovered));
@@ -224,7 +236,6 @@ static void _ui_button_action_system(ecs::Query<ecs::Ref<UiButton>, ecs::Optiona
     }
 }
 
-/* Pending quit */
 static void _ui_pending_quit_system(ecs::Res<core::FrameTime> ft, ecs::Res<UiPendingQuit> pending) {
     if (!pending.ptr->active) {
         return;
@@ -237,31 +248,26 @@ static void _ui_pending_quit_system(ecs::Res<core::FrameTime> ft, ecs::Res<UiPen
     }
 }
 
-/* Frame begin */
 static void _ui_events_frame_begin_system(ecs::Res<UiEvents> events, ecs::Res<UiStats> stats) {
     auto *ev = const_cast<UiEvents*>(events.ptr); auto *st = const_cast<UiStats*>(stats.ptr);
     ev->previous.clear(); ev->previous.swap(ev->current); st->events_emitted = 0; st->rects_drawn = 0; st->texts_drawn = 0; st->interaction_entities = 0; st->style_ms = st->interaction_ms = st->render_rect_ms = st->render_text_ms = 0.0; ++st->frame_index;
 }
 
-/* Layout stub */
-/* ---------------- Phase 2 Layout + Autosize + Constraints + Focus Prep ---------------- */
 static void _ui_layout_phase2_system(
     ecs::Query<ecs::Mut<UiRectSize>, ecs::Mut<UiPosition>, ecs::Optional<UiText>, ecs::Optional<UiAutoSizeText>, ecs::Optional<UiMinSize>, ecs::Optional<UiMaxSize>, ecs::Optional<UiPreferredSize>, ecs::Optional<UiScale>> q_all,
     ecs::Query<ecs::Ref<UiStackLayout>, ecs::Ref<UiChildren>, ecs::Ref<UiPosition>, ecs::Optional<UiRectSize>> q_stacks,
     ecs::Res<UiFocusContext> focus_ctx)
 {
-    /* Pass 1: Autosize text (only when rect size is zero). */
     for (auto [rect_w, pos_w, text_w, autosize_w, min_w, max_w, pref_w, scale_w] : q_all) {
         (void)pos_w; (void)scale_w;
         if (!text_w.ptr || !autosize_w.ptr) continue;
         if (rect_w.ptr->size.x <= 0.f || rect_w.ptr->size.y <= 0.f) {
             int font_size = (int)text_w.ptr->size;
             int wpx = MeasureText(text_w.ptr->value.c_str(), font_size);
-            rect_w.ptr->size.x = (f32)wpx + 12.f; /* small horizontal padding */
-            rect_w.ptr->size.y = (f32)font_size + 8.f; /* vertical padding */
+            rect_w.ptr->size.x = (f32)wpx + 12.f;
+            rect_w.ptr->size.y = (f32)font_size + 8.f;
             if (pref_w.ptr) const_cast<UiPreferredSize*>(pref_w.ptr)->value = rect_w.ptr->size;
         }
-        /* Apply constraints */
         if (min_w.ptr) {
             rect_w.ptr->size.x = std::max(rect_w.ptr->size.x, min_w.ptr->value.x);
             rect_w.ptr->size.y = std::max(rect_w.ptr->size.y, min_w.ptr->value.y);
@@ -271,23 +277,17 @@ static void _ui_layout_phase2_system(
             rect_w.ptr->size.y = std::min(rect_w.ptr->size.y, max_w.ptr->value.y);
         }
     }
-    /* Pass 2: Stack layout (single level). */
     for (auto [layout_ref, children_ref, pos_ref, rect_opt] : q_stacks) {
         (void)layout_ref; (void)children_ref; (void)pos_ref; (void)rect_opt;
-        // Placeholder: real stack layout deferred until ECS gives safe child mutation.
     }
-    /* Pass 3: Focus ordering reconstruction (by X then Y). */
     auto *fc = const_cast<UiFocusContext*>(focus_ctx.ptr);
     fc->order.clear();
-    // We cannot iterate entities with focusable & position without Query param combination + entity ids currently; skipping fill.
 }
 
-/* Focus navigation (Tab / Shift+Tab) */
 static void _ui_focus_navigation_system(ecs::Res<UiFocusContext> focus_ctx, ecs::Res<UiEvents> events) {
     if (!IsKeyPressed(KEY_TAB)) return;
     auto *fc = const_cast<UiFocusContext*>(focus_ctx.ptr);
-    if (fc->order.empty()) return; /* nothing focusable */
-    // Determine current index
+    if (fc->order.empty()) return;
     size_t idx = 0; bool found = false;
     for (size_t i = 0; i < fc->order.size(); ++i) if (fc->order[i] == fc->current) { idx = i; found = true; break; }
     if (!found) idx = (size_t)-1;
@@ -308,7 +308,72 @@ static void _ui_focus_navigation_system(ecs::Res<UiFocusContext> focus_ctx, ecs:
     }
 }
 
-/* Logger */
+static void _ui_name_registry_system(ecs::Query<ecs::Ref<UiName>> q, ecs::Res<UiNameRegistry> reg) {
+    auto *r = const_cast<UiNameRegistry*>(reg.ptr);
+    r->map.clear();
+    for (auto [name_w] : q) {
+        (void)name_w;
+    }
+}
+static void _ui_style_inheritance_system(ecs::Query<ecs::Mut<UiOriginalColor>, ecs::Optional<UiStyleInherit>, ecs::Optional<UiInheritedBaseColor>> q) {
+    for (auto [orig_w, inherit_w, inherited_w] : q) {
+        if (!inherit_w.ptr || !inherited_w.ptr) continue;
+        orig_w.ptr->r = inherited_w.ptr->r;
+        orig_w.ptr->g = inherited_w.ptr->g;
+        orig_w.ptr->b = inherited_w.ptr->b;
+        orig_w.ptr->a = inherited_w.ptr->a;
+    }
+}
+
+static void _ui_toggle_system(ecs::Query<ecs::Mut<UiToggle>, ecs::Ref<UiInteraction>> q, ecs::Res<UiEvents> events) {
+    auto *ev = const_cast<UiEvents*>(events.ptr);
+    for (auto [toggle_w, interaction_w] : q) {
+        const UiInteraction *in = interaction_w.ptr;
+        if (in->previous == UiInteractionState::Pressed && in->state == UiInteractionState::Hovered) {
+            toggle_w.ptr->value = !toggle_w.ptr->value;
+            UiEvent e; e.type = UiEventType::ValueChanged; e.label = toggle_w.ptr->value ? "true" : "false"; ev->current.push_back(e);
+        }
+    }
+}
+
+static void _ui_slider_system(ecs::Query<ecs::Mut<UiSlider>, ecs::Ref<UiPosition>, ecs::Ref<UiRectSize>, ecs::Optional<UiInteraction>> q, ecs::Res<UiEvents> events, ecs::Res<UiInputState> input) {
+    auto *ev = const_cast<UiEvents*>(events.ptr);
+    for (auto [slider_w, pos_w, size_w, inter_w] : q) {
+        auto *sl = slider_w.ptr;
+        if (!inter_w.ptr) continue;
+        bool inside = input.ptr->pointer_pos.x >= pos_w.ptr->pos.x && input.ptr->pointer_pos.x <= pos_w.ptr->pos.x + size_w.ptr->size.x && input.ptr->pointer_pos.y >= pos_w.ptr->pos.y && input.ptr->pointer_pos.y <= pos_w.ptr->pos.y + size_w.ptr->size.y;
+        if (input.ptr->pointer_pressed && inside) sl->dragging = true;
+        if (input.ptr->pointer_released) sl->dragging = false;
+        if (sl->dragging) {
+            float rel = (input.ptr->pointer_pos.x - pos_w.ptr->pos.x) / std::max(1.f, size_w.ptr->size.x);
+            rel = std::clamp(rel, 0.f, 1.f);
+            float new_val = sl->min + (sl->max - sl->min) * rel;
+            if (std::fabs(new_val - sl->value) > 0.0001f) {
+                sl->value = new_val;
+                UiEvent e; e.type = UiEventType::ValueChanged; e.label = "slider"; ev->current.push_back(e);
+            }
+        }
+    }
+}
+
+static void _ui_label_bind_slider_system(ecs::Query<ecs::Mut<UiText>, ecs::Ref<UiLabelBindSlider>> q, ecs::Res<UiSliderValueCache> cache) {
+    auto *c = const_cast<UiSliderValueCache*>(cache.ptr);
+    for (auto [text_w, bind_w] : q) {
+        for (auto &p : c->values) if (p.first == bind_w.ptr->slider) {
+            std::ostringstream ss; ss.setf(std::ios::fixed); ss.precision(2); ss << p.second; text_w.ptr->value = ss.str();
+            break;
+        }
+    }
+}
+
+static void _ui_virtual_list_system(ecs::Query<ecs::Mut<UiVirtualList>, ecs::Ref<UiRectSize>> q) {
+    for (auto [list_w, rect_w] : q) {
+        auto *vl = list_w.ptr;
+        vl->visible_count = (i32)std::clamp((int)(rect_w.ptr->size.y / vl->item_height), 0, (int)vl->items.size());
+        if (vl->first_visible + vl->visible_count > (i32)vl->items.size()) vl->first_visible = std::max(0, (int)vl->items.size() - vl->visible_count);
+    }
+}
+
 static const char * _ui_event_type_str(UiEventType t) {
     switch(t) {
         case UiEventType::HoverEnter: return "HoverEnter";
@@ -324,10 +389,9 @@ static const char * _ui_event_type_str(UiEventType t) {
     }
 }
 
-/* Simple throttle helper */
 static bool _ui_should_throttle(double now_ms, double *last_ms, u32 throttle_ms) {
     if (!last_ms) return true;
-    if (throttle_ms == 0) return true; /* treat 0 as 'allow every event' */
+    if (throttle_ms == 0) return true;
     if (*last_ms < 0.0 || (now_ms - *last_ms) >= (double)throttle_ms) { *last_ms = now_ms; return true; }
     return false;
 }
@@ -362,6 +426,9 @@ static void _ui_event_logger_system(ecs::Res<UiEvents> events, ecs::Res<UiEventL
                 case UiEventType::Click: throttle_ok = _ui_should_throttle(now_ms, &adv_mut->last_click_time, adv_mut->throttle_click_ms); break;
                 case UiEventType::FocusEnter:
                 case UiEventType::FocusLeave: throttle_ok = _ui_should_throttle(now_ms, &adv_mut->last_focus_time, adv_mut->throttle_focus_ms); break;
+                case UiEventType::PointerMove: throttle_ok = _ui_should_throttle(now_ms, &adv_mut->last_pointer_time, adv_mut->throttle_pointer_ms); break;
+                case UiEventType::DragStart:
+                case UiEventType::DragEnd: throttle_ok = _ui_should_throttle(now_ms, &adv_mut->last_drag_time, adv_mut->throttle_drag_ms); break;
                 default: break;
             }
         }
@@ -371,7 +438,6 @@ static void _ui_event_logger_system(ecs::Res<UiEvents> events, ecs::Res<UiEventL
     }
 }
 
-/* Declarative animation system */
 static void _ui_animation_system(ecs::Query<ecs::Mut<UiScale>, ecs::Optional<UiAnimations>> q, ecs::Res<core::FrameTime> ft, ecs::Res<UiStats> stats) {
     UiScopedTimerInternal t(const_cast<double*>(&stats.ptr->animation_ms));
     for (auto [scale_w, anims_w] : q) {
@@ -393,6 +459,73 @@ static void _ui_animation_system(ecs::Query<ecs::Mut<UiScale>, ecs::Optional<UiA
     }
 }
 
+/* Timeline animation system */
+static void _ui_timeline_system(ecs::Query<ecs::Mut<UiScale>, ecs::Optional<UiTimeline>> q, ecs::Res<core::FrameTime> ft) {
+    for (auto [scale_w, timeline_w] : q) {
+        if (!timeline_w.ptr) continue;
+        auto *tl = const_cast<UiTimeline*>(timeline_w.ptr);
+        if (!tl->playing) continue;
+        tl->time += (float)ft.ptr->delta_time;
+        for (auto &track : tl->tracks) {
+            if (track.keys.empty()) continue;
+            float total = track.keys.back().time;
+            float t = tl->time;
+            if (track.loop && total > 0.f) t = fmodf(t, total); else if (t > total) t = total;
+            UiTimelineKeyframe a = track.keys.front();
+            UiTimelineKeyframe b = track.keys.back();
+            for (size_t i = 1; i < track.keys.size(); ++i) {
+                if (t <= track.keys[i].time) { a = track.keys[i-1]; b = track.keys[i]; break; }
+            }
+            float alpha = (b.time - a.time) > 0.f ? (t - a.time) / (b.time - a.time) : 1.f;
+            alpha = std::clamp(alpha, 0.f, 1.f);
+            float v = a.value + (b.value - a.value) * alpha;
+            if (track.property == UiTimelineProperty::Scale)
+                scale_w.ptr->target = v;
+        }
+    }
+}
+
+/* Headless scripted input override */
+static void _ui_headless_input_system(ecs::Res<UiHeadlessConfig> cfg, ecs::Res<UiHeadlessScript> script, ecs::Res<UiInputState> input) {
+    if (!cfg.ptr->enabled) return;
+    auto *s = const_cast<UiHeadlessScript*>(script.ptr);
+    if (s->index >= s->events.size()) return;
+    auto ev = s->events[s->index++];
+    auto *in = const_cast<UiInputState*>(input.ptr);
+    in->prev_pointer_pos = in->pointer_pos;
+    in->pointer_pos = ev.pointer_pos;
+    in->pointer_pressed = ev.press;
+    in->pointer_released = ev.release;
+    if (ev.press) in->pointer_down = true;
+    if (ev.release) in->pointer_down = false;
+}
+
+/* Theme file loader */
+bool load_ui_theme_file(Application &app, const std::string &path) {
+    std::ifstream f(path.c_str());
+    if (!f.is_open()) return false;
+    UiTheme theme;
+    std::string line;
+    while (std::getline(f, line)) {
+        if (line.empty() || line[0] == '#') continue;
+        auto eq = line.find('=');
+        if (eq == std::string::npos) continue;
+        std::string k = line.substr(0, eq);
+        std::string v = line.substr(eq + 1);
+        auto to_f = [&](const std::string &s){ return (float)atof(s.c_str()); };
+        if (k == "hover_dark_percent") theme.hover_dark_percent = to_f(v);
+        else if (k == "hover_speed") theme.hover_speed = to_f(v);
+        else if (k == "restore_speed") theme.restore_speed = to_f(v);
+        else if (k == "flash_percent") theme.flash_percent = to_f(v);
+        else if (k == "flash_speed") theme.flash_speed = to_f(v);
+        else if (k == "quit_delay") theme.quit_delay = to_f(v);
+        else if (k == "press_flash_percent") theme.press_flash_percent = to_f(v);
+        else if (k == "disabled_alpha") theme.disabled_alpha = to_f(v);
+    }
+    app.insert_resource(theme);
+    return true;
+}
+
 void UiPlugin::build(Application &app) {
     app
         .insert_resource(UiTheme{})
@@ -405,20 +538,34 @@ void UiPlugin::build(Application &app) {
         .insert_resource(UiInputConfig{})
         .insert_resource(UiTextMeasureCache{})
         .insert_resource(UiProfiler{})
+        .insert_resource(UiHeadlessConfig{})
+        .insert_resource(UiHeadlessScript{})
         .add_systems(Schedule::UPDATE,
             _ui_events_frame_begin_system,
+            _ui_headless_input_system,
             _ui_layout_phase2_system,
             _ui_input_unified_system,
+            _ui_pointer_move_event_system,
             _ui_interaction_system,
             _ui_interaction_events_system,
             _ui_style_system,
             _ui_animation_system,
+            _ui_timeline_system,
             _ui_focus_navigation_system,
+            _ui_style_inheritance_system,
+            _ui_toggle_system,
+            _ui_slider_system,
+            _ui_label_bind_slider_system,
+            _ui_virtual_list_system,
+            _ui_name_registry_system,
+            _ui_drag_system,
             _ui_button_action_system,
             _ui_pending_quit_system,
             _ui_event_logger_system)
         .add_systems(Schedule::RENDER, _ui_render_rect_system, _ui_render_text_system)
-        .insert_resource(UiFocusContext{});
+        .insert_resource(UiFocusContext{})
+        .insert_resource(UiNameRegistry{})
+        .insert_resource(UiSliderValueCache{});
 }
 
-} /* namespace r */
+}

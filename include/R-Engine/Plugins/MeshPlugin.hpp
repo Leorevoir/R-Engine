@@ -14,6 +14,7 @@ namespace r {
  * @brief Alias for mesh handle type to avoid having u32 everywhere
  */
 using MeshHandle = u32;
+static constexpr inline const MeshHandle MeshInvalidHandle = static_cast<MeshHandle>(-1);
 
 /**
  * @brief Texture Manager for loading & unloading textures
@@ -96,6 +97,7 @@ struct R_ENGINE_API Meshes final {
         * @brief internal method to allocate a new mesh entry
         */
         MeshHandle _allocate();
+        void _add_texture(MeshEntry &entry, const std::string &texture_path);
 
         std::vector<MeshEntry> _data;
         TextureManager _texture_manager;

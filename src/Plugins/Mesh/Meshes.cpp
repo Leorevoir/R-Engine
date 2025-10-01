@@ -28,7 +28,13 @@ r::Meshes::~Meshes()
 
 u32 r::Meshes::add(const ::Mesh &mesh, const std::string &texture_path)
 {
-    u32 handle = _allocate();
+
+    if (mesh.vertexCount == 0 || mesh.triangleCount == 0 || !mesh.vertices || !mesh.indices) {
+        Logger::error("Failed to bind mesh: invalid mesh data");
+        return MeshInvalidHandle;
+    }
+
+    const u32 handle = _allocate();
     auto &entry = _data[handle];
 
     entry.cpu_mesh = mesh;
@@ -44,11 +50,7 @@ u32 r::Meshes::add(const ::Mesh &mesh, const std::string &texture_path)
 
     /** @info load texture if a path is provided using the Texture Manager */
     if (!texture_path.empty()) {
-        entry.texture = _texture_manager.load(texture_path);
-        entry.texture_path = texture_path;
-        if (entry.model.materialCount > 0) {
-            entry.model.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = *entry.texture;
-        }
+        _add_texture(entry, (texture_path));
     }
 
     entry.valid = true;
@@ -118,4 +120,20 @@ u32 r::Meshes::_allocate()
 {
     _data.emplace_back();
     return static_cast<u32>(_data.size() - 1);
+}
+
+void r::Meshes::_add_texture(MeshEntry &entry, const std::string &texture_path)
+{
+    const auto &texture = _texture_manager.load(texture_path);
+
+    if (!texture) {
+        Logger::error("Failed to bind texture to mesh: " + texture_path);
+        return;
+    }
+
+    entry.texture = texture;
+    entry.texture_path = texture_path;
+    if (entry.model.materialCount > 0) {
+        entry.model.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = *entry.texture;
+    }
 }

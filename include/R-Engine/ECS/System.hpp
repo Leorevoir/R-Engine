@@ -3,7 +3,6 @@
 #include <R-Engine/ECS/Resolver.hpp>
 #include <R-Engine/Types.hpp>
 
-#include <functional>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -58,6 +57,17 @@ struct function_traits<R (C::*)(Args...)> {
 */
 template<typename R, typename... Args>
 struct function_traits<R (*)(Args...)> {
+        using args = std::tuple<std::remove_cvref_t<Args>...>;
+};
+
+/**
+ * @brief noexcept function pointer
+ * @info (for free functions with noexcept)
+ *
+ * void (*)(int, float) noexcept;
+ */
+template<typename R, typename... Args>
+struct function_traits<R (*)(Args...) noexcept> {
         using args = std::tuple<std::remove_cvref_t<Args>...>;
 };
 

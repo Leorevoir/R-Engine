@@ -9,7 +9,7 @@
  * helpers
  */
 
-static void _init_window_system(r::ecs::Res<r::WindowPluginConfig> config)
+static void _init_window_system(r::ecs::Res<r::WindowPluginConfig> config) noexcept
 {
     const r::Vec2i size = static_cast<r::Vec2i>(config.ptr->size);
     const std::string &title = config.ptr->title;
@@ -53,7 +53,7 @@ static void _init_window_system(r::ecs::Res<r::WindowPluginConfig> config)
     }
 }
 
-static void _update_cursor_system(r::ecs::Res<r::Cursor> cursor)
+static void _update_cursor_system(r::ecs::Res<r::Cursor> cursor) noexcept
 {
     switch (cursor.ptr->state) {
         case r::WindowCursorState::Visible:
@@ -71,14 +71,14 @@ static void _update_cursor_system(r::ecs::Res<r::Cursor> cursor)
     }
 }
 
-static void _update_window_system()
+static void _update_window_system() noexcept
 {
     if (WindowShouldClose()) {
         r::Application::quit = true;
     }
 }
 
-static void _destroy_window_system()
+static void _destroy_window_system() noexcept
 {
     CloseWindow();
 }
@@ -87,7 +87,7 @@ static void _destroy_window_system()
  * public
 */
 
-r::WindowPlugin::WindowPlugin(const WindowPluginConfig &config) : _config(config)
+r::WindowPlugin::WindowPlugin(const WindowPluginConfig &config) noexcept : _config(config)
 {
     if (_config.disable_raylib_log) {
         SetTraceLogLevel(LOG_NONE);
@@ -95,7 +95,8 @@ r::WindowPlugin::WindowPlugin(const WindowPluginConfig &config) : _config(config
 }
 
 // clang-format off
-void r::WindowPlugin::build(r::Application &app)
+
+void r::WindowPlugin::build(r::Application &app) noexcept
 {
     Cursor initial_cursor_state;
     initial_cursor_state.state = _config.cursor;

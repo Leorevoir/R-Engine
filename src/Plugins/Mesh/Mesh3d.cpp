@@ -1,16 +1,19 @@
 #include <R-Engine/Core/Backend.hpp>
+#include <R-Engine/Core/Filepath.hpp>
+#include <R-Engine/Core/Logger.hpp>
+
 #include <R-Engine/Plugins/MeshPlugin.hpp>
 
 /**
 * public
 */
 
-r::Mesh3d::Mesh3d(const u32 mesh_handle, const r::Color &mesh_color) : id(mesh_handle), color(mesh_color)
+r::Mesh3d::Mesh3d(const u32 mesh_handle, const r::Color &mesh_color) noexcept : id(mesh_handle), color(mesh_color)
 {
     /* __ctor__ */
 }
 
-::Mesh r::Mesh3d::Cube(const f32 size, const Vec3f &center)
+::Mesh r::Mesh3d::Cube(const f32 size, const Vec3f &center) noexcept
 {
     const ::Mesh mesh = GenMeshCube(size, size, size);
 
@@ -22,7 +25,7 @@ r::Mesh3d::Mesh3d(const u32 mesh_handle, const r::Color &mesh_color) : id(mesh_h
     return mesh;
 }
 
-::Mesh r::Mesh3d::Circle(const f32 radius, const u32 slices, const Vec3f &center)
+::Mesh r::Mesh3d::Circle(const f32 radius, const u32 slices, const Vec3f &center) noexcept
 {
     ::Mesh mesh{};
     const u32 vertex_count = slices + 2;
@@ -67,4 +70,14 @@ r::Mesh3d::Mesh3d(const u32 mesh_handle, const r::Color &mesh_color) : id(mesh_h
 
     UploadMesh(&mesh, false);
     return mesh;
+}
+
+::Model r::Mesh3d::Glb(const std::string &path) noexcept
+{
+    if (!path::exists(path)) {
+        Logger::error("Mesh3d::Glb: file does not exist: " + path);
+        return {};
+    }
+
+    return LoadModel(path.c_str());
 }

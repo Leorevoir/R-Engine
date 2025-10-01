@@ -26,7 +26,7 @@ r::Meshes::~Meshes()
     _data.clear();
 }
 
-u32 r::Meshes::add(const ::Mesh &mesh, const std::string &texture_path)
+r::MeshHandle r::Meshes::add(const ::Mesh &mesh, const std::string &texture_path)
 {
 
     if (mesh.vertexCount == 0 || mesh.triangleCount == 0 || !mesh.vertices || !mesh.indices) {
@@ -34,7 +34,7 @@ u32 r::Meshes::add(const ::Mesh &mesh, const std::string &texture_path)
         return MeshInvalidHandle;
     }
 
-    const u32 handle = _allocate();
+    const r::MeshHandle handle = _allocate();
     auto &entry = _data[handle];
 
     entry.cpu_mesh = mesh;
@@ -58,7 +58,29 @@ u32 r::Meshes::add(const ::Mesh &mesh, const std::string &texture_path)
     return handle;
 }
 
-const ::Model *r::Meshes::get(const u32 handle) const noexcept
+r::MeshHandle r::Meshes::add(const ::Model &model, const std::string &texture_path)
+{
+    if (model.meshCount == 0 || !model.meshes) {
+        Logger::error("Failed to bind model: invalid model data");
+        return MeshInvalidHandle;
+    }
+
+    const r::MeshHandle handle = _allocate();
+    auto &entry = _data[handle];
+
+    entry.model = model;
+
+    /** @info load texture if a path is provided using the Texture Manager */
+    if (!texture_path.empty()) {
+        _add_texture(entry, (texture_path));
+    }
+
+    entry.valid = true;
+    Logger::info("bind model with handle: " + std::to_string(handle));
+    return handle;
+}
+
+const ::Model *r::Meshes::get(const r::MeshHandle handle) const noexcept
 {
     if (handle >= _data.size()) {
         return nullptr;
@@ -77,7 +99,7 @@ const std::vector<r::MeshEntry> *r::Meshes::data() const
     return &_data;
 }
 
-void r::Meshes::draw(const u32 handle, const Vec3f &position, const f32 scale, const Color tint) const
+void r::Meshes::draw(const r::MeshHandle handle, const Vec3f &position, const f32 scale, const Color tint) const
 {
     const ::Model *m = get(handle);
 
@@ -87,7 +109,7 @@ void r::Meshes::draw(const u32 handle, const Vec3f &position, const f32 scale, c
     DrawModel(*m, {position.x, position.y, position.z}, scale, {tint.r, tint.g, tint.b, tint.a});
 }
 
-void r::Meshes::remove(const u32 handle)
+void r::Meshes::remove(const r::MeshHandle handle)
 {
     if (handle >= _data.size()) {
         return;
@@ -116,10 +138,10 @@ void r::Meshes::remove(const u32 handle)
 * private
 */
 
-u32 r::Meshes::_allocate()
+r::MeshHandle r::Meshes::_allocate()
 {
     _data.emplace_back();
-    return static_cast<u32>(_data.size() - 1);
+    return static_cast<r::MeshHandle>(_data.size() - 1);
 }
 
 void r::Meshes::_add_texture(MeshEntry &entry, const std::string &texture_path)

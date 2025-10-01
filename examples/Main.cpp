@@ -1,526 +1,365 @@
 #include <R-Engine/Application.hpp>
-#include <R-Engine/Core/Backend.hpp>
+#include <R-Engine/Types.hpp>
 #include <R-Engine/Core/FrameTime.hpp>
 #include <R-Engine/ECS/Command.hpp>
 #include <R-Engine/ECS/Query.hpp>
-#include <R-Engine/Maths/Vec.hpp>
 #include <R-Engine/Plugins/DefaultPlugins.hpp>
 #include <R-Engine/Plugins/WindowPlugin.hpp>
 #include <R-Engine/Plugins/UIPlugin.hpp>
 
-#include <cstdlib>
+#include <raylib.h>
+
+#include <algorithm>
 #include <ctime>
+#include <string>
+#include <vector>
 
-/* clang-format off */
+// ----------------------------------------------------------------------------
+// Data Structures
+// ----------------------------------------------------------------------------
+enum class SettingType { Toggle, Slider, Enum, Color };
 
-/* ================================================================================= */
-/* Components */
-/* */
-/* Components are simple data structures that are attached to entities. */
-/* They define the properties and state of an entity. */
-/* ================================================================================= */
+struct SettingValueTag { int row = -1; };
+struct SettingSliderTag { int row = -1; };
+struct SettingHighlight { };
+struct SettingRowLabelTag { int row = -1; };
 
-/* Represents a 2D position in space. */
-struct Position {
-    r::Vec2f value;
+struct SettingsMenuState {
+    struct Row {
+        SettingType              type;
+        std::string              name;
+        std::string              desc;
+        bool                     toggle      = false;
+        float                    sliderValue = 50.f;
+        float                    sliderMin   = 0.f;
+        float                    sliderMax   = 100.f;
+        int                      enumIndex   = 0;
+        std::vector<std::string> enumValues;
+        ::Color                  color       = {120,240,180,255};
+    };
+
+    std::vector<Row> rows;
+    int               selected        = 0;
+    float             base_y          = 140.f;
+    float             row_spacing     = 40.f;
+    r::ecs::Entity    highlight       = 0;
+    r::ecs::Entity    description_text= 0; // (description currently static / first row only)
 };
 
-/* Represents a 2D velocity. */
-struct Velocity {
-    r::Vec2f value;
-};
-
-/* Represents a drawable circle with a radius and color. */
-struct Circle {
-    float radius;
-    Color color;
-};
-
-/* A "marker component" for the entity that can be controlled by the player. */
-/* It has no data, its presence alone is used to identify the player entity in queries. */
-struct Controllable {};
-
-/* ================================================================================= */
-/* Resources */
-/* */
-/* Resources are global, singleton data structures accessible by any system. */
-/* They are useful for storing application-wide state. */
-/* ================================================================================= */
-
-/* A global resource for gravity. */
-struct Gravity {
-    r::Vec2f value = {0.0f, 980.0f};
-};
-
-/* Phase 2 demo resource to keep track of spawned UI entities */
-struct Phase2ExampleUI {
-    r::ecs::Entity autosize_label = 0;
-    r::ecs::Entity constraint_label = 0;
-    std::vector<r::ecs::Entity> focusable_buttons; /* order as spawned */
-};
-
-/* ================================================================================= */
-/* Systems */
-/* */
-/* Systems are functions that implement the logic of your application. */
-/* They query for entities with specific components and operate on them. */
-/* ================================================================================= */
-
-/**
- * @brief (STARTUP) Spawns the initial entities in the world.
- * @details This system runs once when the application starts. It uses `ecs::Commands`
- * to create new entities and add components to them. It also uses `ecs::Res` to
- * get the window configuration to place entities correctly.
- */
-void spawn_entities_system(r::ecs::Commands &commands, r::ecs::Res<r::WindowPluginConfig> win_config)
+static r::ecs::Entity spawn_text(
+    r::ecs::Commands &cmd,
+    const std::string &txt,
+    int size,
+    float x,
+    float y,
+    int z = 10,
+    r::UiTextColor col = {200,200,200,255})
 {
-    const float screen_width = static_cast<float>(win_config.ptr->size.width);
-    const float screen_height = static_cast<float>(win_config.ptr->size.height);
-
-    /* Spawn the player with all its components in one go. */
-    commands.spawn(
-        Controllable{},
-        Circle{
-            .radius = 20.0f,
-            .color  = BLUE
-        },
-        Position{
-            .value = {screen_width / 2.0f, screen_height / 2.0f}
-        },
-        Velocity{
-            .value = {0.0f, 0.0f}
-        }
-    );
-
-    /* Spawn 10 random balls. */
-    for (int i = 0; i < 10; ++i) {
-        float radius = static_cast<float>((rand() % 20) + 10);
-
-        commands.spawn(
-            Position{
-                .value = {
-                    static_cast<float>(rand() % (int)(screen_width - radius * 2) + radius),
-                    static_cast<float>(rand() % (int)(screen_height / 2) + radius)
-                }
-            },
-            Velocity{
-                .value = {
-                    static_cast<float>((rand() % 500) - 250),
-                    static_cast<float>((rand() % 500) - 250)
-                }
-            },
-            Circle{
-                .radius = radius,
-                .color  = {(unsigned char)(rand() % 256), (unsigned char)(rand() % 256), (unsigned char)(rand() % 256), 255}
-            }
-        );
-    }
-}
-
-/**
- * @brief (UPDATE) Spawns a new ball on mouse click.
- */
-void spawn_on_click_system(r::ecs::Commands &commands)
-{
-    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-        Vector2 mouse_pos = GetMousePosition();
-        float radius = static_cast<float>((rand() % 15) + 5);
-
-        commands.spawn(
-            Position{
-                .value = {mouse_pos.x, mouse_pos.y}
-            },
-            Velocity{
-                .value = {static_cast<float>((rand() % 600) - 300), static_cast<float>((rand() % 600) - 300)}
-            },
-            Circle{
-                .radius = radius,
-                .color = {(unsigned char)(rand() % 156 + 100), (unsigned char)(rand() % 156 + 100), (unsigned char)(rand() % 156 + 100), 255}
-            }
-        );
-    }
-}
-
-/**
- * @brief (UPDATE) Moves the player entity based on keyboard input.
- * @details This system queries for the single entity that has both a `Velocity`
- * component and the `Controllable` marker component.
- */
-void player_control_system(r::ecs::Query<r::ecs::Mut<Velocity>, r::ecs::With<Controllable>> query)
-{
-    const float speed = 500.0f;
-    for (auto [velocity, _] : query) {
-        r::Vec2f direction = {0.0f, 0.0f};
-        if (IsKeyDown(KEY_W) || IsKeyDown(KEY_UP))
-            direction.y -= 1.0f;
-        if (IsKeyDown(KEY_S) || IsKeyDown(KEY_DOWN))
-            direction.y += 1.0f;
-        if (IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT))
-            direction.x -= 1.0f;
-        if (IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT))
-            direction.x += 1.0f;
-
-        if (direction.length() > 0.0f) {
-            velocity.ptr->value = direction.normalize() * speed;
-        } else {
-            velocity.ptr->value = {0.0f, 0.0f};
-        }
-    }
-}
-
-/**
- * @brief (UPDATE) Applies gravity to entities that are not controllable.
- * @details This system queries for entities with `Velocity` but `Without` the
- * `Controllable` component, so it only affects the balls.
- */
-void apply_gravity_system(r::ecs::Query<r::ecs::Mut<Velocity>, r::ecs::Without<Controllable>> query, r::ecs::Res<Gravity> gravity,
-    r::ecs::Res<r::core::FrameTime> time)
-{
-    for (auto [velocity, _] : query) {
-        velocity.ptr->value += gravity.ptr->value * time.ptr->delta_time;
-    }
-}
-
-/**
- * @brief (UPDATE) Updates entity positions based on their velocity.
- * @details A classic physics integration step. It queries for all entities that have
- * both `Position` and `Velocity`.
- */
-void move_system(r::ecs::Query<r::ecs::Mut<Position>, r::ecs::Ref<Velocity>> query, r::ecs::Res<r::core::FrameTime> time)
-{
-    for (auto [position, velocity] : query) {
-        position.ptr->value += velocity.ptr->value * time.ptr->delta_time;
-    }
-}
-
-/**
- * @brief (UPDATE) Makes entities bounce off the screen edges.
- */
-void bounce_system(r::ecs::Query<r::ecs::Mut<Position>, r::ecs::Mut<Velocity>, r::ecs::Ref<Circle>> query,
-    r::ecs::Res<r::WindowPluginConfig> win_config)
-{
-    const float screen_width = static_cast<float>(win_config.ptr->size.width);
-    const float screen_height = static_cast<float>(win_config.ptr->size.height);
-    const float damping = 0.8f;
-
-    for (auto [position, velocity, circle] : query) {
-        if (position.ptr->value.x - circle.ptr->radius < 0) {
-            position.ptr->value.x = circle.ptr->radius;
-            velocity.ptr->value.x = -velocity.ptr->value.x * damping;
-        }
-        if (position.ptr->value.x + circle.ptr->radius > screen_width) {
-            position.ptr->value.x = screen_width - circle.ptr->radius;
-            velocity.ptr->value.x = -velocity.ptr->value.x * damping;
-        }
-        if (position.ptr->value.y - circle.ptr->radius < 0) {
-            position.ptr->value.y = circle.ptr->radius;
-            velocity.ptr->value.y = -velocity.ptr->value.y * damping;
-        }
-        if (position.ptr->value.y + circle.ptr->radius > screen_height) {
-            position.ptr->value.y = screen_height - circle.ptr->radius;
-            velocity.ptr->value.y = -velocity.ptr->value.y * damping;
-        }
-    }
-}
-
-/**
- * @brief (RENDER) Draws all entities with Position and Circle components.
- * @details This system runs in the RENDER schedule, after all the UPDATE logic.
- * The RenderPlugin ensures the drawing context is set up before this system runs.
- */
-void render_system(r::ecs::Query<r::ecs::Ref<Position>, r::ecs::Ref<Circle>> query)
-{
-    for (auto [position, circle] : query) {
-        DrawCircleV({position.ptr->value.x, position.ptr->value.y}, circle.ptr->radius, circle.ptr->color);
-    }
-
-    DrawText("WASD/Arrows to move, Left-Click to spawn balls", 10, 10, 20, DARKGRAY);
-    DrawFPS(10, 30);
-}
-
-/**
- * @brief (STARTUP) Spawns a very simple main menu UI: title + Play + Quit buttons.
- * Play currently does nothing; Quit uses UiOnClickQuit component to exit.
- */
-void spawn_ui_menu_system(r::ecs::Commands &commands, r::ecs::Res<r::WindowPluginConfig> win_config)
-{
-    const float screen_width = static_cast<float>(win_config.ptr->size.width);
-    const float screen_height = static_cast<float>(win_config.ptr->size.height);
-
-    /* Title text centered at top */
-    commands.spawn(
-        r::UiText{ .value = "R-Type", .size = 64 },
-        r::UiTextColor{ 0, 0, 0, 255 },
-        r::UiPosition{ { (screen_width - 400.f) * 0.5f, 60.f } }, /* rough centering; actual centering handled by rect if present */
-        r::UiZIndex{ 10 }
-    );
-
-    /* Common button sizes */
-    const r::Vec2f btn_size = { 220.f, 70.f };
-    const float center_x = (screen_width - btn_size.x) * 0.5f;
-    float start_y = screen_height * 0.5f - 80.f; /* first button y */
-
-    /* Play button via bundle helper */
-    {
-        r::UiButtonBundle play_bundle{};
-        play_bundle.text.value = "Play";
-        play_bundle.original_color = {90,140,255,255};
-        play_bundle.color = {play_bundle.original_color.r, play_bundle.original_color.g, play_bundle.original_color.b, play_bundle.original_color.a};
-        /* Style override example: faster hover darkening & stronger flash */
-        play_bundle.style.hover_dark_percent = 0.65f;
-        play_bundle.style.flash_percent = 1.3f;
-        play_bundle.rect.size = btn_size;
-        auto e = r::spawn_ui_button(commands, play_bundle, r::UiPosition{{center_x, start_y}});
-        commands.entity(e).insert(r::UiFocusable{}).insert(r::UiScale{1.f,1.f});
-    }
-
-    /* Options button with a different base color (shows style override) */
-    {
-        r::UiButtonBundle options_bundle{};
-        options_bundle.text.value = "Options";
-        options_bundle.original_color = {60, 180, 110, 255};
-        options_bundle.color = {options_bundle.original_color.r, options_bundle.original_color.g, options_bundle.original_color.b, options_bundle.original_color.a};
-        options_bundle.style.hover_dark_percent = 0.4f; /* lighter darkening */
-        options_bundle.style.flash_percent = 0.8f;      /* smaller flash */
-        options_bundle.rect.size = btn_size;
-        auto e = r::spawn_ui_button(commands, options_bundle, r::UiPosition{{center_x, start_y + btn_size.y + 30.f}});
-        commands.entity(e).insert(r::UiFocusable{}).insert(r::UiScale{1.f,1.f});
-    }
-
-    /* Disabled button example (non-interactive, styled via disabled flag) */
-    {
-        r::UiButtonBundle disabled_bundle{};
-        disabled_bundle.text.value = "Disabled";
-        disabled_bundle.original_color = {120, 120, 120, 255};
-        disabled_bundle.color = {disabled_bundle.original_color.r, disabled_bundle.original_color.g, disabled_bundle.original_color.b, disabled_bundle.original_color.a};
-        disabled_bundle.style.disabled = true;
-        disabled_bundle.rect.size = btn_size;
-        auto e = r::spawn_ui_button(commands, disabled_bundle, r::UiPosition{{center_x, start_y + (btn_size.y + 30.f) * 2.f}});
-        commands.entity(e).insert(r::UiScale{1.f,1.f}); /* not focusable on purpose */
-    }
-
-    /* Quit button via bundle helper + explicit quit action */
-    {
-        r::UiButtonBundle quit_bundle{};
-        quit_bundle.text.value = "Quit";
-        quit_bundle.original_color = {200,60,80,255};
-        quit_bundle.color = {quit_bundle.original_color.r, quit_bundle.original_color.g, quit_bundle.original_color.b, quit_bundle.original_color.a};
-        quit_bundle.border = {90,20,30,255};
-        quit_bundle.rect.size = btn_size;
-        auto e = r::spawn_ui_button(commands, quit_bundle, r::UiPosition{{center_x, start_y + (btn_size.y + 30.f) * 3.f}});
-        /* Add the quit action component */
-        commands.entity(e).insert(r::UiOnClickQuit{}).insert(r::UiFocusable{}).insert(r::UiScale{1.f,1.f});
-    }
-}
-
-/* ========================================================================== */
-/* (STARTUP) Phase 2 UI feature showcase (autosize, constraints, stack, clip)  */
-/* ========================================================================== */
-void spawn_ui_phase2_examples(r::ecs::Commands &commands, r::ecs::Res<r::WindowPluginConfig> win_config, r::ecs::Res<Phase2ExampleUI> demo_res)
-{
-    auto *demo = const_cast<Phase2ExampleUI*>(demo_res.ptr);
-    const float screen_width = (float)win_config.ptr->size.width;
-    /* Autosize label: rect size starts at 0, UiAutoSizeText + text sets it */
-    demo->autosize_label = commands.spawn(
-        r::UiText{ .value = "AutoSize: dynamic width", .size = 24 },
-        r::UiTextColor{ 30,30,30,255 },
-        r::UiRectSize{ {0.f, 0.f} }, /* will be filled by autosize */
+    return cmd.spawn(
+        r::UiText{ txt, (::u32)size },
+        col,
+        r::UiPosition{ { x, y } },
+        r::UiRectSize{ { 0.f, 0.f } },
         r::UiAutoSizeText{},
-        r::UiPosition{ { 40.f, 520.f } },
-        r::UiZIndex{ 5 },
-        r::UiScale{1.f,1.f}
+        r::UiZIndex{ z },
+        r::UiScale{ 1.f, 1.f }
     ).id();
+}
 
-    /* Constraint label: autosize then enforced min width & max height (silly example) */
-    demo->constraint_label = commands.spawn(
-        r::UiText{ .value = "Constraint: min(200,40)", .size = 24 },
-        r::UiTextColor{ 20,20,60,255 },
-        r::UiRectSize{ {0.f, 0.f} },
-        r::UiAutoSizeText{},
-        r::UiMinSize{ {200.f, 40.f} },
-        r::UiMaxSize{ {400.f, 60.f} },
-        r::UiPreferredSize{ {0.f,0.f} },
-        r::UiPosition{ { 40.f, 560.f } },
-        r::UiZIndex{ 5 },
-        r::UiScale{1.f,1.f}
-    ).id();
+void spawn_settings_menu_system(
+    r::ecs::Commands &commands,
+    r::ecs::Res<r::WindowPluginConfig> win,
+    r::ecs::Res<SettingsMenuState> state,
+    r::ecs::Res<r::UiTheme> theme)
+{
+    auto *st = const_cast<SettingsMenuState*>(state.ptr);
+    auto *th = const_cast<r::UiTheme*>(theme.ptr);
+    th->hover_dark_percent = 0.55f;
+    th->flash_percent      = 1.15f;
+    th->hover_speed        = 16.f;
 
-    /* Stack layout container (placeholder: layout not yet active) */
-    auto stack_panel = commands.spawn(
-        r::UiRectSize{ { 300.f, 140.f } },
-        r::UiPosition{ { screen_width - 340.f, 520.f } },
-        r::UiColor{ 240,240,250,255 },
-        r::UiOriginalColor{ 240,240,250,255 },
+    st->rows = {
+        { SettingType::Toggle, "Show HUD",            "Show or hide HUD",                    true },
+        { SettingType::Toggle, "Show HUD Prompts",    "Toggle contextual prompts",           false },
+        { SettingType::Toggle, "Control Hints",       "Show basic control hints",            true },
+        { SettingType::Toggle, "Reactive Hints",      "Enable reactive hint overlays",       false },
+        { SettingType::Toggle, "HUD Motion",          "Enable subtle HUD motion",            false },
+        { SettingType::Slider, "Camera Shake Amount", "Strength of camera shake",            false, 50.f, 0.f, 100.f },
+        { SettingType::Enum,   "Soldier Compass",     "Compass display mode",                false, 0,0,0,0,{"ALWAYS ON","OFF"} },
+        { SettingType::Enum,   "Fire Mode Indicator", "When to show fire mode",              false, 0,0,0,0,{"WHEN AVAILABLE","ALWAYS","OFF"} },
+        { SettingType::Toggle, "Show Vehicle Seat",   "Show seat index in vehicles",         true },
+        { SettingType::Enum,   "Colorblind",          "Colorblind filter",                   false, 0,0,0,0,{"OFF","DEUT","PROT","TRIT"} }
+    };
+
+    float W = (float)win.ptr->size.width;
+    float H = (float)win.ptr->size.height;
+    (void)H;
+
+    // Background (black full-screen)
+    commands.spawn(
+        r::UiRectSize{ { W, H } },
+        r::UiPosition{ { 0.f, 0.f } },
+        r::UiColor{ 0,0,0,255 },
+        r::UiOriginalColor{ 0,0,0,255 },
         r::UiStyle{},
         r::UiDirty{},
-        r::UiStackLayout{ r::UiStackAxis::Vertical, r::UiStackAlign::Center, 10.f, 6.f },
-        r::UiChildren{ {} },
-        r::UiClipChildren{}, /* marks for clipping descendants (not yet active) */
-        r::UiClipRect{ { screen_width - 340.f, 520.f }, { 300.f, 140.f } },
-        r::UiZIndex{ 4 }
-    ).id();
-    (void)stack_panel; /* currently unused because layout stack is placeholder */
-}
+        r::UiZIndex{ 0 },
+        r::UiScale{ 1.f,1.f }
+    );
 
-/* ========================================================================== */
-/* (STARTUP) Collect focusable buttons into focus order resource              */
-/* ========================================================================== */
-void build_focus_order_system(r::ecs::Res<Phase2ExampleUI> demo_res, r::ecs::Res<r::UiFocusContext> focus_ctx)
-{
-    /* We cannot discover focusables generically yet → manual injection via events later.
-       For demo we leave order empty; Tab cycling will no-op until layout system populates. */
-    (void)demo_res;
-    auto *fc = const_cast<r::UiFocusContext*>(focus_ctx.ptr);
-    fc->order.clear();
-    /* Optionally populate manually if you record button IDs in a resource. */
-}
+    // Animated title (timeline pulsing scale)
+    {
+        r::UiTimeline timeline;
+        timeline.playing = true;
+        timeline.time    = 0.f;
+        timeline.tracks.push_back(
+            r::UiTimelineTrack{ r::UiTimelineProperty::Scale, { {0.f,1.f},{1.f,1.05f},{2.f,1.f} }, true }
+        );
 
-/* ========================================================================== */
-/* (UPDATE) Scale target assignment (simple interaction based animation)      */
-/* ========================================================================== */
-void ui_scale_target_system(r::ecs::Query<r::ecs::Mut<r::UiScale>, r::ecs::Optional<r::UiInteraction>> q)
-{
-    for (auto [scale_w, interaction_w] : q) {
-        auto *sc = scale_w.ptr;
-        if (interaction_w.ptr) {
-            if (interaction_w.ptr->state == r::UiInteractionState::Pressed) sc->target = 0.95f;
-            else if (interaction_w.ptr->state == r::UiInteractionState::Hovered) sc->target = 1.05f;
-            else sc->target = 1.0f;
+        commands.spawn(
+            r::UiText{ "HUD GENERAL", 48 },
+            r::UiTextColor{ 180,255,255,255 },
+            r::UiPosition{ { 40.f, 40.f } },
+            r::UiRectSize{ { 0,0 } },
+            r::UiAutoSizeText{},
+            r::UiScale{ 1.f,1.f },
+            timeline,
+            r::UiZIndex{ 30 }
+        );
+    }
+
+    // Category bar
+    const char* categories[] = {
+        "OPTIONS","GENERAL","DISPLAY","SOUND",
+        "CONTROLLER","MOUSE & KEYBOARD","ACCESSIBILITY","EXTRAS"
+    };
+    float cat_x = 40.f;
+    for (int i = 0; i < 8; ++i) {
+        r::UiTextColor color = (i == 2)
+            ? r::UiTextColor{ 120,255,255,255 }
+            : r::UiTextColor{ 120,170,180,255 };
+        spawn_text(commands, categories[i], 20, cat_x, 100.f, 18, color);
+        cat_x += (float)(MeasureText(categories[i], 20) + 28);
+    }
+
+    // Rows (labels + values / widgets)
+    float label_x = 60.f;
+    float value_x = 500.f;
+    float row_y   = st->base_y;
+    for (int i = 0; i < (int)st->rows.size(); ++i) {
+        auto &row = st->rows[i];
+        commands.spawn(
+            r::UiText{ row.name, 20 },
+            r::UiTextColor{ 200,255,255,255 },
+            r::UiPosition{ { label_x, row_y } },
+            r::UiRectSize{ { 0,0 } },
+            r::UiAutoSizeText{},
+            r::UiScale{ 1.f,1.f },
+            SettingRowLabelTag{ i }
+        );
+
+        // Precompute textual value representation
+        std::string vtext;
+        if (row.type == SettingType::Toggle)      vtext = row.toggle ? "ON" : "OFF";
+        else if (row.type == SettingType::Slider) vtext = std::to_string((int)row.sliderValue);
+        else if (row.type == SettingType::Enum)   vtext = row.enumValues[row.enumIndex];
+
+        if (row.type == SettingType::Slider) {
+            commands.spawn(
+                r::UiSlider{ row.sliderValue, row.sliderMin, row.sliderMax, false },
+                r::UiRectSize{ { 220.f, 14.f } },
+                r::UiPosition{ { value_x, row_y + 4.f } },
+                r::UiInteraction{},
+                r::UiButton{},
+                r::UiScale{ 1.f,1.f },
+                SettingSliderTag{ i }
+            );
+        }
+
+        if (row.type == SettingType::Color) {
+            commands.spawn(
+                r::UiRectSize{ { 120.f,22.f } },
+                r::UiPosition{ { value_x, row_y + 2.f } },
+                r::UiColor{ row.color.r,row.color.g,row.color.b,row.color.a },
+                r::UiOriginalColor{ row.color.r,row.color.g,row.color.b,row.color.a },
+                r::UiStyle{},
+                r::UiDirty{},
+                r::UiScale{ 1.f,1.f },
+                SettingValueTag{ i }
+            );
         } else {
-            sc->target = 1.0f;
+            commands.spawn(
+                r::UiText{ vtext, 20 },
+                r::UiTextColor{ 0,0,0,255 },
+                r::UiPosition{ { value_x, row_y } },
+                r::UiRectSize{ { 0,0 } },
+                r::UiAutoSizeText{},
+                r::UiScale{ 1.f,1.f },
+                SettingValueTag{ i }
+            );
+        }
+        row_y += st->row_spacing;
+    }
+
+    // Highlight bar entity
+    st->highlight = commands.spawn(
+        r::UiRectSize{ { W - 120.f, st->row_spacing - 6.f } },
+        r::UiPosition{ { 40.f, st->base_y - 3.f } },
+        r::UiColor{ 0,255,255,40 },
+        r::UiOriginalColor{ 0,255,255,40 },
+        r::UiStyle{},
+        r::UiDirty{},
+        r::UiZIndex{ 5 },
+        r::UiScale{ 1.f,1.f },
+        SettingHighlight{}
+    ).id();
+
+    // Description (currently only first row's desc shown)
+    st->description_text = spawn_text(
+        commands,
+        st->rows[0].desc,
+        20,
+        value_x + 360.f,
+        st->base_y,
+        18,
+        r::UiTextColor{ 180,255,255,255 }
+    );
+
+    // Footer actions (dummy / visual only)
+    spawn_text(commands, "BACK",            18,  60.f, (float)win.ptr->size.height - 40.f, 18, r::UiTextColor{ 150,200,200,255 });
+    spawn_text(commands, "RESTORE DEFAULT", 18, 200.f, (float)win.ptr->size.height - 40.f, 18, r::UiTextColor{ 150,200,200,255 });
+}
+
+// Navigation (Up/Down)
+void settings_navigation_system(r::ecs::Res<SettingsMenuState> state)
+{
+    auto *st = const_cast<SettingsMenuState*>(state.ptr);
+    if (IsKeyPressed(KEY_DOWN)) st->selected = (st->selected + 1) % (int)st->rows.size();
+    if (IsKeyPressed(KEY_UP))   st->selected = (st->selected - 1 + (int)st->rows.size()) % (int)st->rows.size();
+}
+
+// Apply value changes via Left/Right/Enter
+void settings_apply_actions_system(r::ecs::Res<SettingsMenuState> state)
+{
+    auto *st  = const_cast<SettingsMenuState*>(state.ptr);
+    auto &row = st->rows[st->selected];
+    bool L = IsKeyPressed(KEY_LEFT);
+    bool R = IsKeyPressed(KEY_RIGHT);
+    bool A = IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE);
+
+    switch (row.type) {
+        case SettingType::Toggle:
+            if (A || L || R) row.toggle = !row.toggle;
+            break;
+        case SettingType::Slider:
+            if (L) row.sliderValue = std::max(row.sliderMin, row.sliderValue - 5.f);
+            if (R) row.sliderValue = std::min(row.sliderMax, row.sliderValue + 5.f);
+            break;
+        case SettingType::Enum:
+            if (L) row.enumIndex = (row.enumIndex - 1 + (int)row.enumValues.size()) % (int)row.enumValues.size();
+            if (R) row.enumIndex = (row.enumIndex + 1) % (int)row.enumValues.size();
+            break;
+        case SettingType::Color:
+            if (A) {
+                static ::Color presets[] = {
+                    {120,240,180,255}, {160,200,255,255}, {255,180,120,255}, {255,255,120,255}
+                };
+                static int idx = 0;
+                idx      = (idx + 1) % 4;
+                row.color = presets[idx];
+            }
+            break;
+    }
+}
+
+// Move highlight bar to currently selected row
+void settings_highlight_update_system(
+    r::ecs::Query<r::ecs::Mut<r::UiPosition>, r::ecs::With<SettingHighlight>> q,
+    r::ecs::Res<SettingsMenuState> state)
+{
+    auto *st = const_cast<SettingsMenuState*>(state.ptr);
+    float y  = st->base_y + st->selected * st->row_spacing - 3.f;
+    for (auto [pos, _] : q) {
+        pos.ptr->pos.y = y;
+    }
+}
+
+// Synchronize UI widget visuals from SettingsMenuState (one-way binding)
+void settings_value_sync_system(
+    r::ecs::Query<r::ecs::Mut<r::UiText>, r::ecs::Ref<SettingValueTag>> q_txt,
+    r::ecs::Query<r::ecs::Mut<r::UiRectSize>, r::ecs::Mut<r::UiColor>, r::ecs::Ref<SettingValueTag>> q_color,
+    r::ecs::Query<r::ecs::Mut<r::UiSlider>, r::ecs::Ref<SettingSliderTag>> q_slider,
+    r::ecs::Res<SettingsMenuState> state)
+{
+    auto *st = const_cast<SettingsMenuState*>(state.ptr);
+
+    // Slider numeric values
+    for (auto [slider, tag] : q_slider) {
+        auto &row = st->rows[tag.ptr->row];
+        if (row.type == SettingType::Slider) {
+            slider.ptr->value = row.sliderValue;
+        }
+    }
+
+    // Color boxes
+    for (auto [rect, col, tag] : q_color) {
+        auto &row = st->rows[tag.ptr->row];
+        if (row.type == SettingType::Color) {
+            col.ptr->r = row.color.r;
+            col.ptr->g = row.color.g;
+            col.ptr->b = row.color.b;
+            col.ptr->a = row.color.a;
+            rect.ptr->size = { 120.f, 22.f };
+        }
+    }
+
+    // Plain textual values
+    for (auto [txt, tag] : q_txt) {
+        auto &row = st->rows[tag.ptr->row];
+        switch (row.type) {
+            case SettingType::Toggle: txt.ptr->value = row.toggle ? "ON" : "OFF"; break;
+            case SettingType::Slider: txt.ptr->value = std::to_string((int)row.sliderValue); break;
+            case SettingType::Enum:   txt.ptr->value = row.enumValues[row.enumIndex]; break;
+            default: break; // Color rows have no textual overlay here
         }
     }
 }
 
-/* ========================================================================== */
-/* (UPDATE) Scale animation lerp                                              */
-/* ========================================================================== */
-void ui_scale_animation_system(r::ecs::Query<r::ecs::Mut<r::UiScale>> q, r::ecs::Res<r::core::FrameTime> ft)
+// Overlay debug (very lightweight info header)
+void settings_overlay_render(r::ecs::Res<SettingsMenuState> state)
 {
-    const float speed = 18.f;
-    for (auto [scale_w] : q) {
-        auto *sc = scale_w.ptr;
-        sc->value += (sc->target - sc->value) * std::clamp(speed * ft.ptr->delta_time, 0.f, 1.f);
-    }
-}
-
-/* ========================================================================== */
-/* (UPDATE) Example consumer of the UiClickEvents bus                         */
-/* ========================================================================== */
-void ui_click_events_logger(r::ecs::Res<r::UiEvents> events)
-{
-    /* Manual consumer example (logger system built-in can also be enabled via UiEventLoggerConfig). */
-    for (const auto &ev : events.ptr->current) {
-        if (ev.type == r::UiEventType::QuitClick) {
-            TraceLog(LOG_INFO, "[UI] Quit button clicked (label=%s)", ev.label.c_str());
-        }
-    }
-}
-
-/* ========================================================================== */
-/* (STARTUP) Configure UI logger & tweak global theme                         */
-/* ========================================================================== */
-void configure_ui_logger_and_theme(r::ecs::Res<r::UiEventLoggerConfig> logger_cfg, r::ecs::Res<r::UiTheme> theme)
-{
-    auto *cfg = const_cast<r::UiEventLoggerConfig*>(logger_cfg.ptr);
-    cfg->enabled = true;
-    cfg->log_hover = true;
-    cfg->log_press = true;
-    cfg->log_release = true;
-    cfg->log_click = true;
-    cfg->log_quit = true;
-
-    /* Light theme tweaks (faster hover & stronger flash globally) */
-    auto *th = const_cast<r::UiTheme*>(theme.ptr);
-    th->hover_speed = 18.f;
-    th->flash_percent = 1.1f;
-}
-
-/* ========================================================================== */
-/* (RENDER) UI Stats & Event overlay (demonstrates UiStats + UiEvents)        */
-/* ========================================================================== */
-void ui_debug_overlay_render(r::ecs::Res<r::UiStats> stats, r::ecs::Res<r::UiEvents> events)
-{
-    const int x = 10;
-    int y = 70; /* below existing debug text */
-    char buf[256];
-    std::snprintf(buf, sizeof(buf), "UI Frame %llu", (unsigned long long)stats.ptr->frame_index);
-    DrawText(buf, x, y, 16, DARKGREEN); y += 18;
-    std::snprintf(buf, sizeof(buf), "Events: %u (curr) Rects: %u Texts: %u", stats.ptr->events_emitted, stats.ptr->rects_drawn, stats.ptr->texts_drawn);
-    DrawText(buf, x, y, 14, DARKGREEN); y += 16;
-    std::snprintf(buf, sizeof(buf), "Interaction Ent: %u", stats.ptr->interaction_entities);
-    DrawText(buf, x, y, 14, DARKGREEN); y += 16;
-    std::snprintf(buf, sizeof(buf), "Times ms I%.2f S%.2f Rr%.2f Rt%.2f", stats.ptr->interaction_ms, stats.ptr->style_ms, stats.ptr->render_rect_ms, stats.ptr->render_text_ms);
-    DrawText(buf, x, y, 14, DARKGREEN); y += 18;
-    /* Count event types this frame */
-    unsigned hoverEnter=0, hoverLeave=0, pressed=0, released=0, click=0, quitClick=0;
-    for (auto &e : events.ptr->current) {
-        switch (e.type) {
-            case r::UiEventType::HoverEnter: ++hoverEnter; break;
-            case r::UiEventType::HoverLeave: ++hoverLeave; break;
-            case r::UiEventType::Pressed: ++pressed; break;
-            case r::UiEventType::Released: ++released; break;
-            case r::UiEventType::Click: ++click; break;
-            case r::UiEventType::QuitClick: ++quitClick; break;
-            default: break;
-        }
-    }
-    std::snprintf(buf, sizeof(buf), "Ev H+%u H-%u P%u R%u C%u Q%u", hoverEnter, hoverLeave, pressed, released, click, quitClick);
-    DrawText(buf, x, y, 14, DARKGREEN);
+    auto *st = const_cast<SettingsMenuState*>(state.ptr);
+    DrawText(
+        TextFormat("Selected: %s", st->rows[st->selected].name.c_str()),
+        40, 10, 20,
+        Color{ 180,255,255,255 }
+    );
+    DrawFPS(1180, 10);
 }
 
 int main()
 {
-    /* Seed random number generator for varied colors and velocities. */
-    srand(static_cast<unsigned int>(time(nullptr)));
+    srand((unsigned)time(nullptr));
 
     r::Application{}
-        /* Add default plugins like windowing and rendering. */
-        /* We can configure a plugin by creating an instance and passing it to .set(). */
         .add_plugins(
-            r::DefaultPlugins{}
-                .set(r::WindowPlugin{
-                    r::WindowPluginConfig{
-                        .size = {1280, 720},
-                        .title = "R-Engine: Bundle Spawn Demo",
-                    }
-                })
+            r::DefaultPlugins{}.set(
+                r::WindowPlugin{ r::WindowPluginConfig{ .size = {1280,720}, .title = "Settings Menu Demo" }}
+            )
         )
-
-        /* Insert global resources. These can be accessed by systems. */
-        .insert_resource(Gravity{})
-    /* Insert Phase 2 demo tracking resource */
-    .insert_resource(Phase2ExampleUI{})
-
-        /* Add systems to the application schedule. */
-        /* STARTUP systems run once at the beginning. */
-        .add_systems(r::Schedule::STARTUP, spawn_entities_system)
-    .add_systems(r::Schedule::STARTUP, spawn_ui_menu_system)
-    .add_systems(r::Schedule::STARTUP, spawn_ui_phase2_examples)
-    .add_systems(r::Schedule::STARTUP, build_focus_order_system)
-        .add_systems(r::Schedule::STARTUP, configure_ui_logger_and_theme)
-
-        /* UPDATE systems run once every frame for game logic and physics. */
-        /* The order matters here: input -> physics -> movement. */
-        .add_systems(r::Schedule::UPDATE,
-            spawn_on_click_system,
-            player_control_system,
-            apply_gravity_system,
-            move_system,
-            bounce_system,
-            ui_click_events_logger, /* placed after UI plugin systems so events are populated */
-            ui_scale_target_system,
-            ui_scale_animation_system
+        .insert_resource(SettingsMenuState{})
+        .add_systems(r::Schedule::STARTUP, spawn_settings_menu_system)
+        .add_systems(
+            r::Schedule::UPDATE,
+            settings_navigation_system,
+            settings_apply_actions_system,
+            settings_highlight_update_system,
+            settings_value_sync_system
         )
-
-        /* RENDER systems run after UPDATE systems for drawing. */
-        /* The RenderPlugin already adds systems to begin and end the drawing context. */
-    .add_systems(r::Schedule::RENDER, render_system)
-    .add_systems(r::Schedule::RENDER, ui_debug_overlay_render)
-
-        /* Start the main application loop. */
+        .add_systems(r::Schedule::RENDER, settings_overlay_render)
         .run();
 
     return 0;
 }
-/* clang-format on */
+
+/* End Settings Menu Demo */

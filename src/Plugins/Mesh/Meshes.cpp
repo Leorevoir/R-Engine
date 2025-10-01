@@ -28,7 +28,13 @@ r::Meshes::~Meshes()
 
 u32 r::Meshes::add(const ::Mesh &mesh, const std::string &texture_path)
 {
-    u32 handle = _allocate();
+
+    if (mesh.vertexCount == 0 || mesh.triangleCount == 0 || !mesh.vertices || !mesh.indices) {
+        Logger::error("Failed to bind mesh: invalid mesh data");
+        return MeshInvalidHandle;
+    }
+
+    const u32 handle = _allocate();
     auto &entry = _data[handle];
 
     entry.cpu_mesh = mesh;

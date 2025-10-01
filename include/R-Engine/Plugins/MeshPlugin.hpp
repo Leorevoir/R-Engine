@@ -14,6 +14,7 @@ namespace r {
  * @brief Alias for mesh handle type to avoid having u32 everywhere
  */
 using MeshHandle = u32;
+static constexpr inline const MeshHandle MeshInvalidHandle = static_cast<MeshHandle>(-1);
 
 /**
  * @brief Texture Manager for loading & unloading textures

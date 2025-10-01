@@ -54,9 +54,9 @@ struct R_ENGINE_API Cursor {
 class R_ENGINE_API WindowPlugin final : public Plugin
 {
     public:
-        explicit WindowPlugin(const WindowPluginConfig &config = WindowPluginConfig());
+        explicit WindowPlugin(const WindowPluginConfig &config = WindowPluginConfig()) noexcept;
 
-        void build(Application &app) override;
+        void build(Application &app) noexcept override;
 
     private:
         WindowPluginConfig _config;

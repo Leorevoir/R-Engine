@@ -73,6 +73,11 @@ struct R_ENGINE_API Meshes final {
         MeshHandle add(const ::Mesh &mesh, const std::string &texture_path = "");
 
         /**
+         * @brief add a new model to the manager with a facultative texture path
+         */
+        MeshHandle add(const ::Model &model, const std::string &texture_path = "");
+
+        /**
         * @brief get a mesh entry by its handle
         */
         const ::Model *get(const u32 handle) const noexcept;
@@ -116,17 +121,23 @@ struct R_ENGINE_API Transform3d {
 
 struct R_ENGINE_API Mesh3d final {
     public:
-        Mesh3d(const MeshHandle mesh_handle, const r::Color &mesh_color = {});
+        Mesh3d(const MeshHandle mesh_handle, const r::Color &mesh_color = {}) noexcept;
 
         /**
         * @brief generate a cube mesh centered at the given position with the given size
         */
-        static ::Mesh Cube(const f32 size, const Vec3f &center = {0.f, 0.f, 0.f});
+        static ::Mesh Cube(const f32 size, const Vec3f &center = {0.f, 0.f, 0.f}) noexcept;
+        ;
 
         /**
         * @brief generate a sphere mesh centered at the given position with the given radius and number of slices
         */
-        static ::Mesh Circle(const f32 radius, const u32 slices, const Vec3f &center = {0.f, 0.f, 0.f});
+        static ::Mesh Circle(const f32 radius, const u32 slices, const Vec3f &center = {0.f, 0.f, 0.f}) noexcept;
+
+        /**
+        * @brief load a model from a glb file
+        */
+        static ::Model Glb(const std::string &path) noexcept;
 
         MeshHandle id = static_cast<MeshHandle>(-1);
         r::Color color;

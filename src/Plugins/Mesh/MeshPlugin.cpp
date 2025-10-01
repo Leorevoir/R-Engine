@@ -5,7 +5,8 @@
  * static helpers
  */
 
-static void mesh_render_system(r::ecs::Query<r::ecs::Ref<r::Mesh3d>, r::ecs::Ref<r::Transform3d>> query, r::ecs::Res<r::Meshes> meshes)
+static void mesh_render_system(r::ecs::Query<r::ecs::Ref<r::Mesh3d>, r::ecs::Ref<r::Transform3d>> query,
+    r::ecs::Res<r::Meshes> meshes) noexcept
 {
     for (const auto &[mesh_comp, transform] : query) {
         const auto *t3d = transform.ptr;

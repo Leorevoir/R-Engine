@@ -52,6 +52,13 @@ struct Gravity {
     r::Vec2f value = {0.0f, 980.0f};
 };
 
+/* Phase 2 demo resource to keep track of spawned UI entities */
+struct Phase2ExampleUI {
+    r::ecs::Entity autosize_label = 0;
+    r::ecs::Entity constraint_label = 0;
+    std::vector<r::ecs::Entity> focusable_buttons; /* order as spawned */
+};
+
 /* ================================================================================= */
 /* Systems */
 /* */
@@ -263,7 +270,8 @@ void spawn_ui_menu_system(r::ecs::Commands &commands, r::ecs::Res<r::WindowPlugi
         play_bundle.style.hover_dark_percent = 0.65f;
         play_bundle.style.flash_percent = 1.3f;
         play_bundle.rect.size = btn_size;
-        r::spawn_ui_button(commands, play_bundle, r::UiPosition{{center_x, start_y}});
+        auto e = r::spawn_ui_button(commands, play_bundle, r::UiPosition{{center_x, start_y}});
+        commands.entity(e).insert(r::UiFocusable{}).insert(r::UiScale{1.f,1.f});
     }
 
     /* Options button with a different base color (shows style override) */
@@ -275,7 +283,8 @@ void spawn_ui_menu_system(r::ecs::Commands &commands, r::ecs::Res<r::WindowPlugi
         options_bundle.style.hover_dark_percent = 0.4f; /* lighter darkening */
         options_bundle.style.flash_percent = 0.8f;      /* smaller flash */
         options_bundle.rect.size = btn_size;
-        r::spawn_ui_button(commands, options_bundle, r::UiPosition{{center_x, start_y + btn_size.y + 30.f}});
+        auto e = r::spawn_ui_button(commands, options_bundle, r::UiPosition{{center_x, start_y + btn_size.y + 30.f}});
+        commands.entity(e).insert(r::UiFocusable{}).insert(r::UiScale{1.f,1.f});
     }
 
     /* Disabled button example (non-interactive, styled via disabled flag) */
@@ -284,9 +293,10 @@ void spawn_ui_menu_system(r::ecs::Commands &commands, r::ecs::Res<r::WindowPlugi
         disabled_bundle.text.value = "Disabled";
         disabled_bundle.original_color = {120, 120, 120, 255};
         disabled_bundle.color = {disabled_bundle.original_color.r, disabled_bundle.original_color.g, disabled_bundle.original_color.b, disabled_bundle.original_color.a};
-        disabled_bundle.style.disabled = false;
+        disabled_bundle.style.disabled = true;
         disabled_bundle.rect.size = btn_size;
-        r::spawn_ui_button(commands, disabled_bundle, r::UiPosition{{center_x, start_y + (btn_size.y + 30.f) * 2.f}});
+        auto e = r::spawn_ui_button(commands, disabled_bundle, r::UiPosition{{center_x, start_y + (btn_size.y + 30.f) * 2.f}});
+        commands.entity(e).insert(r::UiScale{1.f,1.f}); /* not focusable on purpose */
     }
 
     /* Quit button via bundle helper + explicit quit action */
@@ -299,7 +309,98 @@ void spawn_ui_menu_system(r::ecs::Commands &commands, r::ecs::Res<r::WindowPlugi
         quit_bundle.rect.size = btn_size;
         auto e = r::spawn_ui_button(commands, quit_bundle, r::UiPosition{{center_x, start_y + (btn_size.y + 30.f) * 3.f}});
         /* Add the quit action component */
-        commands.entity(e).insert(r::UiOnClickQuit{});
+        commands.entity(e).insert(r::UiOnClickQuit{}).insert(r::UiFocusable{}).insert(r::UiScale{1.f,1.f});
+    }
+}
+
+/* ========================================================================== */
+/* (STARTUP) Phase 2 UI feature showcase (autosize, constraints, stack, clip)  */
+/* ========================================================================== */
+void spawn_ui_phase2_examples(r::ecs::Commands &commands, r::ecs::Res<r::WindowPluginConfig> win_config, r::ecs::Res<Phase2ExampleUI> demo_res)
+{
+    auto *demo = const_cast<Phase2ExampleUI*>(demo_res.ptr);
+    const float screen_width = (float)win_config.ptr->size.width;
+    /* Autosize label: rect size starts at 0, UiAutoSizeText + text sets it */
+    demo->autosize_label = commands.spawn(
+        r::UiText{ .value = "AutoSize: dynamic width", .size = 24 },
+        r::UiTextColor{ 30,30,30,255 },
+        r::UiRectSize{ {0.f, 0.f} }, /* will be filled by autosize */
+        r::UiAutoSizeText{},
+        r::UiPosition{ { 40.f, 520.f } },
+        r::UiZIndex{ 5 },
+        r::UiScale{1.f,1.f}
+    ).id();
+
+    /* Constraint label: autosize then enforced min width & max height (silly example) */
+    demo->constraint_label = commands.spawn(
+        r::UiText{ .value = "Constraint: min(200,40)", .size = 24 },
+        r::UiTextColor{ 20,20,60,255 },
+        r::UiRectSize{ {0.f, 0.f} },
+        r::UiAutoSizeText{},
+        r::UiMinSize{ {200.f, 40.f} },
+        r::UiMaxSize{ {400.f, 60.f} },
+        r::UiPreferredSize{ {0.f,0.f} },
+        r::UiPosition{ { 40.f, 560.f } },
+        r::UiZIndex{ 5 },
+        r::UiScale{1.f,1.f}
+    ).id();
+
+    /* Stack layout container (placeholder: layout not yet active) */
+    auto stack_panel = commands.spawn(
+        r::UiRectSize{ { 300.f, 140.f } },
+        r::UiPosition{ { screen_width - 340.f, 520.f } },
+        r::UiColor{ 240,240,250,255 },
+        r::UiOriginalColor{ 240,240,250,255 },
+        r::UiStyle{},
+        r::UiDirty{},
+        r::UiStackLayout{ r::UiStackAxis::Vertical, r::UiStackAlign::Center, 10.f, 6.f },
+        r::UiChildren{ {} },
+        r::UiClipChildren{}, /* marks for clipping descendants (not yet active) */
+        r::UiClipRect{ { screen_width - 340.f, 520.f }, { 300.f, 140.f } },
+        r::UiZIndex{ 4 }
+    ).id();
+    (void)stack_panel; /* currently unused because layout stack is placeholder */
+}
+
+/* ========================================================================== */
+/* (STARTUP) Collect focusable buttons into focus order resource              */
+/* ========================================================================== */
+void build_focus_order_system(r::ecs::Res<Phase2ExampleUI> demo_res, r::ecs::Res<r::UiFocusContext> focus_ctx)
+{
+    /* We cannot discover focusables generically yet → manual injection via events later.
+       For demo we leave order empty; Tab cycling will no-op until layout system populates. */
+    (void)demo_res;
+    auto *fc = const_cast<r::UiFocusContext*>(focus_ctx.ptr);
+    fc->order.clear();
+    /* Optionally populate manually if you record button IDs in a resource. */
+}
+
+/* ========================================================================== */
+/* (UPDATE) Scale target assignment (simple interaction based animation)      */
+/* ========================================================================== */
+void ui_scale_target_system(r::ecs::Query<r::ecs::Mut<r::UiScale>, r::ecs::Optional<r::UiInteraction>> q)
+{
+    for (auto [scale_w, interaction_w] : q) {
+        auto *sc = scale_w.ptr;
+        if (interaction_w.ptr) {
+            if (interaction_w.ptr->state == r::UiInteractionState::Pressed) sc->target = 0.95f;
+            else if (interaction_w.ptr->state == r::UiInteractionState::Hovered) sc->target = 1.05f;
+            else sc->target = 1.0f;
+        } else {
+            sc->target = 1.0f;
+        }
+    }
+}
+
+/* ========================================================================== */
+/* (UPDATE) Scale animation lerp                                              */
+/* ========================================================================== */
+void ui_scale_animation_system(r::ecs::Query<r::ecs::Mut<r::UiScale>> q, r::ecs::Res<r::core::FrameTime> ft)
+{
+    const float speed = 18.f;
+    for (auto [scale_w] : q) {
+        auto *sc = scale_w.ptr;
+        sc->value += (sc->target - sc->value) * std::clamp(speed * ft.ptr->delta_time, 0.f, 1.f);
     }
 }
 
@@ -388,11 +489,15 @@ int main()
 
         /* Insert global resources. These can be accessed by systems. */
         .insert_resource(Gravity{})
+    /* Insert Phase 2 demo tracking resource */
+    .insert_resource(Phase2ExampleUI{})
 
         /* Add systems to the application schedule. */
         /* STARTUP systems run once at the beginning. */
         .add_systems(r::Schedule::STARTUP, spawn_entities_system)
-        .add_systems(r::Schedule::STARTUP, spawn_ui_menu_system)
+    .add_systems(r::Schedule::STARTUP, spawn_ui_menu_system)
+    .add_systems(r::Schedule::STARTUP, spawn_ui_phase2_examples)
+    .add_systems(r::Schedule::STARTUP, build_focus_order_system)
         .add_systems(r::Schedule::STARTUP, configure_ui_logger_and_theme)
 
         /* UPDATE systems run once every frame for game logic and physics. */
@@ -403,7 +508,9 @@ int main()
             apply_gravity_system,
             move_system,
             bounce_system,
-            ui_click_events_logger /* placed after UI plugin systems so events are populated */
+            ui_click_events_logger, /* placed after UI plugin systems so events are populated */
+            ui_scale_target_system,
+            ui_scale_animation_system
         )
 
         /* RENDER systems run after UPDATE systems for drawing. */

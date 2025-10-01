@@ -1,15 +1,3 @@
-/**
- * @file UIPlugin.hpp
- * @brief User Interface (UI) plugin public API (Phase 1 foundation).
- * @details Provides ECS components, resources and a plugin that implement:
- *  - Unified event bus (hover / press / release / click / quit)
- *  - Filterable event logger
- *  - Style system (per-widget style + global theme + disabled state)
- *  - Frame statistics (counts + timings)
- *  - Pseudo bundle helper for spawning buttons quickly
- *  - Forward-looking stubs for layout / hierarchy (not yet active)
- * @note Layout & ValueChanged events are placeholders for future phases.
- */
 #pragma once
 
 #include <R-Engine/Plugins/Plugin.hpp>
@@ -163,7 +151,9 @@ enum class UiEventType : unsigned char {
     Released,
     Click,
     QuitClick,   /* specialized click leading to quit */
-    ValueChanged /* reserved for future widgets */
+    ValueChanged, /* reserved for future widgets */
+    FocusEnter,   /* keyboard focus gained */
+    FocusLeave    /* keyboard focus lost */
 };
 
 /** @brief Single UI event instance (label optional, filled when text component present). */
@@ -221,6 +211,136 @@ struct R_ENGINE_API UiDirty {
     bool layout = false; /* reserved */
 };
 
+/* ------------------------------------------------------------------------- */
+/* Phase 2: Layout / Constraints / Autosize / Focus / Clipping / Animations  */
+/* ------------------------------------------------------------------------- */
+
+/** @brief Axis for stack layout. */
+enum class UiStackAxis : unsigned char { Horizontal, Vertical };
+
+/** @brief Alignment for secondary axis in stack layout. */
+enum class UiStackAlign : unsigned char { Start, Center };
+
+/** @brief Stack layout container (uses manual UiChildren list). */
+struct R_ENGINE_API UiStackLayout {
+    UiStackAxis axis = UiStackAxis::Vertical;
+    UiStackAlign align = UiStackAlign::Center; /* cross axis alignment */
+    f32 padding = 8.f;  /* inner padding on all sides */
+    f32 spacing = 8.f;  /* gap between children */
+};
+
+/** @brief Size constraint: minimum. */
+struct R_ENGINE_API UiMinSize { Vec2f value {0.f, 0.f}; };
+/** @brief Size constraint: maximum. Use large values to mean 'unbounded'. */
+struct R_ENGINE_API UiMaxSize { Vec2f value { 1e9f, 1e9f }; };
+/** @brief Preferred size produced by layout / autosize (advisory). */
+struct R_ENGINE_API UiPreferredSize { Vec2f value {0.f, 0.f}; };
+
+/** @brief Marker: automatically measure text to set size (if zero) + preferred size. */
+struct R_ENGINE_API UiAutoSizeText { };
+
+/** @brief Marker: entity can receive keyboard focus via Tab. */
+struct R_ENGINE_API UiFocusable { };
+/** @brief Runtime focus flag (redundant but convenient for styling). */
+struct R_ENGINE_API UiFocusState { bool focused = false; };
+
+/** @brief Focus navigation context resource (current + ordering). */
+struct R_ENGINE_API UiFocusContext {
+    ecs::Entity current = 0;
+    ecs::Entity previous = 0;
+    std::vector<ecs::Entity> order; /* recomputed each frame (position sort) */
+};
+
+/** @brief Marker: clip (scissor) all descendants listed in UiChildren to this rect. */
+struct R_ENGINE_API UiClipChildren { };
+/** @brief Applied clipping rectangle (local absolute space). */
+struct R_ENGINE_API UiClipRect { Vec2f pos{0.f,0.f}; Vec2f size{0.f,0.f}; };
+
+/** @brief Scale (animated) applied at render time (does not affect layout). */
+struct R_ENGINE_API UiScale { f32 value = 1.f; f32 target = 1.f; };
+
+/* ------------------------------------------------------------------------- */
+/* Phase 3: Performance & Experience                                        */
+/* ------------------------------------------------------------------------- */
+
+/** @brief Unified pointer input (mouse + gamepad virtual cursor). */
+struct R_ENGINE_API UiInputState {
+    Vec2f pointer_pos {0.f,0.f};
+    bool pointer_down = false;
+    bool pointer_pressed = false;
+    bool pointer_released = false;
+    bool any_gamepad = false; /* true if gamepad contributed this frame */
+};
+
+/** @brief Config for virtual cursor input & mappings. */
+struct R_ENGINE_API UiInputConfig {
+    f32 gamepad_cursor_speed = 600.f; /* pixels per second */
+    int gamepad_index = 0;            /* which gamepad */
+    int confirm_button = 0;           /* A button (raylib gamepad button id) */
+};
+
+/** @brief Simple LRU-like cache entry for text measurement. */
+struct R_ENGINE_API UiTextMeasureCacheEntry {
+    std::string key; /* text + '#' + size */
+    int width = 0;
+    u64 last_used_frame = 0; /* for eviction */
+};
+
+/** @brief Cache storing measured text widths to avoid repeated MeasureText calls. */
+struct R_ENGINE_API UiTextMeasureCache {
+    std::vector<UiTextMeasureCacheEntry> entries;
+    u32 capacity = 256;
+};
+
+/** @brief Advanced logger configuration with throttle per event type (ms). */
+struct R_ENGINE_API UiAdvancedLoggerConfig {
+    bool enabled = false;
+    u32 throttle_hover_ms = 0;
+    u32 throttle_press_ms = 0;
+    u32 throttle_release_ms = 0;
+    u32 throttle_click_ms = 0;
+    u32 throttle_focus_ms = 0;
+    /* internal last log times */
+    double last_hover_time = -1.0;
+    double last_press_time = -1.0;
+    double last_release_time = -1.0;
+    double last_click_time = -1.0;
+    double last_focus_time = -1.0;
+};
+
+/** @brief Animation target property kinds (extendable). */
+enum class UiAnimProperty : unsigned char { Scale, Alpha };
+
+/** @brief Declarative float animation track for a property (one-shot or looping). */
+struct R_ENGINE_API UiAnimFloat {
+    UiAnimProperty property = UiAnimProperty::Scale;
+    f32 from = 1.f;
+    f32 to = 1.f;
+    f32 duration = 0.2f; /* seconds */
+    f32 elapsed = 0.f;
+    bool playing = false;
+    bool loop = false;
+};
+
+/** @brief Triggers for starting animations on events. */
+struct R_ENGINE_API UiAnimOnHover { bool start = true; };
+struct R_ENGINE_API UiAnimOnClick { bool start = true; };
+struct R_ENGINE_API UiAnimOnFocus { bool start = true; };
+
+/** @brief Per-entity animation set (multiple tracks). */
+struct R_ENGINE_API UiAnimations { std::vector<UiAnimFloat> tracks; };
+
+/** @brief Profiler config + rolling samples of timings. */
+struct R_ENGINE_API UiProfiler {
+    u32 max_samples = 120; /* frames */
+    std::vector<double> interaction_samples;
+    std::vector<double> style_samples;
+    std::vector<double> render_rect_samples;
+    std::vector<double> render_text_samples;
+    std::vector<double> animation_samples;
+    std::vector<double> input_samples;
+};
+
 /* Frame statistics (reset each frame). */
 /**
  * @brief Frame statistics for UI subsystem.
@@ -236,6 +356,12 @@ struct R_ENGINE_API UiStats {
     double style_ms = 0.0;
     double render_rect_ms = 0.0;
     double render_text_ms = 0.0;
+    /* Phase 3 additions */
+    u32 draw_calls = 0; /* after batching */
+    u32 text_cache_hits = 0;
+    u32 text_cache_misses = 0;
+    double input_ms = 0.0;
+    double animation_ms = 0.0;
 };
 
 /* ------------------------------------------------------------------------- */

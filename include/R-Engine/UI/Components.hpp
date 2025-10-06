@@ -28,7 +28,12 @@ enum class Visibility : u8 {
     Collapsed,
 };
 
-// Basic style (Phase 2): fixed size + colors + margins
+// Layout enums
+enum class LayoutDirection : u8 { Row, Column };
+enum class JustifyContent : u8 { Start, Center, End, SpaceBetween };
+enum class AlignItems : u8 { Start, Center, End, Stretch };
+
+// Basic style (Phase 3): fixed size + colors + margins + layout
 struct R_ENGINE_API Style {
     f32 width = 0.f;         // px (0 -> auto)
     f32 height = 0.f;        // px (0 -> auto)
@@ -36,6 +41,9 @@ struct R_ENGINE_API Style {
     i32 z_index = 0;
     f32 margin = 0.f;        // uniform margin in px
     f32 padding = 0.f;       // uniform padding in px
+    LayoutDirection direction = LayoutDirection::Column;
+    JustifyContent justify = JustifyContent::Start;
+    AlignItems align = AlignItems::Start;
 };
 
 // Computed (absolute) layout in screen-space
@@ -48,4 +56,3 @@ struct R_ENGINE_API ComputedLayout {
 };
 
 } // namespace r
-

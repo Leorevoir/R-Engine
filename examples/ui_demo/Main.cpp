@@ -42,7 +42,7 @@ static void spawn_ui_tree(r::ecs::Commands &cmds, r::ecs::Res<r::WindowPluginCon
     auto panel = cmds.spawn(
         r::UiNode{},
         r::Parent{ root_id },
-        r::Style{ .width = 320.f, .height = 180.f, .background = {60, 60, 80, 255}, .z_index = 1, .margin = 16.f, .padding = 8.f },
+        r::Style{ .width = 600.f, .height = 180.f, .background = {60, 60, 80, 255}, .z_index = 1, .margin = 16.f, .padding = 8.f, .direction = r::LayoutDirection::Row, .justify = r::JustifyContent::SpaceBetween, .align = r::AlignItems::Center },
         r::ComputedLayout{},
         r::Visibility::Visible
     );
@@ -53,6 +53,22 @@ static void spawn_ui_tree(r::ecs::Commands &cmds, r::ecs::Res<r::WindowPluginCon
         r::UiNode{},
         r::Parent{ panel_id },
         r::Style{ .width = 200.f, .height = 40.f, .background = {180, 80, 80, 255}, .z_index = 2, .margin = 12.f, .padding = 4.f },
+        r::ComputedLayout{},
+        r::Visibility::Visible
+    );
+
+    cmds.spawn(
+        r::UiNode{},
+        r::Parent{ panel_id },
+        r::Style{ .width = 120.f, .height = 60.f, .background = {80, 180, 120, 255}, .z_index = 2, .margin = 12.f, .padding = 4.f },
+        r::ComputedLayout{},
+        r::Visibility::Visible
+    );
+
+    cmds.spawn(
+        r::UiNode{},
+        r::Parent{ panel_id },
+        r::Style{ .width = 60.f, .height = 120.f, .background = {80, 120, 200, 255}, .z_index = 2, .margin = 12.f, .padding = 4.f },
         r::ComputedLayout{},
         r::Visibility::Visible
     );

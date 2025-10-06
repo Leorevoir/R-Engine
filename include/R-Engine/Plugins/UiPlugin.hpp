@@ -12,9 +12,7 @@
 
 namespace r {
 
-// clang-format off
-
-// UiTheme and UiEvents moved into include/R-Engine/UI/* headers
+ 
 
 /**
  * @brief Runtime config for UiPlugin (debug toggles, etc.).
@@ -23,8 +21,6 @@ struct R_ENGINE_API UiPluginConfig {
     bool show_debug_overlay = true;
     std::string overlay_text = "UI Plugin Ready";
 };
-
-// clang-format on
 
 /**
  * @brief UI plugin providing resources and systems for UI.
@@ -43,4 +39,4 @@ class R_ENGINE_API UiPlugin final : public Plugin {
         UiPluginConfig _config;
 };
 
-} // namespace r
+}

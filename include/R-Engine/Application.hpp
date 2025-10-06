@@ -20,16 +20,17 @@ namespace r {
 // clang-format off
 
 enum class Schedule {
-    STARTUP          = 1 << 0,
-    UPDATE           = 1 << 1,
-    FIXED_UPDATE     = 1 << 2,
-    BEFORE_RENDER_2D = 1 << 3,
-    RENDER_2D        = 1 << 4,
-    AFTER_RENDER_2D  = 1 << 5,
-    BEFORE_RENDER_3D = 1 << 6,
-    RENDER_3D        = 1 << 7,
-    AFTER_RENDER_3D  = 1 << 8,
-    SHUTDOWN         = 1 << 9,
+    PRE_STARTUP      = 1 << 0,
+    STARTUP          = 1 << 1,
+    UPDATE           = 1 << 2,
+    FIXED_UPDATE     = 1 << 3,
+    BEFORE_RENDER_2D = 1 << 4,
+    RENDER_2D        = 1 << 5,
+    AFTER_RENDER_2D  = 1 << 6,
+    BEFORE_RENDER_3D = 1 << 7,
+    RENDER_3D        = 1 << 8,
+    AFTER_RENDER_3D  = 1 << 9,
+    SHUTDOWN         = 1 << 10,
 };
 R_ENUM_FLAGABLE(Schedule)
 
@@ -153,6 +154,7 @@ class R_ENGINE_API Application final
         * @brief run the application
         * @details this will start the main loop of the application
         *
+        * PRE_STARTUP systems();
         * STARTUP systems();
         *
         * <main loop> {

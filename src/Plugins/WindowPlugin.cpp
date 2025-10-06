@@ -104,7 +104,7 @@ void r::WindowPlugin::build(r::Application &app) noexcept
     app
         .insert_resource(_config)
         .insert_resource(initial_cursor_state)
-        .add_systems(Schedule::STARTUP, _init_window_system)
+        .add_systems(Schedule::PRE_STARTUP, _init_window_system)
         .add_systems(Schedule::UPDATE, _update_window_system, _update_cursor_system)
         .add_systems(Schedule::SHUTDOWN, _destroy_window_system);
 

@@ -47,6 +47,10 @@ void r::Application::_startup()
 {
     _scene.insert_resource<core::FrameTime>(_clock.frame());
 
+    Logger::debug("Pre-startup schedule running...");
+    _run_schedule(Schedule::PRE_STARTUP);
+    _apply_commands();
+
     Logger::debug("Startup schedule running...");
     _run_schedule(Schedule::STARTUP);
     _apply_commands();

@@ -119,3 +119,7 @@ publish/
 out
 
 examples/assets/
+
+intra_assets/*
+
+*.pdf

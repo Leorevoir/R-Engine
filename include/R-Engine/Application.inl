@@ -4,27 +4,106 @@
 #include <R-Engine/Plugins/Plugin.hpp>
 
 #include <type_traits>
+#include <utility>
 
 // clang-format off
 
-template<typename Func>
-void r::Application::_add_one_system(r::Schedule when, Func &&func) noexcept
-{
-    using FuncDecay = std::decay_t<Func>;
-    FuncDecay fn = std::forward<Func>(func);
+/**
+* SystemConfigurator Implementation
+*/
 
-    _systems[when].emplace_back(
-    [fn](ecs::Scene &scene, ecs::CommandBuffer &cmd) mutable
-    {
-        ecs::run_system(fn, scene, cmd);
-    });
+inline r::Application::SystemConfigurator::SystemConfigurator(Application *app, Schedule schedule, std::vector<SystemTypeId> system_ids) noexcept
+    : _app(app), _schedule(schedule), _system_ids(std::move(system_ids))
+{
+}
+
+template<auto SystemFunc>
+inline r::Application::SystemConfigurator &r::Application::SystemConfigurator::after() noexcept
+{
+    SystemTypeId dependency_id(typeid(decltype(SystemFunc)));
+    for (const auto &system_id : _system_ids) {
+        _app->_systems[_schedule].nodes.at(system_id).dependencies.insert(dependency_id);
+    }
+    _app->_systems[_schedule].dirty = true;
+    return *this;
+}
+
+template<auto SystemFunc>
+inline r::Application::SystemConfigurator &r::Application::SystemConfigurator::before() noexcept
+{
+    SystemTypeId dependent_id(typeid(decltype(SystemFunc)));
+    for (const auto &system_id : _system_ids) {
+        if (_app->_systems[_schedule].nodes.find(dependent_id) == _app->_systems[_schedule].nodes.end()) {
+             SystemNode placeholder_node(dependent_id.name(), dependent_id, nullptr, {});
+             _app->_systems[_schedule].nodes.emplace(dependent_id, std::move(placeholder_node));
+        }
+        _app->_systems[_schedule].nodes.at(dependent_id).dependencies.insert(system_id);
+    }
+    _app->_systems[_schedule].dirty = true;
+    return *this;
 }
 
 template<typename... Funcs>
-r::Application &r::Application::add_systems(Schedule when, Funcs &&...funcs) noexcept
+inline r::Application::SystemConfigurator r::Application::SystemConfigurator::add_systems(Schedule when, Funcs &&...funcs) noexcept
 {
-    (_add_one_system(when, std::forward<Funcs>(funcs)), ...);
-    return *this;
+    return _app->add_systems(when, std::forward<Funcs>(funcs)...);
+}
+
+template<typename ResT>
+inline r::Application& r::Application::SystemConfigurator::insert_resource(ResT res) noexcept
+{
+    return _app->insert_resource(std::move(res));
+}
+
+template<typename... Plugins>
+inline r::Application& r::Application::SystemConfigurator::add_plugins(Plugins &&...plugins) noexcept
+{
+    return _app->add_plugins(std::forward<Plugins>(plugins)...);
+}
+
+inline void r::Application::SystemConfigurator::run()
+{
+    _app->run();
+}
+
+
+/**
+* Application Implementation
+*/
+
+template<typename Func>
+r::Application::SystemTypeId r::Application::_add_one_system(r::Schedule when, Func &&func) noexcept
+{
+    using FuncDecay = std::decay_t<Func>;
+    SystemTypeId id(typeid(FuncDecay));
+
+    auto &graph = _systems[when];
+
+    /* Use designated initializers to avoid default constructor issues */
+    SystemNode node(
+        id.name(),
+        id,
+        [fn = std::forward<Func>(func)](ecs::Scene &scene, ecs::CommandBuffer &cmd) mutable {
+            ecs::run_system(fn, scene, cmd);
+        },
+        {});
+
+    if (graph.nodes.count(id)) {
+        /* If a placeholder node exists from a .before() call, preserve its dependencies. */
+        node.dependencies = std::move(graph.nodes.at(id).dependencies);
+    }
+
+    graph.nodes.insert_or_assign(id, std::move(node));
+    graph.dirty = true;
+
+    return id;
+}
+
+template<typename... Funcs>
+r::Application::SystemConfigurator r::Application::add_systems(Schedule when, Funcs &&...funcs) noexcept
+{
+    std::vector<SystemTypeId> ids = {_add_one_system(when, std::forward<Funcs>(funcs))...};
+    return SystemConfigurator(this, when, std::move(ids));
 }
 
 template<typename ResT>

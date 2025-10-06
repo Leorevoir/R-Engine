@@ -300,9 +300,13 @@ int main()
             spawn_on_click_system,
             player_control_system,
             apply_gravity_system,
-            move_system,
             bounce_system
         )
+
+        /* Add move_system and explicitly state that it must run AFTER player_control_system. */
+        /* The chain continues seamlessly. */
+        .add_systems(r::Schedule::UPDATE, move_system)
+        .after<player_control_system>()
 
         /* RENDER systems run after UPDATE systems for drawing. */
         /* The RenderPlugin already adds systems to begin and end the drawing context. */

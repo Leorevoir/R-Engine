@@ -28,6 +28,11 @@ void r::Application::Application::run()
     _apply_commands();
     Logger::debug("Startup schedule complete. Entering main loop.");
 
+    _systems.erase(Schedule::STARTUP);
+    if (_systems.empty()) {
+        quit = true;
+    }
+
     while (!quit) {
         _clock.tick();
         *_scene.get_resource_ptr<core::FrameTime>() = _clock.frame();
@@ -41,6 +46,7 @@ void r::Application::Application::run()
         }
         _render_routine();
     }
+
     Logger::debug("Main loop exited. Running shutdown schedule...");
     _run_schedule(Schedule::SHUTDOWN);
     _apply_commands();

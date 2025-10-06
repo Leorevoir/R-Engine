@@ -14,6 +14,13 @@ struct EntityId {
 };
 
 /**
+ * @brief Placeholder mapping exposed to systems (read-only view of Scene's map).
+ */
+struct PlaceholderMap {
+        const std::unordered_map<Entity, Entity> *ptr = nullptr;
+};
+
+/**
  * wrappers for query parameters (Dependency Injection)
  */
 

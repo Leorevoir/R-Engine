@@ -47,6 +47,11 @@ struct R_ENGINE_API Resolver {
         Q<Wrappers...> resolve(std::type_identity<Query<Wrappers...>>);
 
         /**
+        * @brief Access to placeholder->real entity mapping (read-only).
+        */
+        PlaceholderMap resolve(std::type_identity<PlaceholderMap>);
+
+        /**
          * @brief fallback for unsupported types
          */
         template<typename T>

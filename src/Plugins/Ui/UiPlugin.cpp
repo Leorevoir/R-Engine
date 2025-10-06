@@ -10,6 +10,7 @@
 #include <R-Engine/UI/Components.hpp>
 #include <R-Engine/Plugins/RenderPlugin.hpp>
 #include <R-Engine/Plugins/WindowPlugin.hpp>
+#include <unordered_set>
 
 namespace r {
 
@@ -33,6 +34,19 @@ static void ui_update_system(r::ecs::ResMut<UiEvents> events, r::ecs::ResMut<UiI
     input.ptr->mouse_left_pressed = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
     input.ptr->mouse_left_released = IsMouseButtonReleased(MOUSE_BUTTON_LEFT);
     input.ptr->mouse_left_down = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
+}
+
+static void ui_remap_parents_system(
+    r::ecs::Query<r::ecs::Mut<r::Parent>> q,
+    r::ecs::PlaceholderMap map) noexcept
+{
+    if (!map.ptr) return;
+    for (auto [parent] : q) {
+        auto it = map.ptr->find(parent.ptr->id);
+        if (it != map.ptr->end()) {
+            parent.ptr->id = it->second;
+        }
+    }
 }
 
 static constexpr inline ::Camera _to_raylib(const r::Camera3d &c) noexcept
@@ -158,19 +172,26 @@ static void ui_compute_layout_system(
 {
     std::unordered_map<r::ecs::Entity, std::vector<r::ecs::Entity>> children_map;
     std::unordered_map<r::ecs::Entity, r::Style> styles;
-    std::vector<r::ecs::Entity> roots;
+    std::unordered_set<r::ecs::Entity> present;
+    struct Pending { r::ecs::Entity e; r::ecs::Entity parent; bool visible; };
+    std::vector<Pending> pending;
 
     for (auto [parent_opt, style_opt, vis_opt, _node, id] : q) {
         const r::ecs::Entity e = id.value;
-        const r::Style s = style_opt.ptr ? *style_opt.ptr : r::Style{};
-        styles[e] = s;
+        present.insert(e);
+        styles[e] = style_opt.ptr ? *style_opt.ptr : r::Style{};
+        const bool visible = (!vis_opt.ptr || *vis_opt.ptr == r::Visibility::Visible);
+        const r::ecs::Entity parent = (parent_opt.ptr ? parent_opt.ptr->id : 0);
+        pending.push_back({e, parent, visible});
+    }
 
-        if (!vis_opt.ptr || *vis_opt.ptr == r::Visibility::Visible) {
-            if (parent_opt.ptr == nullptr || parent_opt.ptr->id == 0) {
-                roots.push_back(e);
-            } else {
-                children_map[parent_opt.ptr->id].push_back(e);
-            }
+    std::vector<r::ecs::Entity> roots;
+    for (const auto &p : pending) {
+        if (!p.visible) continue;
+        if (p.parent == 0 || present.count(p.parent) == 0) {
+            roots.push_back(p.e);
+        } else {
+            children_map[p.parent].push_back(p.e);
         }
     }
 
@@ -228,7 +249,7 @@ void UiPlugin::build(Application &app)
         .insert_resource(UiInputState{})
         .insert_resource(UiEvents{})
         .add_systems(Schedule::STARTUP, ui_startup_system)
-        .add_systems(Schedule::UPDATE, ui_update_system, ui_compute_layout_system)
+        .add_systems(Schedule::UPDATE, ui_remap_parents_system, ui_update_system, ui_compute_layout_system)
         .add_systems(Schedule::RENDER, ui_render_system);
 
     Logger::info("UiPlugin built");

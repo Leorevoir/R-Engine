@@ -306,7 +306,7 @@ int main()
 
         /* RENDER systems run after UPDATE systems for drawing. */
         /* The RenderPlugin already adds systems to begin and end the drawing context. */
-        .add_systems(r::Schedule::RENDER, render_system)
+        .add_systems(r::Schedule::RENDER_2D, render_system)
 
         /* Start the main application loop. */
         .run();

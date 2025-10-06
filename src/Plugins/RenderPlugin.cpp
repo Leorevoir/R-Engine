@@ -18,14 +18,18 @@ static constexpr inline const ::Camera to_raylib(const r::Camera3d &c) noexcept
     };
 }
 
-static void render_plugin_before_render_system(r::ecs::Res<r::Camera3d> camera) noexcept
+static void render_plugin_2D_before_render_system(void) noexcept
 {
     BeginDrawing();
     ClearBackground(RAYWHITE);
+}
+
+static void render_plugin_3D_before_render_system(r::ecs::Res<r::Camera3d> camera) noexcept
+{
     BeginMode3D(to_raylib(*camera.ptr));
 }
 
-static void render_plugin_after_render_system(void) noexcept
+static void render_plugin_3D_after_render_system(void) noexcept
 {
     EndMode3D();
     EndDrawing();
@@ -43,6 +47,7 @@ r::RenderPlugin::RenderPlugin(const r::Camera3d &camera3d) : camera(camera3d)
 void r::RenderPlugin::build(r::Application &app)
 {
     app.insert_resource(camera)
-        .add_systems(Schedule::BEFORE_RENDER, render_plugin_before_render_system)
-        .add_systems(Schedule::AFTER_RENDER, render_plugin_after_render_system);
+        .add_systems(Schedule::BEFORE_RENDER_2D, render_plugin_2D_before_render_system)
+        .add_systems(Schedule::BEFORE_RENDER_3D, render_plugin_3D_before_render_system)
+        .add_systems(Schedule::AFTER_RENDER_3D, render_plugin_3D_after_render_system);
 }

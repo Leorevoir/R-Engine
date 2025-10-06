@@ -39,11 +39,8 @@ void r::Application::Application::run()
             _run_schedule(Schedule::FIXED_UPDATE);
             _apply_commands();
         }
-        _run_schedule(Schedule::BEFORE_RENDER);
-        _run_schedule(Schedule::RENDER);
-        _run_schedule(Schedule::AFTER_RENDER);
+        _render_routine();
     }
-
     Logger::debug("Main loop exited. Running shutdown schedule...");
     _run_schedule(Schedule::SHUTDOWN);
     _apply_commands();
@@ -64,6 +61,16 @@ void r::Application::_run_schedule(const Schedule sched)
     for (const auto &sys : it->second) {
         sys(_scene, _command_buffer);
     }
+}
+
+void r::Application::_render_routine()
+{
+    _run_schedule(Schedule::BEFORE_RENDER_3D);
+    _run_schedule(Schedule::RENDER_3D);
+    _run_schedule(Schedule::AFTER_RENDER_3D);
+    _run_schedule(Schedule::BEFORE_RENDER_2D);
+    _run_schedule(Schedule::RENDER_2D);
+    _run_schedule(Schedule::AFTER_RENDER_2D);
 }
 
 void r::Application::_apply_commands()

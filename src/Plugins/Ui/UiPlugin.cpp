@@ -10,6 +10,7 @@
 #include <R-Engine/UI/Components.hpp>
 #include <R-Engine/Plugins/RenderPlugin.hpp>
 #include <R-Engine/Plugins/WindowPlugin.hpp>
+#include <R-Engine/Plugins/InputPlugin.hpp>
 #include <unordered_set>
 #include <unordered_map>
 #include <vector>
@@ -28,15 +29,100 @@ static void ui_startup_system(r::ecs::Res<UiPluginConfig> cfg, r::ecs::Res<UiThe
     Logger::info(std::string{"UiPlugin startup. DebugOverlay="} + (cfg.ptr->show_debug_overlay ? "on" : "off"));
 }
 
-static void ui_update_system(r::ecs::ResMut<UiEvents> events, r::ecs::ResMut<UiInputState> input) noexcept
+static void ui_update_system(r::ecs::ResMut<UiEvents> events, r::ecs::ResMut<UiInputState> input, r::ecs::Res<r::UserInput> ui) noexcept
 {
-    events.ptr->_reserved.clear();
+    events.ptr->pressed.clear();
+    events.ptr->released.clear();
+    events.ptr->clicked.clear();
+    events.ptr->entered.clear();
+    events.ptr->left.clear();
 
     const ::Vector2 mp = GetMousePosition();
     input.ptr->mouse_position = {mp.x, mp.y};
-    input.ptr->mouse_left_pressed = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
-    input.ptr->mouse_left_released = IsMouseButtonReleased(MOUSE_BUTTON_LEFT);
-    input.ptr->mouse_left_down = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
+    input.ptr->mouse_left_pressed = ui.ptr->isMouseButtonPressed(MOUSE_BUTTON_LEFT);
+    input.ptr->mouse_left_released = ui.ptr->isMouseButtonReleased(MOUSE_BUTTON_LEFT);
+    input.ptr->mouse_left_down = ui.ptr->isMouseButtonDown(MOUSE_BUTTON_LEFT);
+}
+
+static void ui_pointer_system(
+    r::ecs::ResMut<UiInputState> state,
+    r::ecs::ResMut<UiEvents> events,
+    r::ecs::Query<r::ecs::Ref<r::UiNode>, r::ecs::Ref<r::ComputedLayout>, r::ecs::Optional<r::Style>, r::ecs::Optional<r::Visibility>, r::ecs::Optional<r::Parent>, r::ecs::EntityId> q) noexcept
+{
+    struct Item { int z; size_t ord; r::ecs::Entity id; r::ComputedLayout const* layout; r::Style style; r::ecs::Entity parent; };
+    std::vector<Item> items; items.reserve(128);
+    std::unordered_map<r::ecs::Entity, const r::ComputedLayout*> layouts;
+    std::unordered_map<r::ecs::Entity, r::Style> styles;
+    std::unordered_map<r::ecs::Entity, r::ecs::Entity> parents;
+
+    size_t ord = 0;
+    for (auto [node, layout, style_opt, vis_opt, parent_opt, id] : q) {
+        (void)node;
+        if (vis_opt.ptr && (*vis_opt.ptr != r::Visibility::Visible)) continue;
+        r::Style s = style_opt.ptr ? *style_opt.ptr : r::Style{};
+        items.push_back({ s.z_index, ord++, id.value, layout.ptr, s, parent_opt.ptr ? parent_opt.ptr->id : 0 });
+        layouts[id.value] = layout.ptr;
+        styles[id.value] = s;
+        parents[id.value] = parent_opt.ptr ? parent_opt.ptr->id : 0;
+    }
+    std::stable_sort(items.begin(), items.end(), [](const Item&a,const Item&b){ if (a.z!=b.z) return a.z < b.z; return a.ord < b.ord; });
+
+    auto point_in = [](float px,float py,const r::ComputedLayout* l){ return (px >= l->x && px <= l->x + l->w && py >= l->y && py <= l->y + l->h); };
+
+    auto inside_with_clip = [&](const Item &it, float mx, float my){
+        if (!point_in(mx,my,it.layout)) return false;
+        r::ecs::Entity p = it.parent;
+        while (p != 0) {
+            auto psit = styles.find(p);
+            auto plit = layouts.find(p);
+            if (psit != styles.end() && plit != layouts.end()) {
+                const r::Style &ps = psit->second;
+                const r::ComputedLayout *pl = plit->second;
+                if (ps.clip_children) {
+                    float cx = pl->x + ps.padding;
+                    float cy = pl->y + ps.padding;
+                    float cw = pl->w - ps.padding * 2.f;
+                    float ch = pl->h - ps.padding * 2.f;
+                    if (!(mx >= cx && mx <= cx + cw && my >= cy && my <= cy + ch)) return false;
+                }
+            }
+            auto pit = parents.find(p);
+            if (pit == parents.end()) break;
+            p = pit->second;
+        }
+        return true;
+    };
+
+    const float mx = state.ptr->mouse_position.x;
+    const float my = state.ptr->mouse_position.y;
+
+    r::ecs::Entity hovered = 0;
+    for (auto it = items.rbegin(); it != items.rend(); ++it) {
+        if (inside_with_clip(*it, mx, my)) { hovered = it->id; break; }
+    }
+
+    if (hovered != state.ptr->hovered) {
+        if (state.ptr->hovered != 0) events.ptr->left.push_back(state.ptr->hovered);
+        if (hovered != 0) events.ptr->entered.push_back(hovered);
+        state.ptr->prev_hovered = state.ptr->hovered;
+        state.ptr->hovered = hovered;
+    }
+
+    if (state.ptr->mouse_left_pressed && hovered != 0) {
+        state.ptr->active = hovered;
+        state.ptr->focused = hovered;
+        events.ptr->pressed.push_back(hovered);
+    }
+
+    if (state.ptr->mouse_left_released) {
+        if (state.ptr->active != 0) {
+            events.ptr->released.push_back(state.ptr->active);
+            if (hovered == state.ptr->active) {
+                events.ptr->clicked.push_back(state.ptr->active);
+            }
+        }
+        state.ptr->active = 0;
+    }
 }
 
 static void ui_remap_parents_system(
@@ -332,7 +418,7 @@ void UiPlugin::build(Application &app)
         .insert_resource(UiInputState{})
         .insert_resource(UiEvents{})
         .add_systems(Schedule::STARTUP, ui_startup_system)
-        .add_systems(Schedule::UPDATE, ui_remap_parents_system, ui_update_system, ui_compute_layout_system)
+        .add_systems(Schedule::UPDATE, ui_remap_parents_system, ui_update_system, ui_compute_layout_system, ui_pointer_system)
         .add_systems(Schedule::RENDER, ui_render_system);
 
     Logger::info("UiPlugin built");

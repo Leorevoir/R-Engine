@@ -2,6 +2,7 @@
 
 #include <R-Engine/R-EngineExport.hpp>
 #include <R-Engine/Maths/Vec.hpp>
+#include <R-Engine/ECS/Entity.hpp>
 
 namespace r {
 
@@ -13,6 +14,11 @@ struct R_ENGINE_API UiInputState {
     bool mouse_left_down = false;
     bool mouse_left_pressed = false;
     bool mouse_left_released = false;
+
+    ecs::Entity hovered = 0;
+    ecs::Entity prev_hovered = 0;
+    ecs::Entity active = 0;
+    ecs::Entity focused = 0;
 };
 
 } /* namespace r */

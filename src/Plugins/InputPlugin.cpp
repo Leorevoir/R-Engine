@@ -21,6 +21,19 @@ bool r::UserInput::isMouseButtonPressed(int button_code) const
     return it != mouse_buttons_pressed.end();
 }
 
+bool r::UserInput::isMouseButtonDown(int button_code) const
+{
+    const auto it = mouse_buttons_down.find(button_code);
+
+    return it != mouse_buttons_down.end();
+}
+
+bool r::UserInput::isMouseButtonReleased(int button_code) const
+{
+    const auto it = mouse_buttons_released.find(button_code);
+
+    return it != mouse_buttons_released.end();
+}
 /**
  * @brief Bind an action (action name) to a specific input. Inputs can be keyboard or mouse types.
  * @details This system adds a name to a specific key
@@ -60,11 +73,19 @@ static void input_system(r::ecs::ResMut<r::UserInput> userInput)
         }
     }
 
-    /* 3 Because we count 3 buttons on the mouse */
+    /* 3 because we count 3 buttons on the mouse */
     userInput.ptr->mouse_buttons_pressed.clear();
+    userInput.ptr->mouse_buttons_down.clear();
+    userInput.ptr->mouse_buttons_released.clear();
     for (u16 button = 0; button < 3; ++button) {
         if (IsMouseButtonPressed(button)) {
             userInput.ptr->mouse_buttons_pressed.insert(button);
+        }
+        if (IsMouseButtonDown(button)) {
+            userInput.ptr->mouse_buttons_down.insert(button);
+        }
+        if (IsMouseButtonReleased(button)) {
+            userInput.ptr->mouse_buttons_released.insert(button);
         }
     }
 }

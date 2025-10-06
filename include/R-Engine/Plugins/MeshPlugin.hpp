@@ -127,7 +127,6 @@ struct R_ENGINE_API Mesh3d final {
         * @brief generate a cube mesh centered at the given position with the given size
         */
         static ::Mesh Cube(const f32 size, const Vec3f &center = {0.f, 0.f, 0.f}) noexcept;
-        ;
 
         /**
         * @brief generate a sphere mesh centered at the given position with the given radius and number of slices

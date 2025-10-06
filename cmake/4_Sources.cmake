@@ -1,16 +1,16 @@
 file(GLOB_RECURSE SRC_ENGINE "src/*.cpp")
 set(INCLUDE_ENGINE
-    "${CMAKE_SOURCE_DIR}/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include"
 )
 
 if(ENABLE_TESTS)
     file(GLOB_RECURSE SRC_TESTS "tests/*.cpp")
     set(INCLUDE_TESTS
-        "${CMAKE_SOURCE_DIR}/tests"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests"
     )
 endif()
 
-file(GLOB EXAMPLE_SUBDIRS LIST_DIRECTORIES true "${CMAKE_SOURCE_DIR}/examples/*")
+file(GLOB EXAMPLE_SUBDIRS LIST_DIRECTORIES true "${CMAKE_CURRENT_SOURCE_DIR}/examples/*")
 
 set(EXAMPLE_TARGETS "")
 
@@ -24,7 +24,7 @@ foreach(EXAMPLE_DIR ${EXAMPLE_SUBDIRS})
         if(EXAMPLE_SRCS)
             add_executable(${TARGET_NAME} ${EXAMPLE_SRCS})
             target_include_directories(${TARGET_NAME} PRIVATE
-                ${CMAKE_SOURCE_DIR}/include
+                ${CMAKE_CURRENT_SOURCE_DIR}/include
             )
             target_link_libraries(${TARGET_NAME} PRIVATE
                 r-engine
@@ -40,5 +40,5 @@ if(EXAMPLE_TARGETS)
 endif()
 
 set(INCLUDE_EXAMPLES
-    "${CMAKE_SOURCE_DIR}/examples"
+    "${CMAKE_CURRENT_SOURCE_DIR}/examples"
 )

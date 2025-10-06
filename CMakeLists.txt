@@ -3,7 +3,7 @@ project(r-engine LANGUAGES C CXX VERSION 0.0.1)
 
 ########################################
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 ########################################
 
@@ -18,8 +18,8 @@ include(4_Sources)
 
 add_library(r-engine SHARED ${SRC_ENGINE})
 target_include_directories(r-engine PRIVATE
-    ${CMAKE_SOURCE_DIR}/include
-    ${CMAKE_SOURCE_DIR}/external
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/external
 )
 target_link_libraries(r-engine PUBLIC
     raylib
@@ -52,14 +52,14 @@ if(ENABLE_TESTS)
     add_test(NAME unit_tests COMMAND unit_tests)
 
     target_include_directories(unit_tests PRIVATE
-        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
     )
 
 endif()
 
 add_custom_target(tests_run
     COMMENT "Running unit tests"
-    COMMAND ${CMAKE_COMMAND} -DBUILD_TESTS=ON ${CMAKE_SOURCE_DIR}
+    COMMAND ${CMAKE_COMMAND} -DBUILD_TESTS=ON ${CMAKE_CURRENT_SOURCE_DIR}
     COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target unit_tests
     COMMAND ${CMAKE_BINARY_DIR}/unit_tests
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}

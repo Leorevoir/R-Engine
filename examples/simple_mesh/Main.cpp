@@ -13,7 +13,6 @@ static void startup_system(r::ecs::Commands &cmd, r::ecs::ResMut<r::Meshes> mesh
     cmd.spawn(
         r::Mesh3d{
             meshes.ptr->add(r::Mesh3d::Glb(glb_path)),
-            r::Color{0, 0, 0}
         },
         r::Transform3d{.translation = {0, -4, 0}, .scale = {1, 1, 1}}
     );

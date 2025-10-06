@@ -16,13 +16,16 @@ namespace r {
 // clang-format off
 
 enum class Schedule {
-    STARTUP         = 1 << 0,
-    UPDATE          = 1 << 1,
-    FIXED_UPDATE    = 1 << 2,
-    BEFORE_RENDER   = 1 << 3,
-    RENDER          = 1 << 4,
-    AFTER_RENDER    = 1 << 5,
-    SHUTDOWN        = 1 << 6,
+    STARTUP          = 1 << 0,
+    UPDATE           = 1 << 1,
+    FIXED_UPDATE     = 1 << 2,
+    BEFORE_RENDER_2D = 1 << 3,
+    RENDER_2D        = 1 << 4,
+    AFTER_RENDER_2D  = 1 << 5,
+    BEFORE_RENDER_3D = 1 << 6,
+    RENDER_3D        = 1 << 7,
+    AFTER_RENDER_3D  = 1 << 8,
+    SHUTDOWN         = 1 << 9,
 };
 R_ENUM_FLAGABLE(Schedule)
 
@@ -81,6 +84,7 @@ class R_ENGINE_API Application final
         static inline bool quit = false;
 
     private:
+        void _render_routine();
         void _run_schedule(const Schedule sched);
         void _apply_commands();
 

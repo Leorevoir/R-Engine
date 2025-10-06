@@ -8,45 +8,48 @@
 
 namespace r {
 
-// Marker component for UI entities
+/* Marker component for UI entities */
 struct R_ENGINE_API UiNode {
 };
 
-// Hierarchy
+/* Hierarchy */
 struct R_ENGINE_API Parent {
-    ecs::Entity id = 0; // 0 -> no parent
+    ecs::Entity id = 0; /* 0 -> no parent */
 };
 
 struct R_ENGINE_API Children {
     std::vector<ecs::Entity> ids;
 };
 
-// Visibility
+/* Visibility */
 enum class Visibility : u8 {
     Visible,
     Hidden,
     Collapsed,
 };
 
-// Layout enums
+/* Layout enums */
 enum class LayoutDirection : u8 { Row, Column };
 enum class JustifyContent : u8 { Start, Center, End, SpaceBetween };
 enum class AlignItems : u8 { Start, Center, End, Stretch };
 
-// Basic style (Phase 3): fixed size + colors + margins + layout
+/* Basic style (Phase 3): fixed size + colors + margins + layout */
 struct R_ENGINE_API Style {
-    f32 width = 0.f;         // px (0 -> auto)
-    f32 height = 0.f;        // px (0 -> auto)
+    f32 width = 0.f;         /* px (0 -> auto) */
+    f32 height = 0.f;        /* px (0 -> auto) */
     Color background{200, 200, 200, 200};
     i32 z_index = 0;
-    f32 margin = 0.f;        // uniform margin in px
-    f32 padding = 0.f;       // uniform padding in px
+    f32 margin = 0.f;        /* uniform margin in px */
+    f32 padding = 0.f;       /* uniform padding in px */
     LayoutDirection direction = LayoutDirection::Column;
     JustifyContent justify = JustifyContent::Start;
     AlignItems align = AlignItems::Start;
+    bool clip_children = false;      /* if true, clip descendants to this node's content rect */
+    f32 border_thickness = 0.f;      /* px, 0 = no border */
+    Color border_color{0, 0, 0, 255};
 };
 
-// Computed (absolute) layout in screen-space
+/* Computed (absolute) layout in screen-space */
 struct R_ENGINE_API ComputedLayout {
     f32 x = 0.f;
     f32 y = 0.f;
@@ -55,4 +58,4 @@ struct R_ENGINE_API ComputedLayout {
     i32 z = 0;
 };
 
-} // namespace r
+} /* namespace r */

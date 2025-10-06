@@ -15,5 +15,4 @@ struct R_ENGINE_API UiInputState {
     bool mouse_left_released = false;
 };
 
-} // namespace r
-
+} /* namespace r */

@@ -17,5 +17,4 @@ struct R_ENGINE_API UiTheme {
     u8    padding           = 6;
 };
 
-} // namespace r
-
+} /* namespace r */

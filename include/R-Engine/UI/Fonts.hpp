@@ -10,8 +10,7 @@ namespace r {
  *          with font handles and lifetime management.
  */
 struct R_ENGINE_API UiFonts {
-    bool initialized = false; // placeholder, avoids empty struct warnings
+    bool initialized = false; /* placeholder, avoids empty struct warnings */
 };
 
-} // namespace r
-
+} /* namespace r */

@@ -11,6 +11,9 @@
 #include <R-Engine/Plugins/RenderPlugin.hpp>
 #include <R-Engine/Plugins/WindowPlugin.hpp>
 #include <unordered_set>
+#include <unordered_map>
+#include <vector>
+#include <algorithm>
 
 namespace r {
 
@@ -211,18 +214,98 @@ static void ui_compute_layout_system(
 }
 
 static void ui_render_system(r::ecs::Res<UiPluginConfig> cfg, r::ecs::Res<r::Camera3d> cam,
-    r::ecs::Query<r::ecs::Ref<r::UiNode>, r::ecs::Ref<r::ComputedLayout>, r::ecs::Optional<r::Style>, r::ecs::Optional<r::Visibility>> q) noexcept
+    r::ecs::Query<r::ecs::Ref<r::UiNode>, r::ecs::Ref<r::ComputedLayout>, r::ecs::Optional<r::Style>, r::ecs::Optional<r::Visibility>, r::ecs::Optional<r::Parent>, r::ecs::EntityId> q) noexcept
 {
     EndMode3D();
 
-    for (auto [node, layout, style_opt, vis_opt] : q) {
-        (void)node;
-        const bool hidden = (vis_opt.ptr && (*vis_opt.ptr != r::Visibility::Visible));
-        if (hidden) continue;
+    struct DrawItem {
+        int z;
+        size_t order;
+        r::ecs::Entity id;
+        const r::ComputedLayout *layout;
+        r::Style style;
+        r::ecs::Entity parent;
+    };
 
+    std::vector<DrawItem> items;
+    items.reserve(128);
+
+    std::unordered_map<r::ecs::Entity, const r::ComputedLayout *> layouts;
+    std::unordered_map<r::ecs::Entity, r::Style> styles;
+    std::unordered_map<r::ecs::Entity, r::ecs::Entity> parents;
+
+    size_t ord = 0;
+    for (auto [node, layout, style_opt, vis_opt, parent_opt, id] : q) {
+        (void)node;
+        if (vis_opt.ptr && (*vis_opt.ptr != r::Visibility::Visible)) continue;
         const r::Style s = style_opt.ptr ? *style_opt.ptr : r::Style{};
-        DrawRectangle((int)layout.ptr->x, (int)layout.ptr->y, (int)layout.ptr->w, (int)layout.ptr->h,
-            {s.background.r, s.background.g, s.background.b, s.background.a});
+        items.push_back(DrawItem{ s.z_index, ord++, id.value, layout.ptr, s, parent_opt.ptr ? parent_opt.ptr->id : 0 });
+        layouts[id.value] = layout.ptr;
+        styles[id.value] = s;
+        parents[id.value] = parent_opt.ptr ? parent_opt.ptr->id : 0;
+    }
+
+    std::stable_sort(items.begin(), items.end(), [](const DrawItem &a, const DrawItem &b) {
+        if (a.z != b.z) return a.z < b.z;
+        return a.order < b.order;
+    });
+
+    auto intersect = [](int x, int y, int w, int h, int x2, int y2, int w2, int h2) {
+        int nx = std::max(x, x2);
+        int ny = std::max(y, y2);
+        int r1 = x + w; int r2 = x2 + w2;
+        int b1 = y + h; int b2 = y2 + h2;
+        int nw = std::max(0, std::min(r1, r2) - nx);
+        int nh = std::max(0, std::min(b1, b2) - ny);
+        return ::Rectangle{ (float)nx, (float)ny, (float)nw, (float)nh };
+    };
+
+    for (const auto &it : items) {
+        const int x = (int)it.layout->x;
+        const int y = (int)it.layout->y;
+        const int w = (int)it.layout->w;
+        const int h = (int)it.layout->h;
+
+        bool applied_scissor = false;
+        ::Rectangle scissor = {0, 0, 0, 0};
+        r::ecs::Entity p = it.parent;
+        bool first = true;
+        while (p != 0) {
+            auto psit = styles.find(p);
+            auto plit = layouts.find(p);
+            if (psit != styles.end() && plit != layouts.end()) {
+                const r::Style &ps = psit->second;
+                const r::ComputedLayout *pl = plit->second;
+                if (ps.clip_children) {
+                    const int cx = (int)(pl->x + ps.padding);
+                    const int cy = (int)(pl->y + ps.padding);
+                    const int cw = (int)(pl->w - ps.padding * 2.f);
+                    const int ch = (int)(pl->h - ps.padding * 2.f);
+                    if (first) {
+                        scissor = { (float)cx, (float)cy, (float)cw, (float)ch };
+                        first = false;
+                    } else {
+                        scissor = intersect((int)scissor.x, (int)scissor.y, (int)scissor.width, (int)scissor.height,
+                                            cx, cy, cw, ch);
+                    }
+                    applied_scissor = true;
+                }
+            }
+            auto pit = parents.find(p);
+            if (pit == parents.end()) break;
+            p = pit->second;
+        }
+
+        if (applied_scissor) BeginScissorMode((int)scissor.x, (int)scissor.y, (int)scissor.width, (int)scissor.height);
+
+        DrawRectangle(x, y, w, h, {it.style.background.r, it.style.background.g, it.style.background.b, it.style.background.a});
+        if (it.style.border_thickness > 0.f) {
+            ::Rectangle rec{ (float)x, (float)y, (float)w, (float)h };
+            DrawRectangleLinesEx(rec, (int)it.style.border_thickness,
+                { it.style.border_color.r, it.style.border_color.g, it.style.border_color.b, it.style.border_color.a });
+        }
+
+        if (applied_scissor) EndScissorMode();
     }
     if (cfg.ptr->show_debug_overlay) {
         DrawRectangle(8, 8, 220, 28, {255, 255, 255, 200});

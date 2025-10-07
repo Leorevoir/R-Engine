@@ -171,11 +171,14 @@ void r::Application::_execute_systems(const ScheduleGraph &graph)
 
 void r::Application::_render_routine()
 {
-    _run_schedule(Schedule::BEFORE_RENDER_3D);
-    _run_schedule(Schedule::RENDER_3D);
-    _run_schedule(Schedule::AFTER_RENDER_3D);
     _run_schedule(Schedule::BEFORE_RENDER_2D);
+    _run_schedule(Schedule::BEFORE_RENDER_3D);
+
+    _run_schedule(Schedule::RENDER_3D);
+
+    _run_schedule(Schedule::AFTER_RENDER_3D);
     _run_schedule(Schedule::RENDER_2D);
+
     _run_schedule(Schedule::AFTER_RENDER_2D);
 }
 

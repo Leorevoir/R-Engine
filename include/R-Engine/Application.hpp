@@ -39,6 +39,15 @@ R_ENUM_FLAGABLE(Schedule)
 class R_ENGINE_API Application final
 {
     private:
+        /**
+         * @brief Helper struct to generate a unique type for each unique system function.
+         * @details `SystemTag<func1>` and `SystemTag<func2>` are distinct types,
+         * so `typeid(SystemTag<func1>)` will be different from `typeid(SystemTag<func2>)`.
+         */
+        template<auto Func>
+        struct SystemTag {
+        };
+
         using SystemTypeId = std::type_index;
 
         struct SystemNode {
@@ -91,8 +100,8 @@ class R_ENGINE_API Application final
                 /**
                 * @brief Forwards to Application::add_systems to continue adding more systems.
                 */
-                template<typename... Funcs>
-                SystemConfigurator add_systems(Schedule when, Funcs &&...funcs) noexcept;
+                template<auto... SystemFuncs>
+                SystemConfigurator add_systems(Schedule when) noexcept;
 
                 /**
                 * @brief Forwards to Application::insert_resource.
@@ -125,11 +134,11 @@ class R_ENGINE_API Application final
         * @details Returns a SystemConfigurator to allow for chaining calls like .after()
         * or .before() to define execution order dependencies.
         * @param when The schedule to run the systems in.
-        * @param funcs The system functions to add.
+        * @param SystemFuncs The system functions to add.
         * @return A SystemConfigurator instance for dependency configuration.
         */
-        template<typename... Funcs>
-        SystemConfigurator add_systems(Schedule when, Funcs &&...funcs) noexcept;
+        template<auto... SystemFuncs>
+        SystemConfigurator add_systems(Schedule when) noexcept;
 
         /**
         * @brief Inserts a resource into the Application scene.
@@ -181,8 +190,8 @@ class R_ENGINE_API Application final
         void _execute_systems(const ScheduleGraph &graph);
         void _apply_commands();
 
-        template<typename Func>
-        SystemTypeId _add_one_system(Schedule when, Func &&func) noexcept;
+        template<auto SystemFunc>
+        SystemTypeId _add_one_system(Schedule when) noexcept;
 
         template<typename PluginT>
         void _add_one_plugin(PluginT &&plugin) noexcept;

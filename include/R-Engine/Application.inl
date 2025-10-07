@@ -20,7 +20,7 @@ inline r::Application::SystemConfigurator::SystemConfigurator(Application *app, 
 template<auto SystemFunc>
 inline r::Application::SystemConfigurator &r::Application::SystemConfigurator::after() noexcept
 {
-    SystemTypeId dependency_id(typeid(decltype(SystemFunc)));
+    SystemTypeId dependency_id(typeid(SystemTag<SystemFunc>));
     for (const auto &system_id : _system_ids) {
         _app->_systems[_schedule].nodes.at(system_id).dependencies.insert(dependency_id);
     }
@@ -31,7 +31,7 @@ inline r::Application::SystemConfigurator &r::Application::SystemConfigurator::a
 template<auto SystemFunc>
 inline r::Application::SystemConfigurator &r::Application::SystemConfigurator::before() noexcept
 {
-    SystemTypeId dependent_id(typeid(decltype(SystemFunc)));
+    SystemTypeId dependent_id(typeid(SystemTag<SystemFunc>));
     for (const auto &system_id : _system_ids) {
         if (_app->_systems[_schedule].nodes.find(dependent_id) == _app->_systems[_schedule].nodes.end()) {
              SystemNode placeholder_node(dependent_id.name(), dependent_id, nullptr, {});
@@ -43,10 +43,10 @@ inline r::Application::SystemConfigurator &r::Application::SystemConfigurator::b
     return *this;
 }
 
-template<typename... Funcs>
-inline r::Application::SystemConfigurator r::Application::SystemConfigurator::add_systems(Schedule when, Funcs &&...funcs) noexcept
+template<auto... SystemFuncs>
+inline r::Application::SystemConfigurator r::Application::SystemConfigurator::add_systems(Schedule when) noexcept
 {
-    return _app->add_systems(when, std::forward<Funcs>(funcs)...);
+    return _app->add_systems<SystemFuncs...>(when);
 }
 
 template<typename ResT>
@@ -71,20 +71,17 @@ inline void r::Application::SystemConfigurator::run()
 * Application Implementation
 */
 
-template<typename Func>
-r::Application::SystemTypeId r::Application::_add_one_system(r::Schedule when, Func &&func) noexcept
+template<auto SystemFunc>
+r::Application::SystemTypeId r::Application::_add_one_system(r::Schedule when) noexcept
 {
-    using FuncDecay = std::decay_t<Func>;
-    SystemTypeId id(typeid(FuncDecay));
-
+    SystemTypeId id(typeid(SystemTag<SystemFunc>));
     auto &graph = _systems[when];
 
-    /* Use designated initializers to avoid default constructor issues */
     SystemNode node(
         id.name(),
         id,
-        [fn = std::forward<Func>(func)](ecs::Scene &scene, ecs::CommandBuffer &cmd) mutable {
-            ecs::run_system(fn, scene, cmd);
+        [](ecs::Scene &scene, ecs::CommandBuffer &cmd) mutable {
+            ecs::run_system(SystemFunc, scene, cmd);
         },
         {});
 
@@ -99,10 +96,10 @@ r::Application::SystemTypeId r::Application::_add_one_system(r::Schedule when, F
     return id;
 }
 
-template<typename... Funcs>
-r::Application::SystemConfigurator r::Application::add_systems(Schedule when, Funcs &&...funcs) noexcept
+template<auto... SystemFuncs>
+r::Application::SystemConfigurator r::Application::add_systems(Schedule when) noexcept
 {
-    std::vector<SystemTypeId> ids = {_add_one_system(when, std::forward<Funcs>(funcs))...};
+    std::vector<SystemTypeId> ids = {_add_one_system<SystemFuncs>(when)...};
     return SystemConfigurator(this, when, std::move(ids));
 }
 

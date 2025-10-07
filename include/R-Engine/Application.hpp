@@ -8,11 +8,9 @@
 #include <R-Engine/ECS/Scene.hpp>
 #include <R-Engine/ECS/System.hpp>
 
-#include <functional>
 #include <string>
 #include <typeindex>
 #include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 namespace r {
@@ -49,21 +47,21 @@ class R_ENGINE_API Application final
         };
 
         using SystemTypeId = std::type_index;
+        using SystemFn = void (*)(ecs::Scene &, ecs::CommandBuffer &);
 
         struct SystemNode {
                 SystemNode();
-                SystemNode(std::string p_name, SystemTypeId p_id, std::function<void(ecs::Scene &, ecs::CommandBuffer &)> p_func,
-                    std::unordered_set<SystemTypeId> p_dependencies);
+                SystemNode(const std::string &p_name, SystemTypeId p_id, SystemFn p_func, std::vector<SystemTypeId> p_dependencies);
 
                 std::string name;
                 SystemTypeId id;
-                std::function<void(ecs::Scene &, ecs::CommandBuffer &)> func;
-                std::unordered_set<SystemTypeId> dependencies;
+                SystemFn func = nullptr;
+                std::vector<SystemTypeId> dependencies;
         };
 
         struct ScheduleGraph {
                 std::unordered_map<SystemTypeId, SystemNode> nodes;
-                std::vector<SystemTypeId> execution_order;
+                std::vector<SystemNode *> execution_order;
                 bool dirty = true;
         };
 
@@ -178,7 +176,7 @@ class R_ENGINE_API Application final
         */
         void run();
 
-        static inline bool quit = false;
+        static inline std::atomic_bool quit{false};
 
     private:
         void _startup();

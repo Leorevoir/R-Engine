@@ -8,14 +8,16 @@
 #include <queue>
 #include <sstream>
 
-r::Application::SystemNode::SystemNode() : id(typeid(void))
+r::Application::SystemNode::SystemNode() : id(typeid(void)), func(nullptr)
 {
+    /* __ctor__ */
 }
 
-r::Application::SystemNode::SystemNode(std::string p_name, SystemTypeId p_id,
-    std::function<void(ecs::Scene &, ecs::CommandBuffer &)> p_func, std::unordered_set<SystemTypeId> p_dependencies)
-    : name(std::move(p_name)), id(p_id), func(std::move(p_func)), dependencies(std::move(p_dependencies))
+r::Application::SystemNode::SystemNode(const std::string &p_name, SystemTypeId p_id, SystemFn p_func,
+    std::vector<SystemTypeId> p_dependencies)
+    : name(std::move(p_name)), id(p_id), func(p_func), dependencies(std::move(p_dependencies))
 {
+    /* __ctor__ */
 }
 
 /**
@@ -25,11 +27,7 @@ r::Application::SystemNode::SystemNode(std::string p_name, SystemTypeId p_id,
 r::Application::Application()
 {
     Logger::info("Application created");
-    std::signal(SIGINT, [](int) {
-        std::cout << "\r";
-        Logger::info("SIGINT received, quitting application...");
-        r::Application::quit = true;
-    });
+    std::signal(SIGINT, [](i32) { r::Application::quit.store(true, std::memory_order_relaxed); });
 }
 
 void r::Application::run()
@@ -79,6 +77,9 @@ void r::Application::_shutdown()
     Logger::debug("Main loop exited. Running shutdown schedule...");
     _run_schedule(Schedule::SHUTDOWN);
     _apply_commands();
+    if (quit.load(std::memory_order_relaxed)) {
+        Logger::info("SIGINT received, quitting application...");
+    }
     Logger::debug("Shutdown schedule complete. Application exiting.");
 }
 
@@ -136,7 +137,9 @@ void r::Application::_sort_schedule(ScheduleGraph &graph)
     while (!q.empty()) {
         SystemTypeId u = q.front();
         q.pop();
-        graph.execution_order.push_back(u);
+
+        // push pointer to the node into execution_order
+        graph.execution_order.push_back(&graph.nodes.at(u));
 
         if (adj_list.count(u)) {
             for (const auto &v : adj_list.at(u)) {
@@ -164,10 +167,16 @@ void r::Application::_sort_schedule(ScheduleGraph &graph)
 
 void r::Application::_execute_systems(const ScheduleGraph &graph)
 {
-    for (const auto &system_id : graph.execution_order) {
-        graph.nodes.at(system_id).func(_scene, _command_buffer);
+    for (const auto *node_ptr : graph.execution_order) {
+        node_ptr->func(_scene, _command_buffer);
     }
 }
+// void r::Application::_execute_systems(const ScheduleGraph &graph)
+// {
+//     for (const auto &system_id : graph.execution_order) {
+//         graph.nodes.at(system_id).func(_scene, _command_buffer);
+//     }
+// }
 
 void r::Application::_render_routine()
 {

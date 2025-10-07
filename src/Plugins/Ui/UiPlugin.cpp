@@ -8,6 +8,10 @@
 #include <R-Engine/UI/Theme.hpp>
 #include <R-Engine/UI/Events.hpp>
 #include <R-Engine/UI/Components.hpp>
+#include <R-Engine/UI/Text.hpp>
+#include <R-Engine/UI/Image.hpp>
+#include <R-Engine/UI/Button.hpp>
+#include <R-Engine/UI/Textures.hpp>
 #include <R-Engine/Plugins/RenderPlugin.hpp>
 #include <R-Engine/Plugins/WindowPlugin.hpp>
 #include <R-Engine/Plugins/InputPlugin.hpp>
@@ -47,20 +51,21 @@ static void ui_update_system(r::ecs::ResMut<UiEvents> events, r::ecs::ResMut<UiI
 static void ui_pointer_system(
     r::ecs::ResMut<UiInputState> state,
     r::ecs::ResMut<UiEvents> events,
-    r::ecs::Query<r::ecs::Ref<r::UiNode>, r::ecs::Ref<r::ComputedLayout>, r::ecs::Optional<r::Style>, r::ecs::Optional<r::Visibility>, r::ecs::Optional<r::Parent>, r::ecs::EntityId> q) noexcept
+    r::ecs::Query<r::ecs::Ref<r::UiNode>, r::ecs::Ref<r::ComputedLayout>, r::ecs::Optional<r::Style>, r::ecs::Optional<r::Visibility>, r::ecs::Optional<r::Parent>, r::ecs::Optional<r::UiButton>, r::ecs::EntityId> q) noexcept
 {
-    struct Item { int z; size_t ord; r::ecs::Entity id; r::ComputedLayout const* layout; r::Style style; r::ecs::Entity parent; };
+    struct Item { int z; size_t ord; r::ecs::Entity id; r::ComputedLayout const* layout; r::Style style; r::ecs::Entity parent; bool disabled; };
     std::vector<Item> items; items.reserve(128);
     std::unordered_map<r::ecs::Entity, const r::ComputedLayout*> layouts;
     std::unordered_map<r::ecs::Entity, r::Style> styles;
     std::unordered_map<r::ecs::Entity, r::ecs::Entity> parents;
 
     size_t ord = 0;
-    for (auto [node, layout, style_opt, vis_opt, parent_opt, id] : q) {
+    for (auto [node, layout, style_opt, vis_opt, parent_opt, button_opt, id] : q) {
         (void)node;
         if (vis_opt.ptr && (*vis_opt.ptr != r::Visibility::Visible)) continue;
         r::Style s = style_opt.ptr ? *style_opt.ptr : r::Style{};
-        items.push_back({ s.z_index, ord++, id.value, layout.ptr, s, parent_opt.ptr ? parent_opt.ptr->id : 0 });
+        const bool disabled = button_opt.ptr && button_opt.ptr->disabled;
+        items.push_back({ s.z_index, ord++, id.value, layout.ptr, s, parent_opt.ptr ? parent_opt.ptr->id : 0, disabled });
         layouts[id.value] = layout.ptr;
         styles[id.value] = s;
         parents[id.value] = parent_opt.ptr ? parent_opt.ptr->id : 0;
@@ -98,6 +103,7 @@ static void ui_pointer_system(
 
     r::ecs::Entity hovered = 0;
     for (auto it = items.rbegin(); it != items.rend(); ++it) {
+        if (it->disabled) continue;
         if (inside_with_clip(*it, mx, my)) { hovered = it->id; break; }
     }
 
@@ -300,7 +306,11 @@ static void ui_compute_layout_system(
 }
 
 static void ui_render_system(r::ecs::Res<UiPluginConfig> cfg, r::ecs::Res<r::Camera3d> cam,
-    r::ecs::Query<r::ecs::Ref<r::UiNode>, r::ecs::Ref<r::ComputedLayout>, r::ecs::Optional<r::Style>, r::ecs::Optional<r::Visibility>, r::ecs::Optional<r::Parent>, r::ecs::EntityId> q) noexcept
+    r::ecs::Res<r::UiInputState> input,
+    r::ecs::Res<r::UiTheme> theme,
+    r::ecs::ResMut<r::UiTextures> textures,
+    r::ecs::ResMut<r::UiFonts> fonts,
+    r::ecs::Query<r::ecs::Ref<r::UiNode>, r::ecs::Ref<r::ComputedLayout>, r::ecs::Optional<r::Style>, r::ecs::Optional<r::Visibility>, r::ecs::Optional<r::Parent>, r::ecs::Optional<r::UiText>, r::ecs::Optional<r::UiImage>, r::ecs::Optional<r::UiButton>, r::ecs::EntityId> q) noexcept
 {
     EndMode3D();
 
@@ -311,6 +321,8 @@ static void ui_render_system(r::ecs::Res<UiPluginConfig> cfg, r::ecs::Res<r::Cam
         const r::ComputedLayout *layout;
         r::Style style;
         r::ecs::Entity parent;
+        bool is_button;
+        bool is_disabled;
     };
 
     std::vector<DrawItem> items;
@@ -321,11 +333,13 @@ static void ui_render_system(r::ecs::Res<UiPluginConfig> cfg, r::ecs::Res<r::Cam
     std::unordered_map<r::ecs::Entity, r::ecs::Entity> parents;
 
     size_t ord = 0;
-    for (auto [node, layout, style_opt, vis_opt, parent_opt, id] : q) {
+    for (auto [node, layout, style_opt, vis_opt, parent_opt, text_opt, image_opt, button_opt, id] : q) {
         (void)node;
         if (vis_opt.ptr && (*vis_opt.ptr != r::Visibility::Visible)) continue;
         const r::Style s = style_opt.ptr ? *style_opt.ptr : r::Style{};
-        items.push_back(DrawItem{ s.z_index, ord++, id.value, layout.ptr, s, parent_opt.ptr ? parent_opt.ptr->id : 0 });
+        const bool is_button = button_opt.ptr != nullptr;
+        const bool is_disabled = (button_opt.ptr && button_opt.ptr->disabled);
+        items.push_back(DrawItem{ s.z_index, ord++, id.value, layout.ptr, s, parent_opt.ptr ? parent_opt.ptr->id : 0, is_button, is_disabled });
         layouts[id.value] = layout.ptr;
         styles[id.value] = s;
         parents[id.value] = parent_opt.ptr ? parent_opt.ptr->id : 0;
@@ -384,11 +398,36 @@ static void ui_render_system(r::ecs::Res<UiPluginConfig> cfg, r::ecs::Res<r::Cam
 
         if (applied_scissor) BeginScissorMode((int)scissor.x, (int)scissor.y, (int)scissor.width, (int)scissor.height);
 
-        DrawRectangle(x, y, w, h, {it.style.background.r, it.style.background.g, it.style.background.b, it.style.background.a});
-        if (it.style.border_thickness > 0.f) {
+        r::Color bg = it.style.background;
+        r::Color border = it.style.border_color;
+        float border_thickness = it.style.border_thickness;
+
+        if (it.is_button) {
+            if (it.is_disabled) {
+                bg = theme.ptr->button.bg_disabled;
+                border = theme.ptr->button.border_disabled;
+                border_thickness = theme.ptr->button.border_thickness;
+            } else
+            if (input.ptr->active == it.id) {
+                bg = theme.ptr->button.bg_pressed;
+                border = theme.ptr->button.border_pressed;
+                border_thickness = theme.ptr->button.border_thickness;
+            } else if (input.ptr->hovered == it.id) {
+                bg = theme.ptr->button.bg_hover;
+                border = theme.ptr->button.border_hover;
+                border_thickness = theme.ptr->button.border_thickness;
+            } else {
+                bg = theme.ptr->button.bg_normal;
+                border = theme.ptr->button.border_normal;
+                border_thickness = theme.ptr->button.border_thickness;
+            }
+        }
+
+        DrawRectangle(x, y, w, h, {bg.r, bg.g, bg.b, bg.a});
+        if (border_thickness > 0.f) {
             ::Rectangle rec{ (float)x, (float)y, (float)w, (float)h };
-            DrawRectangleLinesEx(rec, (int)it.style.border_thickness,
-                { it.style.border_color.r, it.style.border_color.g, it.style.border_color.b, it.style.border_color.a });
+            DrawRectangleLinesEx(rec, (int)border_thickness,
+                { border.r, border.g, border.b, border.a });
         }
 
         if (applied_scissor) EndScissorMode();
@@ -400,6 +439,88 @@ static void ui_render_system(r::ecs::Res<UiPluginConfig> cfg, r::ecs::Res<r::Cam
         DrawText(text, 14, 12, font_size, {0, 0, 0, 255});
         DrawFPS(10, 40);
     }
+
+    /* Draw text and images above backgrounds */
+    for (auto [node, layout, style_opt, vis_opt, parent_opt, text_opt, image_opt, button_opt, id] : q) {
+        (void)node; (void)parent_opt;
+        if (vis_opt.ptr && (*vis_opt.ptr != r::Visibility::Visible)) continue;
+
+        const int x = (int)layout.ptr->x;
+        const int y = (int)layout.ptr->y;
+        const int w = (int)layout.ptr->w;
+        const int h = (int)layout.ptr->h;
+        const r::Style s = style_opt.ptr ? *style_opt.ptr : r::Style{};
+        const int cx = x + (int)s.padding;
+        const int cy = y + (int)s.padding;
+        const int cw = w - (int)(s.padding * 2.f);
+        const int ch = h - (int)(s.padding * 2.f);
+
+        if (image_opt.ptr && !image_opt.ptr->path.empty()) {
+            auto &cache = textures.ptr->cache;
+            const std::string &path = image_opt.ptr->path;
+            const ::Texture2D *tex = nullptr;
+            auto it = cache.find(path);
+            if (it == cache.end()) {
+                auto t = LoadTexture(path.c_str());
+                if (t.id != 0) cache[path] = t;
+                auto it2 = cache.find(path);
+                if (it2 != cache.end()) tex = &it2->second;
+            } else {
+                tex = &it->second;
+            }
+            if (tex && tex->id != 0) {
+                ::Rectangle src{0,0,(float)tex->width,(float)tex->height};
+                float dw = (float)cw; float dh = (float)ch;
+                float dx = (float)cx; float dy = (float)cy;
+                if (image_opt.ptr->keep_aspect && tex->height > 0) {
+                    float ar = (float)tex->width / (float)tex->height;
+                    float box_ar = (float)cw / (float)ch;
+                    if (box_ar > ar) { dw = (float)ch * ar; dx = (float)cx + ((float)cw - dw) * 0.5f; }
+                    else { dh = (float)cw / ar; dy = (float)cy + ((float)ch - dh) * 0.5f; }
+                }
+                ::Rectangle dst{dx, dy, dw, dh};
+                DrawTexturePro(*tex, src, dst, {0,0}, 0.f,
+                    { image_opt.ptr->tint.r, image_opt.ptr->tint.g, image_opt.ptr->tint.b, image_opt.ptr->tint.a });
+            }
+        }
+
+        if (text_opt.ptr && !text_opt.ptr->content.empty()) {
+            ::Font font = GetFontDefault();
+            if (!text_opt.ptr->font_path.empty()) {
+                const ::Font *fp = fonts.ptr->load(text_opt.ptr->font_path);
+                if (fp) font = *fp;
+            }
+            float spacing = 1.0f;
+            int fs = text_opt.ptr->font_size;
+            ::Color col = { text_opt.ptr->color.r, text_opt.ptr->color.g, text_opt.ptr->color.b, text_opt.ptr->color.a };
+            if (button_opt.ptr) col = { theme.ptr->button.text.r, theme.ptr->button.text.g, theme.ptr->button.text.b, theme.ptr->button.text.a };
+            std::string text = text_opt.ptr->content;
+            if (text_opt.ptr->wrap_width > 0.f && cw > 0) {
+                float maxw = std::min(text_opt.ptr->wrap_width, (float)cw);
+                std::string out;
+                std::string line;
+                size_t i = 0; const size_t n = text.size();
+                while (i < n) {
+                    size_t j = i;
+                    while (j < n && text[j] != ' ') j++;
+                    std::string word = text.substr(i, j - i);
+                    std::string candidate = line.empty() ? word : line + " " + word;
+                    float width = MeasureTextEx(font, candidate.c_str(), (float)fs, spacing).x;
+                    if (width <= maxw || line.empty()) {
+                        line = candidate;
+                    } else {
+                        out += line + "\n";
+                        line = word;
+                    }
+                    i = (j < n && text[j] == ' ') ? j + 1 : j;
+                }
+                if (!line.empty()) out += line;
+                text = out;
+            }
+            DrawTextEx(font, text.c_str(), {(float)cx, (float)cy}, (float)fs, spacing, col);
+        }
+    }
+
     BeginMode3D(_to_raylib(*cam.ptr));
 }
 
@@ -415,11 +536,20 @@ void UiPlugin::build(Application &app)
         .insert_resource(_config)
         .insert_resource(UiFonts{})
         .insert_resource(UiTheme{})
+        .insert_resource(UiTextures{})
         .insert_resource(UiInputState{})
         .insert_resource(UiEvents{})
         .add_systems(Schedule::STARTUP, ui_startup_system)
         .add_systems(Schedule::UPDATE, ui_remap_parents_system, ui_update_system, ui_compute_layout_system, ui_pointer_system)
-        .add_systems(Schedule::RENDER, ui_render_system);
+        .add_systems(Schedule::RENDER, ui_render_system)
+        .add_systems(Schedule::SHUTDOWN, [](r::ecs::ResMut<r::UiTextures> tex, r::ecs::ResMut<r::UiFonts> fonts){
+            if (IsWindowReady()) {
+                for (auto &kv : tex.ptr->cache) { UnloadTexture(kv.second); }
+                for (auto &kv : fonts.ptr->cache) { UnloadFont(kv.second); }
+            }
+            tex.ptr->cache.clear();
+            fonts.ptr->cache.clear();
+        });
 
     Logger::info("UiPlugin built");
 }

@@ -6,6 +6,9 @@
 #include <R-Engine/Core/Backend.hpp>
 #include <R-Engine/UI/Components.hpp>
 #include <R-Engine/UI/InputState.hpp>
+#include <R-Engine/UI/Text.hpp>
+#include <R-Engine/UI/Image.hpp>
+#include <R-Engine/UI/Button.hpp>
 #include <R-Engine/Core/Logger.hpp>
 
 #include <unordered_set>
@@ -136,6 +139,27 @@ static void spawn_ui_tree(r::ecs::Commands &cmds, r::ecs::Res<r::WindowPluginCon
         r::ComputedLayout{},
         r::Visibility::Visible
     );
+
+    /* Phase 6 examples: buttons with text and image */
+    auto button_row = cmds.spawn(
+        r::UiNode{}, r::Parent{ root_id },
+        r::Style{ .width = 900.f, .height = 120.f, .background = {60, 60, 80, 255}, .z_index = 1, .margin = 24.f, .padding = 12.f, .direction = r::LayoutDirection::Row, .justify = r::JustifyContent::SpaceBetween, .align = r::AlignItems::Center, .clip_children = false, .border_thickness = 2.f, .border_color = {180,180,180,255} },
+        r::ComputedLayout{}, r::Visibility::Visible);
+    const r::ecs::Entity buttons_parent = button_row.id();
+
+    /* Text button */
+    cmds.spawn(
+        r::UiNode{}, r::Parent{ buttons_parent }, r::UiButton{},
+        r::Style{ .width = 220.f, .height = 60.f, .background = {90,90,90,255}, .z_index = 5, .margin = 12.f, .padding = 10.f, .border_thickness = 2.f, .border_color = {210,210,210,255} },
+        r::UiText{ .content = std::string("Play"), .font_size = 24, .wrap_width = 0.f, .color = {230,230,230,255} },
+        r::ComputedLayout{}, r::Visibility::Visible);
+
+    /* Image button */
+    cmds.spawn(
+        r::UiNode{}, r::Parent{ buttons_parent }, r::UiButton{},
+        r::Style{ .width = 220.f, .height = 60.f, .background = {90,90,90,255}, .z_index = 5, .margin = 12.f, .padding = 8.f, .border_thickness = 2.f, .border_color = {210,210,210,255} },
+        r::UiImage{ .path = std::string("examples/ui_demo/icon.png"), .tint = {255,255,255,255}, .keep_aspect = true },
+        r::ComputedLayout{}, r::Visibility::Visible);
 }
 
 int main()

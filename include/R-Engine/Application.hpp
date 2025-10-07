@@ -29,6 +29,7 @@ enum class Schedule {
     RENDER_3D        = 1 << 8,
     AFTER_RENDER_3D  = 1 << 9,
     SHUTDOWN         = 1 << 10,
+    EVENT_CLEANUP    = 1 << 11
 };
 R_ENUM_FLAGABLE(Schedule)
 
@@ -157,8 +158,12 @@ class R_ENGINE_API Application final
         template<typename... Plugins>
         Application &add_plugins(Plugins &&...plugins) noexcept;
 
+        /**
+         * @brief add EventT(s) to the application
+         * @details also adds a clear_events_sytem foreach EventT to the EVENT_CLEANUP schedule
+         */
         template<typename... EventTs>
-        Application &add_events() noexcept;
+        Application &add_events(void) noexcept;
 
         /**
         * @brief run the application

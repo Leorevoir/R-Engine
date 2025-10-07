@@ -79,6 +79,7 @@ void r::Application::_main_loop()
             _run_schedule(Schedule::FIXED_UPDATE);
             _apply_commands();
         }
+        _run_schedule(Schedule::EVENT_CLEANUP);
         _render_routine();
     }
 }
@@ -89,7 +90,8 @@ void r::Application::_shutdown()
     _run_schedule(Schedule::SHUTDOWN);
     _apply_commands();
     if (quit.load(std::memory_order_relaxed)) {
-        Logger::info("SIGINT received, quitting application...");
+        std::cout << "\r";
+        Logger::warn("SIGINT received, quitting application...");
     }
     Logger::debug("Shutdown schedule complete. Application exiting.");
 }

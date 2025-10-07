@@ -12,9 +12,7 @@ static void event_writer(r::ecs::EventWriter<EventA> writer)
 
 static void event_reader(r::ecs::EventReader<EventA> reader)
 {
-    if (reader.has_events()) {
-        EventA event = reader.read();
-
+    for (const auto &event : reader) {
         std::cout << "received: " << event.value << std::endl;
     }
 }

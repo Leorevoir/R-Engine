@@ -4,27 +4,124 @@
 #include <R-Engine/Plugins/Plugin.hpp>
 
 #include <type_traits>
+#include <utility>
 
 // clang-format off
 
-template<typename Func>
-void r::Application::_add_one_system(r::Schedule when, Func &&func) noexcept
-{
-    using FuncDecay = std::decay_t<Func>;
-    FuncDecay fn = std::forward<Func>(func);
+/**
+* SystemConfigurator Implementation
+*/
 
-    _systems[when].emplace_back(
-    [fn](ecs::Scene &scene, ecs::CommandBuffer &cmd) mutable
-    {
-        ecs::run_system(fn, scene, cmd);
-    });
+inline r::Application::SystemConfigurator::SystemConfigurator(Application *app, Schedule schedule, std::vector<SystemTypeId> system_ids) noexcept
+    : _app(app), _schedule(schedule), _system_ids(std::move(system_ids))
+{
+    /* __ctor__ */
 }
 
-template<typename... Funcs>
-r::Application &r::Application::add_systems(Schedule when, Funcs &&...funcs) noexcept
+template<auto SystemFunc>
+inline r::Application::SystemConfigurator &r::Application::SystemConfigurator::after() noexcept
 {
-    (_add_one_system(when, std::forward<Funcs>(funcs)), ...);
+    SystemTypeId dependency_id(typeid(SystemTag<SystemFunc>));
+
+    for (const auto &system_id : _system_ids) {
+        auto &deps = _app->_systems[_schedule].nodes.at(system_id).dependencies;
+
+        if (std::find(deps.begin(), deps.end(), dependency_id) == deps.end()) {
+            deps.push_back(dependency_id);
+        }
+
+    }
+    _app->_systems[_schedule].dirty = true;
     return *this;
+}
+
+template<auto SystemFunc>
+inline r::Application::SystemConfigurator &r::Application::SystemConfigurator::before() noexcept
+{
+    SystemTypeId dependent_id(typeid(SystemTag<SystemFunc>));
+    auto &graph = _app->_systems[_schedule];
+
+    if (graph.nodes.find(dependent_id) == graph.nodes.end()) {
+         const SystemNode placeholder_node(dependent_id.name(), dependent_id, nullptr, {});
+
+         graph.nodes.emplace(dependent_id, std::move(placeholder_node));
+    }
+
+    auto &deps = graph.nodes.at(dependent_id).dependencies;
+
+    for (const auto &system_id : _system_ids) {
+        if (std::find(deps.begin(), deps.end(), system_id) == deps.end()) {
+            deps.push_back(system_id);
+        }
+    }
+    _app->_systems[_schedule].dirty = true;
+    return *this;
+}
+
+template<auto... SystemFuncs>
+inline r::Application::SystemConfigurator r::Application::SystemConfigurator::add_systems(Schedule when) noexcept
+{
+    return _app->add_systems<SystemFuncs...>(when);
+}
+
+template<typename ResT>
+inline r::Application& r::Application::SystemConfigurator::insert_resource(ResT res) noexcept
+{
+    return _app->insert_resource(std::move(res));
+}
+
+template<typename... Plugins>
+inline r::Application& r::Application::SystemConfigurator::add_plugins(Plugins &&...plugins) noexcept
+{
+    return _app->add_plugins(std::forward<Plugins>(plugins)...);
+}
+
+inline void r::Application::SystemConfigurator::run()
+{
+    _app->run();
+}
+
+
+/**
+* Application Implementation
+*/
+
+template<auto SystemFunc>
+static void system_invoker_template(r::ecs::Scene &scene, r::ecs::CommandBuffer &cmd)
+{
+    r::ecs::run_system(SystemFunc, scene, cmd);
+}
+
+template<auto SystemFunc>
+r::Application::SystemTypeId r::Application::_add_one_system(r::Schedule when) noexcept
+{
+    SystemTypeId id(typeid(SystemTag<SystemFunc>));
+    auto &graph = _systems[when];
+
+    SystemNode node(
+        id.name(),
+        id,
+        &system_invoker_template<SystemFunc>,
+        {}
+    );
+
+    if (graph.nodes.count(id)) {
+        node.dependencies = std::move(graph.nodes.at(id).dependencies);
+    }
+
+    graph.nodes.insert_or_assign(id, std::move(node));
+    graph.dirty = true;
+
+    return id;
+}
+
+
+template<auto... SystemFuncs>
+r::Application::SystemConfigurator r::Application::add_systems(Schedule when) noexcept
+{
+    std::vector<SystemTypeId> ids = {_add_one_system<SystemFuncs>(when)...};
+
+    return SystemConfigurator(this, when, std::move(ids));
 }
 
 template<typename ResT>

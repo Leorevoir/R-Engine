@@ -74,7 +74,7 @@ void r::InputPlugin::build(Application& app)
     app
         .insert_resource(UserInput{})
         .insert_resource(InputMap{})
-        .add_systems(Schedule::UPDATE, input_system);
+        .add_systems<input_system>(Schedule::UPDATE);
 
     Logger::info("InputPlugin built");
 }

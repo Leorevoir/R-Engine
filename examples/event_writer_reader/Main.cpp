@@ -8,5 +8,5 @@ static void hello_word()
 
 int main(void)
 {
-    r::Application{}.add_systems(r::Schedule::STARTUP, hello_word).run();
+    r::Application{}.add_systems<hello_word>(r::Schedule::STARTUP).run();
 }

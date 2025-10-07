@@ -31,6 +31,6 @@ int main(void)
                 }
             })
         )
-        .add_systems(r::Schedule::STARTUP, startup_system)
+        .add_systems<startup_system>(r::Schedule::STARTUP)
         .run();
 }

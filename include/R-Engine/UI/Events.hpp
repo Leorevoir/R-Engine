@@ -16,6 +16,7 @@ struct R_ENGINE_API UiEvents {
     std::vector<ecs::Entity> clicked;
     std::vector<ecs::Entity> entered;
     std::vector<ecs::Entity> left;
+    std::vector<ecs::Entity> focus_changed; /* entity that just gained focus */
 };
 
 } /* namespace r */

@@ -20,6 +20,7 @@ namespace r {
 struct R_ENGINE_API UiPluginConfig {
     bool show_debug_overlay = true;
     std::string overlay_text = "UI Plugin Ready";
+    bool debug_draw_bounds = false; /* draw bounds/hover/focus outlines */
 };
 
 /**

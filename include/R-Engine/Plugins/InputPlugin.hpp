@@ -22,12 +22,16 @@ struct R_ENGINE_API Binding {
 
 struct R_ENGINE_API UserInput {
 
-    std::unordered_set<int> keys_pressed;
+    std::unordered_set<int> keys_down;            /* keyboard state (held) */
+    std::unordered_set<int> keys_pressed;         /* keyboard edge pressed */
+    std::unordered_set<int> keys_released;        /* keyboard edge released */
     std::unordered_set<int> mouse_buttons_pressed;
     std::unordered_set<int> mouse_buttons_down;
     std::unordered_set<int> mouse_buttons_released;
 
+    bool isKeyDown(int key_code) const;
     bool isKeyPressed(int key_code) const;
+    bool isKeyReleased(int key_code) const;
     bool isMouseButtonPressed(int button_code) const;
     bool isMouseButtonDown(int button_code) const;
     bool isMouseButtonReleased(int button_code) const;

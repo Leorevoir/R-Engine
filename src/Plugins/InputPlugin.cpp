@@ -7,11 +7,23 @@
 static constexpr u16 FIRST_KEY = 32;
 static constexpr u16 MAX_KEY = 348;
 
+bool r::UserInput::isKeyDown(int key_code) const
+{
+    const auto it = keys_down.find(key_code);
+    return it != keys_down.end();
+}
+
 bool r::UserInput::isKeyPressed(int key_code) const
 {
     const auto it = keys_pressed.find(key_code);
 
     return it != keys_pressed.end();
+}
+
+bool r::UserInput::isKeyReleased(int key_code) const
+{
+    const auto it = keys_released.find(key_code);
+    return it != keys_released.end();
 }
 
 bool r::UserInput::isMouseButtonPressed(int button_code) const
@@ -66,10 +78,18 @@ bool r::InputMap::isActionPressed(const std::string& action_name, const r::UserI
 
 static void input_system(r::ecs::ResMut<r::UserInput> userInput)
 {
+    userInput.ptr->keys_down.clear();
     userInput.ptr->keys_pressed.clear();
+    userInput.ptr->keys_released.clear();
     for (u16 key = FIRST_KEY; key < MAX_KEY; ++key) {
         if (IsKeyDown(key)) {
+            userInput.ptr->keys_down.insert(key);
+        }
+        if (IsKeyPressed(key)) {
             userInput.ptr->keys_pressed.insert(key);
+        }
+        if (IsKeyReleased(key)) {
+            userInput.ptr->keys_released.insert(key);
         }
     }
 

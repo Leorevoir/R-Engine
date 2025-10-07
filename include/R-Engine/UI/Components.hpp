@@ -12,6 +12,10 @@ namespace r {
 struct R_ENGINE_API UiNode {
 };
 
+/* Focusable marker (optional). By default UiButton is treated as focusable. */
+struct R_ENGINE_API UiFocusable {
+};
+
 /* Hierarchy */
 struct R_ENGINE_API Parent {
     ecs::Entity id = 0; /* 0 -> no parent */

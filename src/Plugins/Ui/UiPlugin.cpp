@@ -36,7 +36,7 @@ static void ui_startup_system(r::ecs::Res<UiPluginConfig> cfg, r::ecs::Res<UiThe
     Logger::info(std::string{"UiPlugin startup. DebugOverlay="} + (cfg.ptr->show_debug_overlay ? "on" : "off"));
 }
 
-static void ui_update_system(r::ecs::ResMut<UiEvents> events, r::ecs::ResMut<UiInputState> input, r::ecs::Res<r::UserInput> ui) noexcept
+static void ui_update_system(r::ecs::ResMut<UiEvents> events, r::ecs::ResMut<UiInputState> input, r::ecs::Res<r::UserInput> ui, r::ecs::ResMut<UiPluginConfig> cfg) noexcept
 {
     events.ptr->pressed.clear();
     events.ptr->released.clear();
@@ -49,6 +49,11 @@ static void ui_update_system(r::ecs::ResMut<UiEvents> events, r::ecs::ResMut<UiI
     input.ptr->mouse_left_pressed = ui.ptr->isMouseButtonPressed(MOUSE_BUTTON_LEFT);
     input.ptr->mouse_left_released = ui.ptr->isMouseButtonReleased(MOUSE_BUTTON_LEFT);
     input.ptr->mouse_left_down = ui.ptr->isMouseButtonDown(MOUSE_BUTTON_LEFT);
+
+    /* Debug toggle: F1 to draw bounds */
+    if (ui.ptr->isKeyPressed(KEY_F1)) {
+        cfg.ptr->debug_draw_bounds = !cfg.ptr->debug_draw_bounds;
+    }
 }
 
 static void ui_pointer_system(
@@ -136,6 +141,47 @@ static void ui_pointer_system(
             }
         }
         state.ptr->active = 0;
+    }
+}
+
+static void ui_keyboard_nav_system(
+    r::ecs::Res<r::UserInput> input,
+    r::ecs::ResMut<r::UiInputState> state,
+    r::ecs::ResMut<r::UiEvents> events,
+    r::ecs::Query<r::ecs::Optional<r::UiButton>, r::ecs::Optional<r::Visibility>, r::ecs::EntityId> q)
+{
+    std::vector<r::ecs::Entity> order;
+    order.reserve(64);
+    for (auto [btn_opt, vis_opt, id] : q) {
+        if (vis_opt.ptr && (*vis_opt.ptr != r::Visibility::Visible)) continue;
+        const bool focusable = (btn_opt.ptr && !btn_opt.ptr->disabled);
+        if (focusable) order.push_back(id.value);
+    }
+    if (order.empty()) return;
+
+    auto find_index = [&](r::ecs::Entity e) {
+        for (size_t i = 0; i < order.size(); ++i) {
+            if (order[i] == e) return (int)i;
+        }
+        return -1;
+    };
+
+    const bool shift = input.ptr->isKeyDown(KEY_LEFT_SHIFT) || input.ptr->isKeyDown(KEY_RIGHT_SHIFT);
+    if (input.ptr->isKeyPressed(KEY_TAB)) {
+        int idx = find_index(state.ptr->focused);
+        if (idx < 0) idx = 0; else idx = shift ? (idx - 1 + (int)order.size()) % (int)order.size() : (idx + 1) % (int)order.size();
+        state.ptr->focused = order[(size_t)idx];
+        events.ptr->focus_changed.push_back(state.ptr->focused);
+        r::Logger::info(std::string{"UI focus -> entity "} + std::to_string(state.ptr->focused));
+    }
+
+    const bool activate = input.ptr->isKeyPressed(KEY_ENTER) || input.ptr->isKeyPressed(KEY_SPACE);
+    if (activate && state.ptr->focused != 0) {
+        const r::ecs::Entity e = state.ptr->focused;
+        state.ptr->active = e;
+        events.ptr->pressed.push_back(e);
+        events.ptr->released.push_back(e);
+        events.ptr->clicked.push_back(e);
     }
 }
 
@@ -567,6 +613,23 @@ static void ui_render_system(r::ecs::Res<UiPluginConfig> cfg, r::ecs::Res<r::Cam
         DrawFPS(10, 40);
     }
 
+    /* Debug bounds and highlights */
+    if (cfg.ptr->debug_draw_bounds) {
+        for (auto [node, layout, style_opt, vis_opt, parent_opt, text_opt, image_opt, button_opt, scroll_opt, id] : q) {
+            (void)node; (void)style_opt; (void)vis_opt; (void)parent_opt; (void)text_opt; (void)image_opt; (void)button_opt; (void)scroll_opt;
+            const int x = (int)layout.ptr->x;
+            const int y = (int)layout.ptr->y;
+            const int w = (int)layout.ptr->w;
+            const int h = (int)layout.ptr->h;
+            DrawRectangleLines(x, y, w, h, {120,120,120,120});
+        }
+        /* hovered/active/focused highlight */
+        auto draw_highlight = [&](r::ecs::Entity e, ::Color c){ if (e==0) return; for (auto [node, layout, sopt, vopt, popt, topt, iopt, bopt, scopt, id] : q){ if (id.value==e){ DrawRectangleLinesEx({layout.ptr->x, layout.ptr->y, layout.ptr->w, layout.ptr->h}, 2, c); break; } } };
+        draw_highlight(input.ptr->hovered, {0,255,0,200});
+        draw_highlight(input.ptr->active, {255,165,0,200});
+        draw_highlight(input.ptr->focused, {255,255,0,200});
+    }
+
     /* Draw simple scrollbars for containers that overflow */
     for (const auto &kv : scrolls) {
         r::ecs::Entity cont = kv.first;
@@ -723,7 +786,7 @@ void UiPlugin::build(Application &app)
         .insert_resource(UiInputState{})
         .insert_resource(UiEvents{})
         .add_systems(Schedule::STARTUP, ui_startup_system)
-        .add_systems(Schedule::UPDATE, ui_remap_parents_system, ui_update_system, ui_compute_layout_system, ui_scroll_clamp_system, ui_pointer_system)
+        .add_systems(Schedule::UPDATE, ui_remap_parents_system, ui_update_system, ui_compute_layout_system, ui_keyboard_nav_system, ui_scroll_clamp_system, ui_pointer_system)
         .add_systems(Schedule::RENDER, ui_render_system)
         .add_systems(Schedule::SHUTDOWN, [](r::ecs::ResMut<r::UiTextures> tex, r::ecs::ResMut<r::UiFonts> fonts){
             if (IsWindowReady()) {

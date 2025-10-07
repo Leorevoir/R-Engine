@@ -52,13 +52,15 @@ template<typename T>
 void r::ecs::Scene::remove_component(Entity e)
 {
     auto loc_it = _entity_locations.find(e);
-    if (loc_it == _entity_locations.end()) return;
+    if (loc_it == _entity_locations.end())
+        return;
 
     auto &loc = loc_it->second;
     const usize old_archetype_idx = loc.archetype_index;
     const std::type_index comp_type = typeid(T);
 
-    if (!_archetypes[old_archetype_idx].has_component(comp_type)) return;
+    if (!_archetypes[old_archetype_idx].has_component(comp_type))
+        return;
 
     /** --- Find or Create Destination Archetype (this may reallocate _archetypes) --- */
     usize new_archetype_idx;
@@ -82,13 +84,19 @@ template<typename T>
 T *r::ecs::Scene::get_component_ptr(Entity e)
 {
     const auto *loc = get_entity_location(e);
-    if (!loc) return nullptr;
+
+    if (!loc) {
+        return nullptr;
+    }
 
     const Archetype &archetype = _archetypes[loc->archetype_index];
     const std::type_index comp_type = typeid(T);
 
-    auto comp_it = archetype.component_map.find(comp_type);
-    if (comp_it == archetype.component_map.end()) return nullptr;
+    const auto comp_it = archetype.component_map.find(comp_type);
+
+    if (comp_it == archetype.component_map.end()) {
+        return nullptr;
+    }
 
     const usize col_idx = comp_it->second;
     return static_cast<T *>(archetype.table.columns[col_idx]->get_ptr(loc->table_row));
@@ -98,7 +106,10 @@ template<typename T>
 bool r::ecs::Scene::has_component(Entity e) const
 {
     const auto *loc = get_entity_location(e);
-    if (!loc) return false;
+
+    if (!loc) {
+        return false;
+    }
 
     const Archetype &archetype = _archetypes[loc->archetype_index];
     return archetype.has_component(typeid(T));

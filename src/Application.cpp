@@ -54,10 +54,21 @@ void r::Application::_startup()
     _run_schedule(Schedule::PRE_STARTUP);
     _apply_commands();
 
+    _systems.erase(Schedule::PRE_STARTUP);
+    if (_systems.empty()) {
+        quit.store(true, std::memory_order_relaxed);
+        return;
+    }
+
     Logger::debug("Startup schedule running...");
     _run_schedule(Schedule::STARTUP);
     _apply_commands();
     Logger::debug("Startup schedule complete. Entering main loop.");
+    _systems.erase(Schedule::STARTUP);
+    if (_systems.empty()) {
+        quit.store(true, std::memory_order_relaxed);
+        return;
+    }
 }
 
 void r::Application::_main_loop()
@@ -73,6 +84,7 @@ void r::Application::_main_loop()
             _run_schedule(Schedule::FIXED_UPDATE);
             _apply_commands();
         }
+        _run_schedule(Schedule::EVENT_CLEANUP);
         _render_routine();
     }
 }
@@ -83,7 +95,8 @@ void r::Application::_shutdown()
     _run_schedule(Schedule::SHUTDOWN);
     _apply_commands();
     if (quit.load(std::memory_order_relaxed)) {
-        Logger::info("SIGINT received, quitting application...");
+        std::cout << "\r";
+        Logger::warn("SIGINT received, quitting application...");
     }
     Logger::debug("Shutdown schedule complete. Application exiting.");
 }

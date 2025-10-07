@@ -1,8 +1,7 @@
 #pragma once
 
-#include "R-Engine/Application.hpp"
+#include <R-Engine/Application.hpp>
 #include <R-Engine/Plugins/Plugin.hpp>
-
 #include <type_traits>
 #include <utility>
 
@@ -271,5 +270,33 @@ template<typename... Plugins>
 r::Application &r::Application::add_plugins(Plugins &&...plugins) noexcept
 {
     (_add_one_plugin(std::forward<Plugins>(plugins)), ...);
+    return *this;
+}
+
+namespace r {
+
+namespace detail {
+
+/**
+* @brief system to clear events after they have been processed
+*/
+template<typename EventT>
+static void __clear_events_system(ecs::ResMut<ecs::Events<EventT>> events)
+{
+    if (events.ptr) {
+        events.ptr->clear();
+    }
+}
+
+}// namespace detail
+
+}// namespace r
+
+template<typename... EventTs>
+r::Application &r::Application::add_events() noexcept
+{
+    (insert_resource(ecs::Events<EventTs>{}), ...);
+    (add_systems<detail::__clear_events_system<EventTs>>(Schedule::EVENT_CLEANUP), ...);
+
     return *this;
 }

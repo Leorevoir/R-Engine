@@ -13,6 +13,13 @@ static void _redirect_all_stdout()
     cr_redirect_stderr();
 }
 
+// --- Test System for AddPluginByType ---
+static void assert_plugin_resource_system(r::ecs::Res<int> res)
+{
+    cr_assert(res.ptr != nullptr, "Resource should have been inserted by the plugin.");
+    cr_assert_eq(*res.ptr, 42, "Resource value is incorrect.");
+}
+
 Test(Plugins, AddPluginByType, .init = _redirect_all_stdout)
 {
     class TestPlugin final : public r::Plugin
@@ -27,10 +34,16 @@ Test(Plugins, AddPluginByType, .init = _redirect_all_stdout)
     r::Application app;
 
     app.add_plugins(TestPlugin{});
-    app.add_systems(r::Schedule::STARTUP, [](r::ecs::Res<int> res, r::ecs::Commands & /*cmds*/) {
-        cr_assert(res.ptr != nullptr, "Resource should have been inserted by the plugin.");
-        cr_assert_eq(*res.ptr, 42, "Resource value is incorrect.");
-    });
+    app.add_systems<assert_plugin_resource_system>(r::Schedule::STARTUP);
+}
+
+// --- Test System for BasicPluginGroup ---
+static void assert_plugin_group_resources_system(r::ecs::Res<int> res_int, r::ecs::Res<float> res_float)
+{
+    cr_assert(res_int.ptr != nullptr);
+    cr_assert_eq(*res_int.ptr, 42);
+    cr_assert(res_float.ptr != nullptr);
+    cr_assert_float_eq(*res_float.ptr, 3.14f, 1e-6);
 }
 
 Test(Plugins, BasicPluginGroup, .init = _redirect_all_stdout)
@@ -64,20 +77,24 @@ Test(Plugins, BasicPluginGroup, .init = _redirect_all_stdout)
     r::Application app;
     app.add_plugins(TestPluginGroup{});
 
-    app.add_systems(r::Schedule::STARTUP, [](r::ecs::Res<int> res_int, r::ecs::Res<float> res_float) {
-        cr_assert(res_int.ptr != nullptr);
-        cr_assert_eq(*res_int.ptr, 42);
-        cr_assert(res_float.ptr != nullptr);
-        cr_assert_float_eq(*res_float.ptr, 3.14f, 1e-6);
-    });
+    app.add_systems<assert_plugin_group_resources_system>(r::Schedule::STARTUP);
+}
+
+// --- Test System for BevyStyleSet ---
+struct MyConfig {
+        int value = 10;
+};
+
+static void assert_bevy_style_set_system(r::ecs::Res<MyConfig> config, r::ecs::Res<float> untouched)
+{
+    cr_assert(config.ptr != nullptr);
+    cr_assert_eq(config.ptr->value, 500, "The configured value should be 500, not the default.");
+    cr_assert(untouched.ptr != nullptr);
+    cr_assert_float_eq(*untouched.ptr, 99.0f, 1e-6);
 }
 
 Test(Plugins, BevyStyleSet, .init = _redirect_all_stdout)
 {
-    struct MyConfig {
-            int value = 10;
-    };
-
     class ConfigurablePlugin final : public r::Plugin
     {
         public:
@@ -116,10 +133,5 @@ Test(Plugins, BevyStyleSet, .init = _redirect_all_stdout)
 
     app.add_plugins(TestGroupWithDefaults{}.set(ConfigurablePlugin{MyConfig{.value = 500}}));
 
-    app.add_systems(r::Schedule::STARTUP, [](r::ecs::Res<MyConfig> config, r::ecs::Res<float> untouched) {
-        cr_assert(config.ptr != nullptr);
-        cr_assert_eq(config.ptr->value, 500, "The configured value should be 500, not the default.");
-        cr_assert(untouched.ptr != nullptr);
-        cr_assert_float_eq(*untouched.ptr, 99.0f, 1e-6);
-    });
+    app.add_systems<assert_bevy_style_set_system>(r::Schedule::STARTUP);
 }

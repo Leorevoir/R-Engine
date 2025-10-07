@@ -20,6 +20,11 @@ r::Application::SystemNode::SystemNode(const std::string &p_name, SystemTypeId p
     /* __ctor__ */
 }
 
+r::Application::SystemSet::SystemSet(const std::string &pname, SystemSetId pid) noexcept : name(pname), id(pid)
+{
+    /* __ctor__ */
+}
+
 /**
 * public
 */
@@ -109,8 +114,8 @@ void r::Application::_sort_schedule(ScheduleGraph &graph)
     graph.execution_order.clear();
     std::unordered_map<SystemTypeId, int> in_degree;
     std::unordered_map<SystemTypeId, std::vector<SystemTypeId>> adj_list;
-    std::queue<SystemTypeId> q;
 
+    /* Initialize in-degree for all systems */
     for (const auto &[id, node] : graph.nodes) {
         if (!node.func) {
             throw exception::Error("Scheduler", "System '", node.name, "' was added as a dependency but was never defined.");
@@ -118,6 +123,17 @@ void r::Application::_sort_schedule(ScheduleGraph &graph)
         in_degree[id] = 0;
     }
 
+    _build_adjacency_list(graph, in_degree, adj_list);
+    _apply_set_ordering_constraints(graph, in_degree, adj_list);
+    _perform_topological_sort(graph, in_degree, adj_list);
+
+    graph.dirty = false;
+}
+
+void r::Application::_build_adjacency_list(const ScheduleGraph &graph, std::unordered_map<SystemTypeId, int> &in_degree,
+    std::unordered_map<SystemTypeId, std::vector<SystemTypeId>> &adj_list)
+{
+    /* Build adjacency list from direct system dependencies */
     for (const auto &[id, node] : graph.nodes) {
         for (const auto &dep_id : node.dependencies) {
             if (graph.nodes.find(dep_id) == graph.nodes.end()) {
@@ -127,7 +143,71 @@ void r::Application::_sort_schedule(ScheduleGraph &graph)
             in_degree[id]++;
         }
     }
+}
 
+void r::Application::_apply_set_ordering_constraints(const ScheduleGraph &graph, std::unordered_map<SystemTypeId, int> &in_degree,
+    std::unordered_map<SystemTypeId, std::vector<SystemTypeId>> &adj_list)
+{
+    /* Add dependencies from set ordering and system-to-set ordering */
+    for (const auto &[id, node] : graph.nodes) {
+        /* 1. Set -> Set dependencies */
+        for (const auto &set_id : node.member_of_sets) {
+            if (graph.sets.find(set_id) == graph.sets.end())
+                continue;
+            const auto &set = graph.sets.at(set_id);
+
+            for (const auto &before_set_id : set.before_sets) {
+                if (graph.sets.find(before_set_id) == graph.sets.end())
+                    continue;
+
+                for (const auto &[other_id, other_node] : graph.nodes) {
+                    if (std::find(other_node.member_of_sets.begin(), other_node.member_of_sets.end(), before_set_id)
+                        != other_node.member_of_sets.end()) {
+                        auto &neighbors = adj_list[id];
+                        if (std::find(neighbors.begin(), neighbors.end(), other_id) == neighbors.end()) {
+                            neighbors.push_back(other_id);
+                            in_degree[other_id]++;
+                        }
+                    }
+                }
+            }
+        }
+
+        /* 2. System -> Set dependencies */
+        for (const auto &before_set_id : node.before_sets) {
+            for (const auto &[other_id, other_node] : graph.nodes) {
+                if (std::find(other_node.member_of_sets.begin(), other_node.member_of_sets.end(), before_set_id)
+                    != other_node.member_of_sets.end()) {
+                    auto &neighbors = adj_list[id];
+                    if (std::find(neighbors.begin(), neighbors.end(), other_id) == neighbors.end()) {
+                        neighbors.push_back(other_id);
+                        in_degree[other_id]++;
+                    }
+                }
+            }
+        }
+
+        /* 3. Set -> System dependencies */
+        for (const auto &after_set_id : node.after_sets) {
+            for (const auto &[other_id, other_node] : graph.nodes) {
+                if (std::find(other_node.member_of_sets.begin(), other_node.member_of_sets.end(), after_set_id)
+                    != other_node.member_of_sets.end()) {
+                    auto &neighbors = adj_list[other_id];
+                    if (std::find(neighbors.begin(), neighbors.end(), id) == neighbors.end()) {
+                        neighbors.push_back(id);
+                        in_degree[id]++;
+                    }
+                }
+            }
+        }
+    }
+}
+
+void r::Application::_perform_topological_sort(ScheduleGraph &graph, std::unordered_map<SystemTypeId, int> &in_degree,
+    const std::unordered_map<SystemTypeId, std::vector<SystemTypeId>> &adj_list)
+{
+    /* Topological sort (Kahn's algorithm) */
+    std::queue<SystemTypeId> q;
     for (const auto &[id, _] : graph.nodes) {
         if (in_degree[id] == 0) {
             q.push(id);
@@ -138,7 +218,7 @@ void r::Application::_sort_schedule(ScheduleGraph &graph)
         SystemTypeId u = q.front();
         q.pop();
 
-        // push pointer to the node into execution_order
+        /* push pointer to the node into execution_order */
         graph.execution_order.push_back(&graph.nodes.at(u));
 
         if (adj_list.count(u)) {
@@ -161,8 +241,6 @@ void r::Application::_sort_schedule(ScheduleGraph &graph)
         }
         throw exception::Error("Scheduler", ss.str());
     }
-
-    graph.dirty = false;
 }
 
 void r::Application::_execute_systems(const ScheduleGraph &graph)
@@ -171,12 +249,6 @@ void r::Application::_execute_systems(const ScheduleGraph &graph)
         node_ptr->func(_scene, _command_buffer);
     }
 }
-// void r::Application::_execute_systems(const ScheduleGraph &graph)
-// {
-//     for (const auto &system_id : graph.execution_order) {
-//         graph.nodes.at(system_id).func(_scene, _command_buffer);
-//     }
-// }
 
 void r::Application::_render_routine()
 {

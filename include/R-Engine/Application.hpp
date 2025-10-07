@@ -157,6 +157,9 @@ class R_ENGINE_API Application final
         template<typename... Plugins>
         Application &add_plugins(Plugins &&...plugins) noexcept;
 
+        template<typename... EventTs>
+        Application &add_events() noexcept;
+
         /**
         * @brief run the application
         * @details this will start the main loop of the application

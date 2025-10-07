@@ -150,3 +150,12 @@ r::Application &r::Application::add_plugins(Plugins &&...plugins) noexcept
     (_add_one_plugin(std::forward<Plugins>(plugins)), ...);
     return *this;
 }
+
+#include <iostream>
+
+template<typename... EventTs>
+r::Application &r::Application::add_events() noexcept
+{
+    std::cout << "add events: " << (typeid(EventTs).name() + ... + std::string(", ")) << std::endl;
+    return *this;
+}

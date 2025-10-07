@@ -1,12 +1,26 @@
 #include <R-Engine/Application.hpp>
-#include <iostream>
+#include <R-Engine/ECS/Event.hpp>
 
-static void hello_word()
+struct EventA {
+        i32 value = 0;
+};
+
+static void event_writer(r::ecs::EventWriter<EventA> writer)
 {
-    std::cout << "Hello, World!" << std::endl;
+    writer.send(EventA{42});
+}
+
+static void event_reader(r::ecs::EventReader<EventA> reader)
+{
+    if (reader.has_events()) {
+        EventA event = reader.read();
+
+        std::cout << "received: " << event.value << std::endl;
+    }
 }
 
 int main(void)
 {
-    r::Application{}.add_systems<hello_word>(r::Schedule::STARTUP).run();
+    r::Application{}.add_events<EventA>().add_systems<event_writer, event_reader>(r::Schedule::FIXED_UPDATE).run();
+    return 0;
 }

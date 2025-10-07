@@ -151,11 +151,9 @@ r::Application &r::Application::add_plugins(Plugins &&...plugins) noexcept
     return *this;
 }
 
-#include <iostream>
-
 template<typename... EventTs>
 r::Application &r::Application::add_events() noexcept
 {
-    std::cout << "add events: " << (typeid(EventTs).name() + ... + std::string(", ")) << std::endl;
+    (insert_resource(ecs::Events<EventTs>{}), ...);
     return *this;
 }

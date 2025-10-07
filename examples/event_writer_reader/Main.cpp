@@ -1,6 +1,8 @@
 #include <R-Engine/Application.hpp>
 #include <R-Engine/ECS/Event.hpp>
 
+#include <iostream>
+
 struct EventA {
         i32 value = 0;
 };

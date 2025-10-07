@@ -2,8 +2,10 @@
 
 #include <R-Engine/Core/Error.hpp>
 #include <R-Engine/ECS/Command.hpp>
+#include <R-Engine/ECS/Event.hpp>
 #include <R-Engine/ECS/Query.hpp>
 #include <R-Engine/ECS/Scene.hpp>
+
 #include <typeindex>
 #include <vector>
 
@@ -28,6 +30,18 @@ struct R_ENGINE_API Resolver {
          */
         template<typename T>
         Res<T> resolve(std::type_identity<Res<T>>);
+
+        /**
+        * @brief EventWriter<T>
+        */
+        template<typename T>
+        EventWriter<T> resolve(std::type_identity<EventWriter<T>>);
+
+        /**
+        * @brief EventReader<T>
+        */
+        template<typename T>
+        EventReader<T> resolve(std::type_identity<EventReader<T>>);
 
         /**
          * @brief ResMut<T>

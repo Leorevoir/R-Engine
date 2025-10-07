@@ -114,7 +114,6 @@ void r::Application::_sort_schedule(ScheduleGraph &graph)
     graph.execution_order.clear();
     std::unordered_map<SystemTypeId, int> in_degree;
     std::unordered_map<SystemTypeId, std::vector<SystemTypeId>> adj_list;
-    std::queue<SystemTypeId> q;
 
     /* Initialize in-degree for all systems */
     for (const auto &[id, node] : graph.nodes) {
@@ -124,6 +123,16 @@ void r::Application::_sort_schedule(ScheduleGraph &graph)
         in_degree[id] = 0;
     }
 
+    _build_adjacency_list(graph, in_degree, adj_list);
+    _apply_set_ordering_constraints(graph, in_degree, adj_list);
+    _perform_topological_sort(graph, in_degree, adj_list);
+
+    graph.dirty = false;
+}
+
+void r::Application::_build_adjacency_list(const ScheduleGraph &graph, std::unordered_map<SystemTypeId, int> &in_degree,
+    std::unordered_map<SystemTypeId, std::vector<SystemTypeId>> &adj_list)
+{
     /* Build adjacency list from direct system dependencies */
     for (const auto &[id, node] : graph.nodes) {
         for (const auto &dep_id : node.dependencies) {
@@ -134,7 +143,11 @@ void r::Application::_sort_schedule(ScheduleGraph &graph)
             in_degree[id]++;
         }
     }
+}
 
+void r::Application::_apply_set_ordering_constraints(const ScheduleGraph &graph, std::unordered_map<SystemTypeId, int> &in_degree,
+    std::unordered_map<SystemTypeId, std::vector<SystemTypeId>> &adj_list)
+{
     /* Add dependencies from set ordering and system-to-set ordering */
     for (const auto &[id, node] : graph.nodes) {
         /* 1. Set -> Set dependencies */
@@ -188,8 +201,13 @@ void r::Application::_sort_schedule(ScheduleGraph &graph)
             }
         }
     }
+}
 
+void r::Application::_perform_topological_sort(ScheduleGraph &graph, std::unordered_map<SystemTypeId, int> &in_degree,
+    const std::unordered_map<SystemTypeId, std::vector<SystemTypeId>> &adj_list)
+{
     /* Topological sort (Kahn's algorithm) */
+    std::queue<SystemTypeId> q;
     for (const auto &[id, _] : graph.nodes) {
         if (in_degree[id] == 0) {
             q.push(id);
@@ -223,8 +241,6 @@ void r::Application::_sort_schedule(ScheduleGraph &graph)
         }
         throw exception::Error("Scheduler", ss.str());
     }
-
-    graph.dirty = false;
 }
 
 void r::Application::_execute_systems(const ScheduleGraph &graph)

@@ -9,11 +9,28 @@
 // clang-format off
 
 /**
+* ConfiguratorBase Implementation
+*/
+template<typename Derived>
+template<auto... SystemFuncs>
+inline r::Application::SystemConfigurator r::Application::ConfiguratorBase<Derived>::add_systems(Schedule when) noexcept
+{
+    return _app->add_systems<SystemFuncs...>(when);
+}
+
+template<typename Derived>
+template<typename... SetTypes>
+inline auto r::Application::ConfiguratorBase<Derived>::configure_sets(Schedule when) noexcept -> r::Application::SetConfigurator<SetTypes...>
+{
+    return _app->configure_sets<SetTypes...>(when);
+}
+
+/**
 * SystemConfigurator Implementation
 */
 
 inline r::Application::SystemConfigurator::SystemConfigurator(Application *app, Schedule schedule, std::vector<SystemTypeId> system_ids) noexcept
-    : _app(app), _schedule(schedule), _system_ids(std::move(system_ids))
+    : ConfiguratorBase(app), _schedule(schedule), _system_ids(std::move(system_ids))
 {
     /* __ctor__ */
 }
@@ -38,12 +55,8 @@ inline r::Application::SystemConfigurator &r::Application::SystemConfigurator::a
 template<typename SetType>
 inline r::Application::SystemConfigurator &r::Application::SystemConfigurator::after() noexcept
 {
-    SystemSetId dependency_set_id = typeid(SystemSetTag<SetType>);
+    SystemSetId dependency_set_id = _app->template _ensure_set_exists<SetType>(_schedule);
     auto &graph = _app->_systems[_schedule];
-
-    if (graph.sets.find(dependency_set_id) == graph.sets.end()) {
-        graph.sets.emplace(dependency_set_id, SystemSet(typeid(SetType).name(), dependency_set_id));
-    }
 
     for (const auto &system_id : _system_ids) {
         auto &node = graph.nodes.at(system_id);
@@ -83,12 +96,8 @@ inline r::Application::SystemConfigurator &r::Application::SystemConfigurator::b
 template<typename SetType>
 inline r::Application::SystemConfigurator &r::Application::SystemConfigurator::before() noexcept
 {
-    SystemSetId dependent_set_id = typeid(SystemSetTag<SetType>);
+    SystemSetId dependent_set_id = _app->template _ensure_set_exists<SetType>(_schedule);
     auto &graph = _app->_systems[_schedule];
-
-    if (graph.sets.find(dependent_set_id) == graph.sets.end()) {
-        graph.sets.emplace(dependent_set_id, SystemSet(typeid(SetType).name(), dependent_set_id));
-    }
 
     for (const auto &system_id : _system_ids) {
         auto &node = graph.nodes.at(system_id);
@@ -105,13 +114,8 @@ inline r::Application::SystemConfigurator &r::Application::SystemConfigurator::b
 template<typename SetType>
 inline r::Application::SystemConfigurator &r::Application::SystemConfigurator::in_set() noexcept
 {
-    SystemSetId set_id = typeid(SystemSetTag<SetType>);
+    SystemSetId set_id = _app->template _ensure_set_exists<SetType>(_schedule);
     auto &graph = _app->_systems[_schedule];
-
-    /* Ensure the set exists  */
-    if (graph.sets.find(set_id) == graph.sets.end()) {
-        graph.sets.emplace(set_id, SystemSet(typeid(SetType).name(), set_id));
-    }
 
     /* Add all current systems to this set */
     for (const auto &system_id : _system_ids) {
@@ -122,39 +126,8 @@ inline r::Application::SystemConfigurator &r::Application::SystemConfigurator::i
         }
     }
 
-    _app->_systems[_schedule].dirty = true;
+    graph.dirty = true;
     return *this;
-}
-
-template<auto... SystemFuncs>
-inline r::Application::SystemConfigurator r::Application::SystemConfigurator::add_systems(Schedule when) noexcept
-{
-    return _app->add_systems<SystemFuncs...>(when);
-}
-
-template<typename... SetTypes>
-inline auto r::Application::SystemConfigurator::configure_sets(Schedule when) noexcept -> r::Application::SetConfigurator<SetTypes...>
-{
-    return _app->configure_sets<SetTypes...>(when);
-}
-
-template<typename ResT>
-inline r::Application::SystemConfigurator& r::Application::SystemConfigurator::insert_resource(ResT res) noexcept
-{
-    _app->insert_resource(std::move(res));
-    return *this;
-}
-
-template<typename... Plugins>
-inline r::Application::SystemConfigurator& r::Application::SystemConfigurator::add_plugins(Plugins &&...plugins) noexcept
-{
-    _app->add_plugins(std::forward<Plugins>(plugins)...);
-    return *this;
-}
-
-inline void r::Application::SystemConfigurator::run()
-{
-    _app->run();
 }
 
 /**
@@ -164,7 +137,7 @@ inline void r::Application::SystemConfigurator::run()
 template<typename... SetTypes>
 r::Application::SetConfigurator<SetTypes...>::SetConfigurator(
     Application *app, Schedule schedule, std::vector<SystemSetId> setids) noexcept
-    : _app(app), _schedule(schedule), _set_ids(std::move(setids))
+    : ConfiguratorBase<SetConfigurator<SetTypes...>>(app), _schedule(schedule), _set_ids(std::move(setids))
 {
     /* __ctor__ */
 }
@@ -174,13 +147,8 @@ template<typename OtherSet>
 inline auto r::Application::SetConfigurator<SetTypes...>::before() noexcept
     -> SetConfigurator&
 {
-    SystemSetId other_set_id = typeid(SystemSetTag<OtherSet>);
-    auto &graph = _app->_systems[_schedule];
-
-    /* Ensure target set exists */
-    if (graph.sets.find(other_set_id) == graph.sets.end()) {
-        graph.sets.emplace(other_set_id, SystemSet(typeid(OtherSet).name(), other_set_id));
-    }
+    SystemSetId other_set_id = this->_app->template _ensure_set_exists<OtherSet>(_schedule);
+    auto &graph = this->_app->_systems[_schedule];
 
     /* Add before constraint to all configured sets */
     for (const auto &set_id : _set_ids) {
@@ -191,7 +159,7 @@ inline auto r::Application::SetConfigurator<SetTypes...>::before() noexcept
         }
     }
 
-    _app->_systems[_schedule].dirty = true;
+    graph.dirty = true;
     return *this;
 }
 
@@ -200,13 +168,8 @@ template<typename OtherSet>
 inline auto r::Application::SetConfigurator<SetTypes...>::after() noexcept
     -> SetConfigurator&
 {
-    SystemSetId other_set_id = typeid(SystemSetTag<OtherSet>);
-    auto &graph = _app->_systems[_schedule];
-
-    /* Ensure target set exists */
-    if (graph.sets.find(other_set_id) == graph.sets.end()) {
-        graph.sets.emplace(other_set_id, SystemSet(typeid(OtherSet).name(), other_set_id));
-    }
+    SystemSetId other_set_id = this->_app->template _ensure_set_exists<OtherSet>(_schedule);
+    auto &graph = this->_app->_systems[_schedule];
 
     /* Add after constraint to all configured sets */
     for (const auto &set_id : _set_ids) {
@@ -217,44 +180,8 @@ inline auto r::Application::SetConfigurator<SetTypes...>::after() noexcept
         }
     }
 
-    _app->_systems[_schedule].dirty = true;
+    graph.dirty = true;
     return *this;
-}
-
-template<typename... SetTypes>
-template<auto... SystemFuncs>
-inline r::Application::SystemConfigurator r::Application::SetConfigurator<SetTypes...>::add_systems(Schedule when) noexcept
-{
-    return _app->add_systems<SystemFuncs...>(when);
-}
-
-template<typename... SetTypes>
-template<typename... OtherSetTypes>
-inline auto r::Application::SetConfigurator<SetTypes...>::configure_sets(Schedule when) noexcept -> r::Application::SetConfigurator<OtherSetTypes...>
-{
-    return _app->configure_sets<OtherSetTypes...>(when);
-}
-
-template<typename... SetTypes>
-template<typename ResT>
-inline auto r::Application::SetConfigurator<SetTypes...>::insert_resource(ResT res) noexcept -> SetConfigurator&
-{
-    _app->insert_resource(std::move(res));
-    return *this;
-}
-
-template<typename... SetTypes>
-template<typename... Plugins>
-inline auto r::Application::SetConfigurator<SetTypes...>::add_plugins(Plugins &&...plugins) noexcept -> SetConfigurator&
-{
-    _app->add_plugins(std::forward<Plugins>(plugins)...);
-    return *this;
-}
-
-template<typename... SetTypes>
-inline void r::Application::SetConfigurator<SetTypes...>::run()
-{
-    _app->run();
 }
 
 /**
@@ -292,7 +219,7 @@ r::Application::SystemTypeId r::Application::_add_one_system(r::Schedule when) n
 }
 
 template<typename SetType>
-r::Application::SystemSetId r::Application::_add_one_set(Schedule when) noexcept
+r::Application::SystemSetId r::Application::_ensure_set_exists(Schedule when) noexcept
 {
     SystemSetId id = typeid(SystemSetTag<SetType>);
     auto &graph = _systems[when];
@@ -316,7 +243,7 @@ template<typename... SetTypes>
 inline auto r::Application::configure_sets(Schedule when) noexcept
     -> SetConfigurator<SetTypes...>
 {
-    std::vector<SystemSetId> ids = {_add_one_set<SetTypes>(when)...};
+    std::vector<SystemSetId> ids = {(_ensure_set_exists<SetTypes>(when))...};
     return SetConfigurator<SetTypes...>(this, when, std::move(ids));
 }
 

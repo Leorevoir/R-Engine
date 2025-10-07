@@ -98,6 +98,63 @@ class R_ENGINE_API Application final
         /* Forward declaration */
         template<typename... SetTypes>
         class SetConfigurator;
+        class SystemConfigurator;
+
+        /**
+         * @brief Base class for configurators to remove duplicate forwarding methods.
+         * @details Uses the Curiously Recurring Template Pattern (CRTP).
+         */
+        template<typename Derived>
+        class ConfiguratorBase
+        {
+            protected:
+                Application *_app;
+
+                ConfiguratorBase(Application *app) noexcept : _app(app)
+                {
+                }
+
+            public:
+                /**
+                * @brief Forwards to Application::add_systems to continue adding more systems.
+                */
+                template<auto... SystemFuncs>
+                SystemConfigurator add_systems(Schedule when) noexcept;
+
+                /**
+                 * @brief Forwards to Application::configure_sets to start configuring sets.
+                 */
+                template<typename... SetTypes>
+                SetConfigurator<SetTypes...> configure_sets(Schedule when) noexcept;
+
+                /**
+                * @brief Forwards to Application::insert_resource and returns this configurator.
+                */
+                template<typename ResT>
+                Derived &insert_resource(ResT res) noexcept
+                {
+                    _app->insert_resource(std::move(res));
+                    return static_cast<Derived &>(*this);
+                }
+
+                /**
+                * @brief Forwards to Application::add_plugins and returns this configurator.
+                */
+                template<typename... Plugins>
+                Derived &add_plugins(Plugins &&...plugins) noexcept
+                {
+                    _app->add_plugins(std::forward<Plugins>(plugins)...);
+                    return static_cast<Derived &>(*this);
+                }
+
+                /**
+                * @brief Forwards to Application::run() to start the application.
+                */
+                void run()
+                {
+                    _app->run();
+                }
+        };
 
         /**
         * @brief A builder object for configuring system execution order.
@@ -105,7 +162,7 @@ class R_ENGINE_API Application final
         * calls like .after() and .before() to specify dependencies.
         * It also forwards other Application builder methods to continue the chain.
         */
-        class SystemConfigurator
+        class SystemConfigurator final : public ConfiguratorBase<SystemConfigurator>
         {
             public:
                 SystemConfigurator(Application *app, Schedule schedule, std::vector<SystemTypeId> system_ids) noexcept;
@@ -152,37 +209,7 @@ class R_ENGINE_API Application final
                 template<typename SetType>
                 SystemConfigurator &in_set() noexcept;
 
-                /**
-                * @brief Forwards to Application::add_systems to continue adding more systems.
-                */
-                template<auto... SystemFuncs>
-                SystemConfigurator add_systems(Schedule when) noexcept;
-
-                /**
-                 * @brief Forwards to Application::configure_sets to start configuring sets.
-                 */
-                template<typename... SetTypes>
-                SetConfigurator<SetTypes...> configure_sets(Schedule when) noexcept;
-
-                /**
-                * @brief Forwards to Application::insert_resource and returns this configurator.
-                */
-                template<typename ResT>
-                SystemConfigurator &insert_resource(ResT res) noexcept;
-
-                /**
-                * @brief Forwards to Application::add_plugins and returns this configurator.
-                */
-                template<typename... Plugins>
-                SystemConfigurator &add_plugins(Plugins &&...plugins) noexcept;
-
-                /**
-                * @brief Forwards to Application::run() to start the application.
-                */
-                void run();
-
             private:
-                Application *_app;
                 Schedule _schedule;
                 std::vector<SystemTypeId> _system_ids;
         };
@@ -193,7 +220,7 @@ class R_ENGINE_API Application final
          * that entire groups of systems must run before or after other groups.
          */
         template<typename... SetTypes>
-        class SetConfigurator
+        class SetConfigurator final : public ConfiguratorBase<SetConfigurator<SetTypes...>>
         {
             public:
                 SetConfigurator(Application *app, Schedule schedule, std::vector<SystemSetId> setids) noexcept;
@@ -216,37 +243,7 @@ class R_ENGINE_API Application final
                 template<typename OtherSet>
                 SetConfigurator &after() noexcept;
 
-                /**
-                * @brief Forwards to Application::add_systems to continue adding more systems.
-                */
-                template<auto... SystemFuncs>
-                SystemConfigurator add_systems(Schedule when) noexcept;
-
-                /**
-                 * @brief Forwards to Application::configure_sets to continue configuring sets.
-                 */
-                template<typename... OtherSetTypes>
-                SetConfigurator<OtherSetTypes...> configure_sets(Schedule when) noexcept;
-
-                /**
-                * @brief Forwards to Application::insert_resource and returns this configurator.
-                */
-                template<typename ResT>
-                SetConfigurator &insert_resource(ResT res) noexcept;
-
-                /**
-                * @brief Forwards to Application::add_plugins and returns this configurator.
-                */
-                template<typename... Plugins>
-                SetConfigurator &add_plugins(Plugins &&...plugins) noexcept;
-
-                /**
-                * @brief Forwards to Application::run() to start the application.
-                */
-                void run();
-
             private:
-                Application *_app;
                 Schedule _schedule;
                 std::vector<SystemSetId> _set_ids;
         };
@@ -326,11 +323,19 @@ class R_ENGINE_API Application final
         void _execute_systems(const ScheduleGraph &graph);
         void _apply_commands();
 
+        /* Graph sorting helpers */
+        void _build_adjacency_list(const ScheduleGraph &graph, std::unordered_map<SystemTypeId, int> &in_degree,
+            std::unordered_map<SystemTypeId, std::vector<SystemTypeId>> &adj_list);
+        void _apply_set_ordering_constraints(const ScheduleGraph &graph, std::unordered_map<SystemTypeId, int> &in_degree,
+            std::unordered_map<SystemTypeId, std::vector<SystemTypeId>> &adj_list);
+        void _perform_topological_sort(ScheduleGraph &graph, std::unordered_map<SystemTypeId, int> &in_degree,
+            const std::unordered_map<SystemTypeId, std::vector<SystemTypeId>> &adj_list);
+
         template<auto SystemFunc>
         SystemTypeId _add_one_system(Schedule when) noexcept;
 
         template<typename SetType>
-        SystemSetId _add_one_set(Schedule when) noexcept;
+        SystemSetId _ensure_set_exists(Schedule when) noexcept;
 
         template<typename PluginT>
         void _add_one_plugin(PluginT &&plugin) noexcept;

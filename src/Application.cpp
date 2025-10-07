@@ -61,6 +61,8 @@ void r::Application::_main_loop()
         _clock.tick();
         *_scene.get_resource_ptr<core::FrameTime>() = _clock.frame();
 
+        _apply_state_transitions();
+
         _run_schedule(Schedule::UPDATE);
         _apply_commands();
 
@@ -194,4 +196,21 @@ void r::Application::_render_routine()
 void r::Application::_apply_commands()
 {
     _command_buffer.apply(_scene);
+}
+
+void r::Application::_apply_state_transitions()
+{
+    if (_state_transition_runner) {
+        _state_transition_runner();
+    }
+}
+
+void r::Application::_run_transition_schedule(ScheduleGraph& graph)
+{
+    if (graph.nodes.empty()) return;
+    
+    if (graph.dirty) {
+        _sort_schedule(graph);
+    }
+    _execute_systems(graph);
 }

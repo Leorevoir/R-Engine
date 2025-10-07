@@ -1,5 +1,6 @@
 #pragma once
 
+#include "R-Engine/Core/States.hpp"
 #include <R-Engine/R-EngineExport.hpp>
 
 #include <R-Engine/Core/Clock.hpp>
@@ -57,6 +58,7 @@ class R_ENGINE_API Application final
                 SystemTypeId id;
                 SystemFn func = nullptr;
                 std::vector<SystemTypeId> dependencies;
+                std::function<bool(ecs::Scene &)> condition = nullptr;
         };
 
         struct ScheduleGraph {
@@ -65,6 +67,14 @@ class R_ENGINE_API Application final
                 bool dirty = true;
         };
 
+        struct States {
+                ScheduleGraph on_enter;
+                ScheduleGraph on_exit;
+                std::unordered_map<size_t, ScheduleGraph> on_transition;
+        };
+        std::unordered_map<std::type_index, States> _states;
+        std::function<void()> _state_transition_runner;
+        
         using ScheduleMap = std::unordered_map<Schedule, ScheduleGraph>;
 
     public:
@@ -77,6 +87,7 @@ class R_ENGINE_API Application final
         class SystemConfigurator
         {
             public:
+                friend class Application;
                 SystemConfigurator(Application *app, Schedule schedule, std::vector<SystemTypeId> system_ids) noexcept;
 
                 /**
@@ -100,7 +111,13 @@ class R_ENGINE_API Application final
                 */
                 template<auto... SystemFuncs>
                 SystemConfigurator add_systems(Schedule when) noexcept;
-
+            
+                /**
+                * @brief Adds a system for a state condition
+                */
+                template<auto... Funcs, typename StateEnum>
+                SystemConfigurator add_systems(StateCondition<StateEnum> condition) noexcept;
+                
                 /**
                 * @brief Forwards to Application::insert_resource.
                 */
@@ -126,6 +143,18 @@ class R_ENGINE_API Application final
 
         Application();
         ~Application() = default;
+
+        /**
+        * @brief Inits the first state
+        */
+        template<typename T>
+        Application& init_state(T initial_state) noexcept;
+
+        /**
+        * @brief Adds a system for a state condition
+        */
+        template<auto... Funcs, typename StateEnum>
+        SystemConfigurator add_systems(StateCondition<StateEnum> condition);
 
         /**
         * @brief Adds one or more systems to the application schedule.
@@ -187,12 +216,17 @@ class R_ENGINE_API Application final
         void _sort_schedule(ScheduleGraph &graph);
         void _execute_systems(const ScheduleGraph &graph);
         void _apply_commands();
+        void _apply_state_transitions();
+        void _run_transition_schedule(ScheduleGraph &graph);
 
         template<auto SystemFunc>
         SystemTypeId _add_one_system(Schedule when) noexcept;
 
         template<typename PluginT>
         void _add_one_plugin(PluginT &&plugin) noexcept;
+
+        template<auto SystemFunc>
+        SystemTypeId _add_one_system_to_graph(ScheduleGraph& graph) noexcept;
 
         core::Clock _clock = {};
         ScheduleMap _systems = {};

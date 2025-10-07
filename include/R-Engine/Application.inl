@@ -64,6 +64,12 @@ inline r::Application::SystemConfigurator r::Application::SystemConfigurator::ad
     return _app->add_systems<SystemFuncs...>(when);
 }
 
+template<auto... Funcs, typename StateEnum>
+inline r::Application::SystemConfigurator r::Application::SystemConfigurator::add_systems(StateCondition<StateEnum> condition) noexcept
+{
+    return _app->add_systems<Funcs...>(condition);
+}
+
 template<typename ResT>
 inline r::Application& r::Application::SystemConfigurator::insert_resource(ResT res) noexcept
 {
@@ -149,4 +155,103 @@ r::Application &r::Application::add_plugins(Plugins &&...plugins) noexcept
 {
     (_add_one_plugin(std::forward<Plugins>(plugins)), ...);
     return *this;
+}
+
+template<auto SystemFunc>
+r::Application::SystemTypeId r::Application::_add_one_system_to_graph(ScheduleGraph& graph) noexcept
+{
+    SystemTypeId id(typeid(SystemTag<SystemFunc>));
+    
+    SystemNode node(
+        id.name(),
+        id,
+        &system_invoker_template<SystemFunc>,
+        {}
+    );
+
+    if (graph.nodes.count(id)) {
+        node.dependencies = std::move(graph.nodes.at(id).dependencies);
+    }
+
+    graph.nodes.insert_or_assign(id, std::move(node));
+    graph.dirty = true;
+    return id;
+}
+
+
+template<typename T>
+r::Application& r::Application::init_state(T initial_state) noexcept
+{
+    insert_resource(State<T>(initial_state));
+    insert_resource(NextState<T>());
+
+    _state_transition_runner = [this]() {
+        auto* next_state_res = _scene.get_resource_ptr<NextState<T>>();
+        if (!next_state_res || !next_state_res->next.has_value()) {
+            return;
+        }
+
+        auto* state_res = _scene.get_resource_ptr<State<T>>();
+        T next = next_state_res->next.value();
+        T current = state_res->current();
+
+        if (current == next) {
+            next_state_res->next.reset();
+            return;
+        }
+
+        auto& schedules = _states[typeid(T)];
+
+        // 1. Execute OnExit
+        _run_transition_schedule(schedules.on_exit);
+
+        // 2. Execute OnTransition
+        if (auto it = schedules.on_transition.find(static_cast<size_t>(current)); it != schedules.on_transition.end()) {
+            _run_transition_schedule(it->second);
+        }
+        
+        _apply_commands();
+
+        // 3.Update the state
+        state_res->_previous = current;
+        state_res->_current = next;
+
+        // 4. Execute OnEnter
+        _run_transition_schedule(schedules.on_enter);
+
+        _apply_commands();
+
+        next_state_res->next.reset();
+    };
+
+    return *this;
+}
+
+// add_systems(OnEnter(...), ...)
+template<auto... Funcs, typename StateEnum>
+r::Application::SystemConfigurator r::Application::add_systems(StateCondition<StateEnum> condition)
+{
+    auto& state_schedules = _states[typeid(StateEnum)];
+    ScheduleGraph* target_graph = nullptr;
+    Schedule schedule_for_configurator = Schedule::UPDATE;
+
+    switch (condition.trigger) {
+        case StateTrigger::OnEnter: target_graph = &state_schedules.on_enter; break;
+        case StateTrigger::OnExit: target_graph = &state_schedules.on_exit; break;
+        case StateTrigger::OnTransition:
+            target_graph = &state_schedules.on_transition[static_cast<size_t>(condition.state_from.value())];
+            break;
+    }
+
+    if (!target_graph) {
+        throw exception::Error("Application", "Condition d'état invalide.");
+    }
+
+    std::vector<SystemTypeId> ids;
+    (ids.push_back(_add_one_system_to_graph<Funcs>(*target_graph)), ...);
+    
+    // NOTE : Pour simplifier, le SystemConfigurator pour les transitions
+    // pourrait avoir des limitations (pas de .before/.after entre schedules différents).
+    // Ici, nous le faisons fonctionner pour les dépendances au sein du même graphe de transition.
+    return SystemConfigurator(this, schedule_for_configurator, std::move(ids));
 }

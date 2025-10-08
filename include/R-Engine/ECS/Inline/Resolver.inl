@@ -25,6 +25,28 @@ r::ecs::ResMut<T> r::ecs::Resolver::resolve(std::type_identity<r::ecs::ResMut<T>
 }
 
 /**
+ * EventWriter<T>
+ */
+template<typename T>
+r::ecs::EventWriter<T> r::ecs::Resolver::resolve(std::type_identity<r::ecs::EventWriter<T>>)
+{
+    auto *events = _scene->get_resource_ptr<Events<T>>();
+
+    return EventWriter<T>(events);
+}
+
+/**
+ * EventReader<T>
+ */
+template<typename T>
+r::ecs::EventReader<T> r::ecs::Resolver::resolve(std::type_identity<r::ecs::EventReader<T>>)
+{
+    auto *events = _scene->get_resource_ptr<Events<T>>();
+
+    return EventReader<T>(events);
+}
+
+/**
  * Query<Wrappers...>
  */
 template<typename... Wrappers>
@@ -80,8 +102,7 @@ T r::ecs::Resolver::resolve(std::type_identity<T>)
  * private
  */
 template<typename W>
-void r::ecs::Resolver::_collect_component_types(
-    std::vector<std::type_index> &required, std::vector<std::type_index> &excluded)
+void r::ecs::Resolver::_collect_component_types(std::vector<std::type_index> &required, std::vector<std::type_index> &excluded)
 {
     if constexpr (is_mut<W>::value || is_ref<W>::value || is_with<W>::value) {
         using Comp = typename component_of<W>::type;

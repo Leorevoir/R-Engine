@@ -22,10 +22,10 @@ int main(void)
         {
             commands.spawn((
                 Player{},
-                r::Transform3d{.translation = {100.f, 200.f, 0.f}}
+                r::Transform3d{.position = {100.f, 200.f, 0.f}}
             )).with_children([&](r::ecs::ChildBuilder &parent)
             {
-                parent.spawn((ForceModule{}, r::Transform3d{.translation = {50.f, 0.f, 0.f}}));
+                parent.spawn((ForceModule{}, r::Transform3d{.position = {50.f, 0.f, 0.f}}));
             });
         }>
         (r::Schedule::STARTUP)

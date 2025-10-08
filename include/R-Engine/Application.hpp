@@ -96,9 +96,27 @@ class R_ENGINE_API Application final
         };
 
         struct States {
-                ScheduleGraph on_enter;
-                ScheduleGraph on_exit;
-                std::unordered_map<size_t, ScheduleGraph> on_transition;
+            struct Transition {
+                        size_t from;
+                        size_t to;
+
+                        bool operator==(const Transition &other) const
+                        {
+                            return from == other.from && to == other.to;
+                        }
+                };
+
+                struct TransitionHasher {
+                        std::size_t operator()(const Transition &t) const
+                        {
+                            std::size_t h1 = std::hash<size_t>{}(t.from);
+                            std::size_t h2 = std::hash<size_t>{}(t.to);
+                            return h1 ^ (h2 << 1);
+                        }
+                };
+                std::unordered_map<size_t, ScheduleGraph> on_enter;
+                std::unordered_map<size_t, ScheduleGraph> on_exit;
+                std::unordered_map<Transition, ScheduleGraph, TransitionHasher> on_transition;
         };
         std::unordered_map<std::type_index, States> _states;
         std::function<void()> _state_transition_runner;
@@ -126,12 +144,14 @@ class R_ENGINE_API Application final
                 }
 
             public:
-                /**
-                * @brief Forwards to Application::add_systems to continue adding more systems.
-                */
-                template<auto... SystemFuncs>
-                SystemConfigurator add_systems(Schedule when) noexcept;
+                // /**
+                // * @brief Forwards to Application::add_systems to continue adding more systems.
+                // */
+                // template<auto... SystemFuncs>
+                // SystemConfigurator add_systems(Schedule when) noexcept;
 
+                template<auto... SystemFuncs, typename ScheduleLabel>
+                SystemConfigurator add_systems(ScheduleLabel label) noexcept;
                 /**
                  * @brief Forwards to Application::configure_sets to start configuring sets.
                  */
@@ -165,6 +185,7 @@ class R_ENGINE_API Application final
                 {
                     _app->run();
                 }
+
         };
 
         /**
@@ -176,7 +197,7 @@ class R_ENGINE_API Application final
         class SystemConfigurator final : public ConfiguratorBase<SystemConfigurator>
         {
             public:
-                SystemConfigurator(Application *app, Schedule schedule, std::vector<SystemTypeId> system_ids) noexcept;
+                SystemConfigurator(Application *app, ScheduleGraph *graph, std::vector<SystemTypeId> system_ids) noexcept;
 
                 // FIX: Bring the hidden base class 'add_systems' into this class's scope.
                 using ConfiguratorBase<SystemConfigurator>::add_systems;
@@ -213,11 +234,11 @@ class R_ENGINE_API Application final
                 template<typename SetType>
                 SystemConfigurator &before() noexcept;
 
-                /**
-                * @brief Adds a system for a state condition
-                */
-                template<auto... Funcs, typename StateEnum>
-                SystemConfigurator add_systems(StateCondition<StateEnum> condition) noexcept;
+                // /**
+                // * @brief Adds a system for a state condition
+                // */
+                // template<auto... Funcs, typename StateEnum>
+                // SystemConfigurator add_systems(StateCondition<StateEnum> condition) noexcept;
 
                 /**
                 * @brief Adds the recently added systems to a named set.
@@ -230,7 +251,7 @@ class R_ENGINE_API Application final
                 SystemConfigurator &in_set() noexcept;
 
             private:
-                Schedule _schedule;
+                ScheduleGraph *_graph;
                 std::vector<SystemTypeId> _system_ids;
         };
 
@@ -277,11 +298,11 @@ class R_ENGINE_API Application final
         template<typename T>
         Application &init_state(T initial_state) noexcept;
 
-        /**
-        * @brief Adds a system for a state condition
-        */
-        template<auto... Funcs, typename StateEnum>
-        SystemConfigurator add_systems(StateCondition<StateEnum> condition);
+        // /**
+        // * @brief Adds a system for a state condition
+        // */
+        // template<auto... Funcs, typename StateEnum>
+        // SystemConfigurator add_systems(StateCondition<StateEnum> condition);
 
         /**
         * @brief Adds one or more systems to the application schedule.
@@ -291,8 +312,8 @@ class R_ENGINE_API Application final
         * @param SystemFuncs The system functions to add.
         * @return A SystemConfigurator instance for dependency configuration.
         */
-        template<auto... SystemFuncs>
-        SystemConfigurator add_systems(Schedule when) noexcept;
+        template<auto... SystemFuncs, typename ScheduleLabel>
+        SystemConfigurator add_systems(ScheduleLabel label);
 
         /**
          * @brief Configures ordering constraints for system sets.
@@ -376,7 +397,7 @@ class R_ENGINE_API Application final
         SystemTypeId _add_one_system(Schedule when) noexcept;
 
         template<typename SetType>
-        SystemSetId _ensure_set_exists(Schedule when) noexcept;
+        SystemSetId _ensure_set_exists(ScheduleGraph &graph) noexcept;
 
         template<typename PluginT>
         void _add_one_plugin(PluginT &&plugin) noexcept;

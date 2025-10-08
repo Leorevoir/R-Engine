@@ -28,7 +28,7 @@ inline auto r::Application::ConfiguratorBase<Derived>::configure_sets(Schedule w
 * SystemConfigurator Implementation
 */
 
-inline r::Application::SystemConfigurator::SystemConfigurator(Application *app, Schedule schedule, std::vector<SystemTypeId> system_ids) noexcept
+inline r::Application::SystemConfigurator::SystemConfigurator(Application *app, ScheduleId schedule, std::vector<SystemTypeId> system_ids) noexcept
     : ConfiguratorBase(app), _schedule(schedule), _system_ids(std::move(system_ids))
 {
     /* __ctor__ */
@@ -40,14 +40,14 @@ inline r::Application::SystemConfigurator &r::Application::SystemConfigurator::a
     SystemTypeId dependency_id(typeid(SystemTag<SystemFunc>));
 
     for (const auto &system_id : _system_ids) {
-        auto &deps = _app->_systems[_schedule].nodes.at(system_id).dependencies;
+        auto &deps = _app->_all_schedules[_schedule].nodes.at(system_id).dependencies;
 
         if (std::find(deps.begin(), deps.end(), dependency_id) == deps.end()) {
             deps.push_back(dependency_id);
         }
 
     }
-    _app->_systems[_schedule].dirty = true;
+    _app->_all_schedules[_schedule].dirty = true;
     return *this;
 }
 
@@ -55,7 +55,7 @@ template<typename SetType>
 inline r::Application::SystemConfigurator &r::Application::SystemConfigurator::after() noexcept
 {
     SystemSetId dependency_set_id = _app->template _ensure_set_exists<SetType>(_schedule);
-    auto &graph = _app->_systems[_schedule];
+    auto &graph = _app->_all_schedules[_schedule];
 
     for (const auto &system_id : _system_ids) {
         auto &node = graph.nodes.at(system_id);
@@ -73,7 +73,7 @@ template<auto SystemFunc>
 inline r::Application::SystemConfigurator &r::Application::SystemConfigurator::before() noexcept
 {
     SystemTypeId dependent_id(typeid(SystemTag<SystemFunc>));
-    auto &graph = _app->_systems[_schedule];
+    auto &graph = _app->_all_schedules[_schedule];
 
     if (graph.nodes.find(dependent_id) == graph.nodes.end()) {
          const SystemNode placeholder_node(dependent_id.name(), dependent_id, nullptr, {});
@@ -88,7 +88,7 @@ inline r::Application::SystemConfigurator &r::Application::SystemConfigurator::b
             deps.push_back(system_id);
         }
     }
-    _app->_systems[_schedule].dirty = true;
+    _app->_all_schedules[_schedule].dirty = true;
     return *this;
 }
 
@@ -96,7 +96,7 @@ template<typename SetType>
 inline r::Application::SystemConfigurator &r::Application::SystemConfigurator::before() noexcept
 {
     SystemSetId dependent_set_id = _app->template _ensure_set_exists<SetType>(_schedule);
-    auto &graph = _app->_systems[_schedule];
+    auto &graph = _app->_all_schedules[_schedule];
 
     for (const auto &system_id : _system_ids) {
         auto &node = graph.nodes.at(system_id);
@@ -120,7 +120,7 @@ template<typename SetType>
 inline r::Application::SystemConfigurator &r::Application::SystemConfigurator::in_set() noexcept
 {
     SystemSetId set_id = _app->template _ensure_set_exists<SetType>(_schedule);
-    auto &graph = _app->_systems[_schedule];
+    auto &graph = _app->_all_schedules[_schedule];
 
     /* Add all current systems to this set */
     for (const auto &system_id : _system_ids) {
@@ -141,7 +141,7 @@ inline r::Application::SystemConfigurator &r::Application::SystemConfigurator::i
 
 template<typename... SetTypes>
 r::Application::SetConfigurator<SetTypes...>::SetConfigurator(
-    Application *app, Schedule schedule, std::vector<SystemSetId> setids) noexcept
+    Application *app, ScheduleId schedule, std::vector<SystemSetId> setids) noexcept
     : ConfiguratorBase<SetConfigurator<SetTypes...>>(app), _schedule(schedule), _set_ids(std::move(setids))
 {
     /* __ctor__ */
@@ -153,7 +153,7 @@ inline auto r::Application::SetConfigurator<SetTypes...>::before() noexcept
     -> SetConfigurator&
 {
     SystemSetId other_set_id = this->_app->template _ensure_set_exists<OtherSet>(_schedule);
-    auto &graph = this->_app->_systems[_schedule];
+    auto &graph = this->_app->_all_schedules[_schedule];
 
     /* Add before constraint to all configured sets */
     for (const auto &set_id : _set_ids) {
@@ -174,7 +174,7 @@ inline auto r::Application::SetConfigurator<SetTypes...>::after() noexcept
     -> SetConfigurator&
 {
     SystemSetId other_set_id = this->_app->template _ensure_set_exists<OtherSet>(_schedule);
-    auto &graph = this->_app->_systems[_schedule];
+    auto &graph = this->_app->_all_schedules[_schedule];
 
     /* Add after constraint to all configured sets */
     for (const auto &set_id : _set_ids) {
@@ -200,10 +200,10 @@ static void system_invoker_template(r::ecs::Scene &scene, r::ecs::CommandBuffer 
 }
 
 template<auto SystemFunc>
-r::Application::SystemTypeId r::Application::_add_one_system(r::Schedule when) noexcept
+r::Application::SystemTypeId r::Application::_add_one_system(const ScheduleId& when) noexcept
 {
     SystemTypeId id(typeid(SystemTag<SystemFunc>));
-    auto &graph = _systems[when];
+    auto &graph = _all_schedules[when];
 
     SystemNode node(
         id.name(),
@@ -224,10 +224,10 @@ r::Application::SystemTypeId r::Application::_add_one_system(r::Schedule when) n
 }
 
 template<typename SetType>
-r::Application::SystemSetId r::Application::_ensure_set_exists(Schedule when) noexcept
+r::Application::SystemSetId r::Application::_ensure_set_exists(const ScheduleId& when) noexcept
 {
     SystemSetId id = typeid(SystemSetTag<SetType>);
-    auto &graph = _systems[when];
+    auto &graph = _all_schedules[when];
 
     if (graph.sets.find(id) == graph.sets.end()) {
         graph.sets.emplace(id, SystemSet(typeid(SetType).name(), id));
@@ -239,17 +239,19 @@ r::Application::SystemSetId r::Application::_ensure_set_exists(Schedule when) no
 template<auto... SystemFuncs>
 r::Application::SystemConfigurator r::Application::add_systems(Schedule when) noexcept
 {
-    std::vector<SystemTypeId> ids = {_add_one_system<SystemFuncs>(when)...};
+    ScheduleId schedule_id(when);
+    std::vector<SystemTypeId> ids = {_add_one_system<SystemFuncs>(schedule_id)...};
 
-    return SystemConfigurator(this, when, std::move(ids));
+    return SystemConfigurator(this, schedule_id, std::move(ids));
 }
 
 template<typename... SetTypes>
 inline auto r::Application::configure_sets(Schedule when) noexcept
     -> SetConfigurator<SetTypes...>
 {
-    std::vector<SystemSetId> ids = {(_ensure_set_exists<SetTypes>(when))...};
-    return SetConfigurator<SetTypes...>(this, when, std::move(ids));
+    ScheduleId schedule_id(when);
+    std::vector<SystemSetId> ids = {(_ensure_set_exists<SetTypes>(schedule_id))...};
+    return SetConfigurator<SetTypes...>(this, schedule_id, std::move(ids));
 }
 
 template<typename ResT>
@@ -345,25 +347,26 @@ r::Application &r::Application::init_state(T initial_state) noexcept
             return;
         }
 
-        auto &schedules = _states[typeid(T)];
+        // Build schedule IDs for this transition
+        ScheduleId exit_schedule = _build_schedule_id_from_state_condition(StateTrigger::OnExit, typeid(T), static_cast<size_t>(current));
 
-        // 1. Execute OnExit
-        _run_transition_schedule(schedules.on_exit);
+        ScheduleId transition_schedule = _build_schedule_id_from_state_condition(StateTrigger::OnTransition, typeid(T),
+            static_cast<size_t>(next), static_cast<size_t>(current));
 
-        // 2. Execute OnTransition
-        if (auto it = schedules.on_transition.find(static_cast<size_t>(current)); it != schedules.on_transition.end()) {
-            _run_transition_schedule(it->second);
-        }
+        ScheduleId enter_schedule = _build_schedule_id_from_state_condition(StateTrigger::OnEnter, typeid(T), static_cast<size_t>(next));
 
+        // Execute through unified schedule runner
+        _run_schedule(exit_schedule);
         _apply_commands();
 
-        // 3.Update the state
+        _run_schedule(transition_schedule);
+        _apply_commands();
+
+        // Update state resource
         state_res->_previous = current;
         state_res->_current = next;
 
-        // 4. Execute OnEnter
-        _run_transition_schedule(schedules.on_enter);
-
+        _run_schedule(enter_schedule);
         _apply_commands();
 
         next_state_res->next.reset();
@@ -376,31 +379,12 @@ r::Application &r::Application::init_state(T initial_state) noexcept
 template<auto... Funcs, typename StateEnum>
 r::Application::SystemConfigurator r::Application::add_systems(StateCondition<StateEnum> condition)
 {
-    auto &state_schedules = _states[typeid(StateEnum)];
-    ScheduleGraph *target_graph = nullptr;
-    Schedule schedule_for_configurator = Schedule::UPDATE;
-
-    switch (condition.trigger) {
-        case StateTrigger::OnEnter:
-            target_graph = &state_schedules.on_enter;
-            break;
-        case StateTrigger::OnExit:
-            target_graph = &state_schedules.on_exit;
-            break;
-        case StateTrigger::OnTransition:
-            target_graph = &state_schedules.on_transition[static_cast<size_t>(condition.state_from.value())];
-            break;
-    }
-
-    if (!target_graph) {
-        throw exception::Error("Application", "Invalid state condition.");
-    }
+    ScheduleId schedule_id =
+        _build_schedule_id_from_state_condition(condition.trigger, typeid(StateEnum), static_cast<size_t>(condition.state_to),
+            condition.state_from.has_value() ? std::optional<size_t>(static_cast<size_t>(condition.state_from.value())) : std::nullopt);
 
     std::vector<SystemTypeId> ids;
-    (ids.push_back(_add_one_system_to_graph<Funcs>(*target_graph)), ...);
+    (ids.push_back(_add_one_system<Funcs>(schedule_id)), ...);
 
-    // NOTE: For simplicity, the SystemConfigurator for transitions
-    // might have limitations (no .before/.after across different schedules).
-    // Here, we make it work for dependencies within the same transition graph.
-    return SystemConfigurator(this, schedule_for_configurator, std::move(ids));
+    return SystemConfigurator(this, schedule_id, std::move(ids));
 }

@@ -8,19 +8,80 @@
 #include <queue>
 #include <sstream>
 
-r::Application::SystemNode::SystemNode() : id(typeid(void)), func(nullptr)
+namespace r {
+
+// ScheduleId Implementation
+ScheduleId::ScheduleId(Schedule sched)
+    : type(Type::FIXED), fixed_schedule(sched), state_type(std::nullopt), state_value(std::nullopt), from_state_value(std::nullopt)
+{
+}
+
+ScheduleId::ScheduleId(Type t, std::type_index state_t, size_t state_val)
+    : type(t), fixed_schedule(std::nullopt), state_type(state_t), state_value(state_val), from_state_value(std::nullopt)
+{
+}
+
+ScheduleId::ScheduleId(Type t, std::type_index state_t, size_t to_val, size_t from_val)
+    : type(t), fixed_schedule(std::nullopt), state_type(state_t), state_value(to_val), from_state_value(from_val)
+{
+}
+
+bool ScheduleId::operator==(const ScheduleId &other) const
+{
+    if (type != other.type)
+        return false;
+    if (fixed_schedule != other.fixed_schedule)
+        return false;
+    if (state_type != other.state_type)
+        return false;
+    if (state_value != other.state_value)
+        return false;
+    if (from_state_value != other.from_state_value)
+        return false;
+    return true;
+}
+
+}// namespace r
+
+// Hash implementation
+std::size_t std::hash<r::ScheduleId>::operator()(const r::ScheduleId &id) const noexcept
+{
+    std::size_t h = 0;
+    h ^= std::hash<int>{}(static_cast<int>(id.type)) + 0x9e3779b9 + (h << 6) + (h >> 2);
+
+    if (id.fixed_schedule.has_value()) {
+        h ^= std::hash<int>{}(static_cast<int>(id.fixed_schedule.value())) + 0x9e3779b9 + (h << 6) + (h >> 2);
+    }
+
+    if (id.state_type.has_value()) {
+        h ^= id.state_type.value().hash_code() + 0x9e3779b9 + (h << 6) + (h >> 2);
+    }
+
+    if (id.state_value.has_value()) {
+        h ^= std::hash<size_t>{}(id.state_value.value()) + 0x9e3779b9 + (h << 6) + (h >> 2);
+    }
+
+    if (id.from_state_value.has_value()) {
+        h ^= std::hash<size_t>{}(id.from_state_value.value()) + 0x9e3779b9 + (h << 6) + (h >> 2);
+    }
+
+    return h;
+}
+
+namespace r {
+
+Application::SystemNode::SystemNode() : id(typeid(void)), func(nullptr)
 {
     /* __ctor__ */
 }
 
-r::Application::SystemNode::SystemNode(const std::string &p_name, SystemTypeId p_id, SystemFn p_func,
-    std::vector<SystemTypeId> p_dependencies)
+Application::SystemNode::SystemNode(const std::string &p_name, SystemTypeId p_id, SystemFn p_func, std::vector<SystemTypeId> p_dependencies)
     : name(std::move(p_name)), id(p_id), func(p_func), dependencies(std::move(p_dependencies))
 {
     /* __ctor__ */
 }
 
-r::Application::SystemSet::SystemSet(const std::string &pname, SystemSetId pid) noexcept : name(pname), id(pid)
+Application::SystemSet::SystemSet(const std::string &pname, SystemSetId pid) noexcept : name(pname), id(pid)
 {
     /* __ctor__ */
 }
@@ -29,13 +90,13 @@ r::Application::SystemSet::SystemSet(const std::string &pname, SystemSetId pid) 
 * public
 */
 
-r::Application::Application()
+Application::Application()
 {
     Logger::info("Application created");
     std::signal(SIGINT, [](i32) { r::Application::quit.store(true, std::memory_order_relaxed); });
 }
 
-void r::Application::run()
+void Application::run()
 {
     _startup();
     _main_loop();
@@ -46,32 +107,32 @@ void r::Application::run()
 * private
 */
 
-void r::Application::_startup()
+void Application::_startup()
 {
     _scene.insert_resource<core::FrameTime>(_clock.frame());
 
     Logger::debug("Pre-startup schedule running...");
-    _run_schedule(Schedule::PRE_STARTUP);
+    _run_schedule(ScheduleId(Schedule::PRE_STARTUP));
     _apply_commands();
 
-    _systems.erase(Schedule::PRE_STARTUP);
-    if (_systems.empty()) {
+    _all_schedules.erase(ScheduleId(Schedule::PRE_STARTUP));
+    if (_all_schedules.empty()) {
         quit.store(true, std::memory_order_relaxed);
         return;
     }
 
     Logger::debug("Startup schedule running...");
-    _run_schedule(Schedule::STARTUP);
+    _run_schedule(ScheduleId(Schedule::STARTUP));
     _apply_commands();
     Logger::debug("Startup schedule complete. Entering main loop.");
-    _systems.erase(Schedule::STARTUP);
-    if (_systems.empty()) {
+    _all_schedules.erase(ScheduleId(Schedule::STARTUP));
+    if (_all_schedules.empty()) {
         quit.store(true, std::memory_order_relaxed);
         return;
     }
 }
 
-void r::Application::_main_loop()
+void Application::_main_loop()
 {
     while (!quit) {
         _clock.tick();
@@ -79,22 +140,22 @@ void r::Application::_main_loop()
 
         _apply_state_transitions();
 
-        _run_schedule(Schedule::UPDATE);
+        _run_schedule(ScheduleId(Schedule::UPDATE));
         _apply_commands();
 
         for (i32 i = 0; i < _clock.frame().substep_count; ++i) {
-            _run_schedule(Schedule::FIXED_UPDATE);
+            _run_schedule(ScheduleId(Schedule::FIXED_UPDATE));
             _apply_commands();
         }
-        _run_schedule(Schedule::EVENT_CLEANUP);
+        _run_schedule(ScheduleId(Schedule::EVENT_CLEANUP));
         _render_routine();
     }
 }
 
-void r::Application::_shutdown()
+void Application::_shutdown()
 {
     Logger::debug("Main loop exited. Running shutdown schedule...");
-    _run_schedule(Schedule::SHUTDOWN);
+    _run_schedule(ScheduleId(Schedule::SHUTDOWN));
     _apply_commands();
     if (quit.load(std::memory_order_relaxed)) {
         std::cout << "\r";
@@ -107,11 +168,11 @@ void r::Application::_shutdown()
 * private
 */
 
-void r::Application::_run_schedule(const Schedule sched)
+void Application::_run_schedule(const ScheduleId &sched)
 {
-    const auto it = _systems.find(sched);
+    const auto it = _all_schedules.find(sched);
 
-    if (it == _systems.end() || it->second.nodes.empty()) {
+    if (it == _all_schedules.end() || it->second.nodes.empty()) {
         return;
     }
 
@@ -124,7 +185,7 @@ void r::Application::_run_schedule(const Schedule sched)
     _execute_systems(graph);
 }
 
-void r::Application::_sort_schedule(ScheduleGraph &graph)
+void Application::_sort_schedule(ScheduleGraph &graph)
 {
     graph.execution_order.clear();
     std::unordered_map<SystemTypeId, int> in_degree;
@@ -145,7 +206,7 @@ void r::Application::_sort_schedule(ScheduleGraph &graph)
     graph.dirty = false;
 }
 
-void r::Application::_build_adjacency_list(const ScheduleGraph &graph, std::unordered_map<SystemTypeId, int> &in_degree,
+void Application::_build_adjacency_list(const ScheduleGraph &graph, std::unordered_map<SystemTypeId, int> &in_degree,
     std::unordered_map<SystemTypeId, std::vector<SystemTypeId>> &adj_list)
 {
     /* Build adjacency list from direct system dependencies */
@@ -160,7 +221,7 @@ void r::Application::_build_adjacency_list(const ScheduleGraph &graph, std::unor
     }
 }
 
-void r::Application::_apply_set_ordering_constraints(const ScheduleGraph &graph, std::unordered_map<SystemTypeId, int> &in_degree,
+void Application::_apply_set_ordering_constraints(const ScheduleGraph &graph, std::unordered_map<SystemTypeId, int> &in_degree,
     std::unordered_map<SystemTypeId, std::vector<SystemTypeId>> &adj_list)
 {
     /* Add dependencies from set ordering and system-to-set ordering */
@@ -218,7 +279,7 @@ void r::Application::_apply_set_ordering_constraints(const ScheduleGraph &graph,
     }
 }
 
-void r::Application::_perform_topological_sort(ScheduleGraph &graph, std::unordered_map<SystemTypeId, int> &in_degree,
+void Application::_perform_topological_sort(ScheduleGraph &graph, std::unordered_map<SystemTypeId, int> &in_degree,
     const std::unordered_map<SystemTypeId, std::vector<SystemTypeId>> &adj_list)
 {
     /* Topological sort (Kahn's algorithm) */
@@ -258,44 +319,54 @@ void r::Application::_perform_topological_sort(ScheduleGraph &graph, std::unorde
     }
 }
 
-void r::Application::_execute_systems(const ScheduleGraph &graph)
+void Application::_execute_systems(const ScheduleGraph &graph)
 {
     for (const auto *node_ptr : graph.execution_order) {
         node_ptr->func(_scene, _command_buffer);
     }
 }
 
-void r::Application::_render_routine()
+void Application::_render_routine()
 {
-    _run_schedule(Schedule::BEFORE_RENDER_2D);
-    _run_schedule(Schedule::BEFORE_RENDER_3D);
+    _run_schedule(ScheduleId(Schedule::BEFORE_RENDER_2D));
+    _run_schedule(ScheduleId(Schedule::BEFORE_RENDER_3D));
 
-    _run_schedule(Schedule::RENDER_3D);
+    _run_schedule(ScheduleId(Schedule::RENDER_3D));
 
-    _run_schedule(Schedule::AFTER_RENDER_3D);
-    _run_schedule(Schedule::RENDER_2D);
+    _run_schedule(ScheduleId(Schedule::AFTER_RENDER_3D));
+    _run_schedule(ScheduleId(Schedule::RENDER_2D));
 
-    _run_schedule(Schedule::AFTER_RENDER_2D);
+    _run_schedule(ScheduleId(Schedule::AFTER_RENDER_2D));
 }
 
-void r::Application::_apply_commands()
+void Application::_apply_commands()
 {
     _command_buffer.apply(_scene);
 }
 
-void r::Application::_apply_state_transitions()
+void Application::_apply_state_transitions()
 {
     if (_state_transition_runner) {
         _state_transition_runner();
     }
 }
 
-void r::Application::_run_transition_schedule(ScheduleGraph& graph)
+ScheduleId Application::_build_schedule_id_from_state_condition(StateTrigger trigger, std::type_index state_type, size_t state_value,
+    std::optional<size_t> from_value)
 {
-    if (graph.nodes.empty()) return;
-    
-    if (graph.dirty) {
-        _sort_schedule(graph);
+    switch (trigger) {
+        case StateTrigger::OnEnter:
+            return ScheduleId(ScheduleId::Type::ON_ENTER, state_type, state_value);
+        case StateTrigger::OnExit:
+            return ScheduleId(ScheduleId::Type::ON_EXIT, state_type, state_value);
+        case StateTrigger::OnTransition:
+            if (from_value.has_value()) {
+                return ScheduleId(ScheduleId::Type::ON_TRANSITION, state_type, state_value, from_value.value());
+            }
+            throw exception::Error("Application", "OnTransition requires a from_state value.");
+        default:
+            throw exception::Error("Application", "Invalid state trigger type.");
     }
-    _execute_systems(graph);
 }
+
+}// namespace r

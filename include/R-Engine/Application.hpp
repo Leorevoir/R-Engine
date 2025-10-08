@@ -9,6 +9,7 @@
 #include <R-Engine/ECS/Scene.hpp>
 #include <R-Engine/ECS/System.hpp>
 
+#include <optional>
 #include <string>
 #include <typeindex>
 #include <unordered_map>
@@ -35,6 +36,43 @@ enum class Schedule {
 R_ENUM_FLAGABLE(Schedule)
 
 // clang-format on
+
+/**
+ * @brief Unique identifier for schedules, including dynamic state-based schedules.
+ */
+struct ScheduleId {
+        enum class Type {
+            FIXED,       // Fixed schedules like UPDATE, STARTUP
+            ON_ENTER,    // State entry schedule
+            ON_EXIT,     // State exit schedule
+            ON_TRANSITION// State-to-state transition schedule
+        };
+
+        Type type;
+        std::optional<Schedule> fixed_schedule;   // For FIXED type
+        std::optional<std::type_index> state_type;// For state-based schedules
+        std::optional<size_t> state_value;        // Target state value
+        std::optional<size_t> from_state_value;   // Source state (for transitions)
+
+        // Constructors
+        ScheduleId(Schedule sched);
+        ScheduleId(Type t, std::type_index state_t, size_t state_val);
+        ScheduleId(Type t, std::type_index state_t, size_t to_val, size_t from_val);
+
+        bool operator==(const ScheduleId &other) const;
+};
+
+}// namespace r
+
+// Hash function for ScheduleId to use in unordered_map
+namespace std {
+template<>
+struct hash<r::ScheduleId> {
+        std::size_t operator()(const r::ScheduleId &id) const noexcept;
+};
+}// namespace std
+
+namespace r {
 
 class R_ENGINE_API Application final
 {
@@ -95,15 +133,7 @@ class R_ENGINE_API Application final
                 bool dirty = true;
         };
 
-        struct States {
-                ScheduleGraph on_enter;
-                ScheduleGraph on_exit;
-                std::unordered_map<size_t, ScheduleGraph> on_transition;
-        };
-        std::unordered_map<std::type_index, States> _states;
         std::function<void()> _state_transition_runner;
-
-        using ScheduleMap = std::unordered_map<Schedule, ScheduleGraph>;
 
     public:
         /* Forward declaration */
@@ -176,7 +206,7 @@ class R_ENGINE_API Application final
         class SystemConfigurator final : public ConfiguratorBase<SystemConfigurator>
         {
             public:
-                SystemConfigurator(Application *app, Schedule schedule, std::vector<SystemTypeId> system_ids) noexcept;
+                SystemConfigurator(Application *app, ScheduleId schedule, std::vector<SystemTypeId> system_ids) noexcept;
 
                 // FIX: Bring the hidden base class 'add_systems' into this class's scope.
                 using ConfiguratorBase<SystemConfigurator>::add_systems;
@@ -230,7 +260,7 @@ class R_ENGINE_API Application final
                 SystemConfigurator &in_set() noexcept;
 
             private:
-                Schedule _schedule;
+                ScheduleId _schedule;
                 std::vector<SystemTypeId> _system_ids;
         };
 
@@ -243,7 +273,7 @@ class R_ENGINE_API Application final
         class SetConfigurator final : public ConfiguratorBase<SetConfigurator<SetTypes...>>
         {
             public:
-                SetConfigurator(Application *app, Schedule schedule, std::vector<SystemSetId> setids) noexcept;
+                SetConfigurator(Application *app, ScheduleId schedule, std::vector<SystemSetId> setids) noexcept;
 
                 /**
                  * @brief Specifies that all systems in the configured sets must run before
@@ -264,7 +294,7 @@ class R_ENGINE_API Application final
                 SetConfigurator &after() noexcept;
 
             private:
-                Schedule _schedule;
+                ScheduleId _schedule;
                 std::vector<SystemSetId> _set_ids;
         };
 
@@ -357,12 +387,11 @@ class R_ENGINE_API Application final
         void _main_loop();
         void _shutdown();
         void _render_routine();
-        void _run_schedule(const Schedule sched);
+        void _run_schedule(const ScheduleId &sched);
         void _sort_schedule(ScheduleGraph &graph);
         void _execute_systems(const ScheduleGraph &graph);
         void _apply_commands();
         void _apply_state_transitions();
-        void _run_transition_schedule(ScheduleGraph &graph);
 
         /* Graph sorting helpers */
         void _build_adjacency_list(const ScheduleGraph &graph, std::unordered_map<SystemTypeId, int> &in_degree,
@@ -373,10 +402,10 @@ class R_ENGINE_API Application final
             const std::unordered_map<SystemTypeId, std::vector<SystemTypeId>> &adj_list);
 
         template<auto SystemFunc>
-        SystemTypeId _add_one_system(Schedule when) noexcept;
+        SystemTypeId _add_one_system(const ScheduleId &when) noexcept;
 
         template<typename SetType>
-        SystemSetId _ensure_set_exists(Schedule when) noexcept;
+        SystemSetId _ensure_set_exists(const ScheduleId &when) noexcept;
 
         template<typename PluginT>
         void _add_one_plugin(PluginT &&plugin) noexcept;
@@ -384,8 +413,11 @@ class R_ENGINE_API Application final
         template<auto SystemFunc>
         SystemTypeId _add_one_system_to_graph(ScheduleGraph &graph) noexcept;
 
+        ScheduleId _build_schedule_id_from_state_condition(StateTrigger trigger, std::type_index state_type, size_t state_value,
+            std::optional<size_t> from_value = std::nullopt);
+
         core::Clock _clock = {};
-        ScheduleMap _systems = {};
+        std::unordered_map<ScheduleId, ScheduleGraph> _all_schedules = {};
         ecs::Scene _scene = {};
         ecs::CommandBuffer _command_buffer = {};
 };

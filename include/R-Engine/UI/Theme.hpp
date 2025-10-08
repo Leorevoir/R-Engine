@@ -19,10 +19,9 @@ struct R_ENGINE_API UiTheme {
     int default_font_size = 18;
 
     struct ButtonPalette {
-            // A slightly more colorful default palette
-            Color bg_normal   = {52, 73, 94, 255};   // blue-gray
-            Color bg_hover    = {41, 128, 185, 255}; // blue
-            Color bg_pressed  = {33, 97, 140, 255};  // dark blue
+            Color bg_normal   = {52, 73, 94, 255};
+            Color bg_hover    = {41, 128, 185, 255};
+            Color bg_pressed  = {33, 97, 140, 255};
             Color bg_disabled = {80, 80, 80, 255};
 
             Color border_normal   = {200, 205, 215, 255};

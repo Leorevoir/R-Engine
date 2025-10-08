@@ -2,12 +2,9 @@
 
 #include "R-Engine/ECS/Command.hpp"
 
-/* EntityCommands */
-
-inline r::ecs::EntityCommands::EntityCommands(r::ecs::CommandBuffer *buffer, Entity entity) noexcept : _buffer(buffer), _entity(entity)
-{
-    /* __ctor__ */
-}
+/**
+ * EntityCommands
+ */
 
 template<typename T>
 inline r::ecs::EntityCommands &r::ecs::EntityCommands::insert(T component) noexcept
@@ -27,29 +24,29 @@ inline r::ecs::EntityCommands &r::ecs::EntityCommands::remove() noexcept
     return *this;
 }
 
-inline r::ecs::Entity r::ecs::EntityCommands::id() const noexcept
+template<typename FuncT>
+inline r::ecs::EntityCommands &r::ecs::EntityCommands::with_children(FuncT &&func) noexcept
 {
-    return _entity;
-}
+    if (_buffer) {
+        ChildBuilder builder(_buffer->get_commands(), _entity);
 
-/* CommandBuffer */
-
-inline void r::ecs::CommandBuffer::apply(Scene &scene)
-{
-    scene.clear_command_buffer_placeholder_map();
-    for (const auto &command : _commands) {
-        command(scene);
+        func(builder);
     }
-    _commands.clear();
+    return *this;
 }
+
+/**
+ * CommandBuffer
+ */
 
 template<typename T>
 inline void r::ecs::CommandBuffer::add_component(Entity e, T component)
 {
-    add_command([e, component = std::move(component)](Scene &scene) mutable {
+    _add_command([e, component = std::move(component)](Scene &scene) mutable {
         const auto &map = scene.get_command_buffer_placeholder_map();
         const auto it = map.find(e);
         const Entity real_entity = (it != map.end()) ? it->second : e;
+
         scene.add_component<T>(real_entity, std::move(component));
     });
 }
@@ -57,51 +54,18 @@ inline void r::ecs::CommandBuffer::add_component(Entity e, T component)
 template<typename T>
 inline void r::ecs::CommandBuffer::remove_component(Entity e)
 {
-    add_command([e](Scene &scene) {
+    _add_command([e](Scene &scene) {
         const auto &map = scene.get_command_buffer_placeholder_map();
         const auto it = map.find(e);
         const Entity real_entity = (it != map.end()) ? it->second : e;
+
         scene.remove_component<T>(real_entity);
     });
 }
 
-inline void r::ecs::CommandBuffer::despawn(Entity e)
-{
-    add_command([e](Scene &scene) {
-        const auto &map = scene.get_command_buffer_placeholder_map();
-        const auto it = map.find(e);
-        const Entity real_entity = (it != map.end()) ? it->second : e;
-        scene.destroy_entity(real_entity);
-    });
-}
-
-inline r::ecs::Entity r::ecs::CommandBuffer::spawn_entity()
-{
-    const Entity placeholder = _next_placeholder--;
-    add_command([placeholder](Scene &scene) {
-        const Entity real_entity = scene.create_entity();
-        scene.map_command_buffer_placeholder(placeholder, real_entity);
-    });
-    return placeholder;
-}
-
-inline void r::ecs::CommandBuffer::add_command(std::function<void(Scene &)> &&command)
-{
-    _commands.emplace_back(std::move(command));
-}
-
-/* Commands */
-
-inline r::ecs::Commands::Commands(CommandBuffer *buffer) noexcept : _buffer(buffer)
-{
-    /* __ctor__ */
-}
-
-inline r::ecs::EntityCommands r::ecs::Commands::spawn() noexcept
-{
-    const Entity placeholder = _buffer ? _buffer->spawn_entity() : 0;
-    return EntityCommands(_buffer, placeholder);
-}
+/**
+ * Commands
+ */
 
 template<typename... Components>
 inline r::ecs::EntityCommands r::ecs::Commands::spawn(Components &&...components) noexcept
@@ -112,22 +76,21 @@ inline r::ecs::EntityCommands r::ecs::Commands::spawn(Components &&...components
     return entity_cmds;
 }
 
-inline r::ecs::EntityCommands r::ecs::Commands::entity(Entity e) noexcept
+/**
+ * ChildBuilder
+ */
+
+inline r::ecs::ChildBuilder::ChildBuilder(r::ecs::Commands *commands, r::ecs::Entity parent) noexcept : _commands(commands), _parent(parent)
 {
-    return EntityCommands(_buffer, e);
+    /* __ctor__ */
 }
 
-template<typename T>
-inline void r::ecs::Commands::add_component(Entity e, T comp) noexcept
+template<typename... Components>
+inline r::ecs::EntityCommands r::ecs::ChildBuilder::spawn(Components &&...components) noexcept
 {
-    if (_buffer) {
-        _buffer->add_component<T>(e, std::move(comp));
-    }
-}
+    auto child = _commands->spawn(std::forward<Components>(components)...);
 
-inline void r::ecs::Commands::despawn(Entity e) noexcept
-{
-    if (_buffer) {
-        _buffer->despawn(e);
-    }
+    child.insert(Parent{_parent});
+    _commands->add_child(_parent, child.id());
+    return child;
 }

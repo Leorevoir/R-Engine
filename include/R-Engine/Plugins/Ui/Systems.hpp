@@ -23,37 +23,43 @@ namespace r::ui {
 void startup_system(r::ecs::Res<UiPluginConfig> cfg, r::ecs::Res<UiTheme> theme, r::ecs::Res<UiFonts> fonts) noexcept;
 void update_system(r::ecs::ResMut<UiEvents> events, r::ecs::ResMut<UiInputState> input, r::ecs::Res<r::UserInput> ui, r::ecs::ResMut<UiPluginConfig> cfg) noexcept;
 
-/* Hierarchy mapping */
-void remap_parents_system(r::ecs::Query<r::ecs::Mut<r::Parent>> q, r::ecs::PlaceholderMap map) noexcept;
+/* No remap needed in handle-based mode */
+inline void remap_parents_system(...) {}
 
 /* Pointer + keyboard navigation */
 void pointer_system(
     r::ecs::ResMut<UiInputState> state,
     r::ecs::ResMut<UiEvents> events,
-    r::ecs::Query<r::ecs::Ref<r::UiNode>, r::ecs::Ref<r::ComputedLayout>, r::ecs::Optional<r::Style>, r::ecs::Optional<r::Visibility>, r::ecs::Optional<r::Parent>, r::ecs::Optional<r::UiButton>, r::ecs::Optional<r::UiScroll>, r::ecs::EntityId> q) noexcept;
+    r::ecs::Query<r::ecs::Ref<r::UiNode>, r::ecs::Ref<r::ComputedLayout>, r::ecs::Optional<r::Style>, r::ecs::Optional<r::Visibility>, r::ecs::Optional<r::UiParent>, r::ecs::Optional<r::UiId>, r::ecs::Optional<r::UiButton>, r::ecs::Optional<r::UiScroll>> q) noexcept;
 
 void keyboard_nav_system(
     r::ecs::Res<r::UserInput> input,
     r::ecs::ResMut<r::UiInputState> state,
     r::ecs::ResMut<r::UiEvents> events,
-    r::ecs::Query<r::ecs::Optional<r::UiButton>, r::ecs::Optional<r::Visibility>, r::ecs::EntityId> q);
+    r::ecs::Query<r::ecs::Optional<r::UiButton>, r::ecs::Optional<r::Visibility>, r::ecs::Optional<r::UiId>> q);
+
+/* Scroll wheel input -> UiScroll */
+void scroll_input_system(
+    r::ecs::Res<r::UiInputState> state,
+    r::ecs::Res<r::UserInput> input,
+    r::ecs::ResMut<r::UiEvents> events,
+    r::ecs::Query<r::ecs::Optional<r::UiId>, r::ecs::Optional<r::UiParent>, r::ecs::Optional<r::Style>, r::ecs::Optional<r::UiScroll>> q) noexcept;
 
 /* Layout + scroll */
 void compute_layout_system(
-    r::ecs::Commands &cmds,
     r::ecs::Query<
-        r::ecs::Optional<r::Parent>,
+        r::ecs::Mut<r::ComputedLayout>,
         r::ecs::Optional<r::Style>,
         r::ecs::Optional<r::Visibility>,
-        r::ecs::Ref<r::UiNode>,
-        r::ecs::EntityId
+        r::ecs::Optional<r::UiParent>,
+        r::ecs::Optional<r::UiScroll>,
+        r::ecs::Optional<r::UiId>
     > q,
-    r::ecs::Res<r::WindowPluginConfig> win,
     r::ecs::Res<r::UiTheme> theme);
 
 void scroll_clamp_system(
-    r::ecs::Query<r::ecs::Mut<r::UiScroll>, r::ecs::Ref<r::ComputedLayout>, r::ecs::EntityId> scq,
-    r::ecs::Query<r::ecs::Ref<r::ComputedLayout>, r::ecs::Optional<r::Style>, r::ecs::Optional<r::Parent>, r::ecs::EntityId> allq,
+    r::ecs::Query<r::ecs::Mut<r::UiScroll>, r::ecs::Ref<r::ComputedLayout>, r::ecs::Optional<r::UiId>> scq,
+    r::ecs::Query<r::ecs::Ref<r::ComputedLayout>, r::ecs::Optional<r::Style>, r::ecs::Optional<r::UiParent>, r::ecs::Optional<r::UiId>> allq,
     r::ecs::Res<r::UiTheme> theme);
 
 /* Render */
@@ -62,6 +68,6 @@ void render_system(r::ecs::Res<UiPluginConfig> cfg, r::ecs::Res<r::Camera3d> cam
     r::ecs::Res<r::UiTheme> theme,
     r::ecs::ResMut<r::UiTextures> textures,
     r::ecs::ResMut<r::UiFonts> fonts,
-    r::ecs::Query<r::ecs::Ref<r::UiNode>, r::ecs::Ref<r::ComputedLayout>, r::ecs::Optional<r::Style>, r::ecs::Optional<r::Visibility>, r::ecs::Optional<r::Parent>, r::ecs::Optional<r::UiText>, r::ecs::Optional<r::UiImage>, r::ecs::Optional<r::UiButton>, r::ecs::Optional<r::UiScroll>, r::ecs::EntityId> q) noexcept;
+    r::ecs::Query<r::ecs::Ref<r::UiNode>, r::ecs::Ref<r::ComputedLayout>, r::ecs::Optional<r::Style>, r::ecs::Optional<r::Visibility>, r::ecs::Optional<r::UiParent>, r::ecs::Optional<r::Parent>, r::ecs::Optional<r::UiText>, r::ecs::Optional<r::UiImage>, r::ecs::Optional<r::UiButton>, r::ecs::Optional<r::UiScroll>, r::ecs::Optional<r::UiId>> q) noexcept;
 
 } // namespace r::ui

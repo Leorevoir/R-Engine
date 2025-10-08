@@ -58,8 +58,6 @@ W r::ecs::Query<Wrappers...>::Iterator::build_wrapper(Scene *scene, Entity e)
     } else if constexpr (is_optional<W>::value) {
         using Comp = typename component_of<W>::type;
         return W{scene->get_component_ptr<Comp>(e)};
-    } else if constexpr (is_entity_id<W>::value) {
-        return W{e};
     } else if constexpr (is_with<W>::value || is_without<W>::value) {
         return W{};
     } else {

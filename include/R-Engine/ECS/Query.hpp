@@ -7,20 +7,6 @@ namespace r {
 namespace ecs {
 
 /**
- * @brief Wrapper to access the current entity id in a Query.
- */
-struct EntityId {
-        Entity value = 0;
-};
-
-/**
- * @brief Placeholder mapping exposed to systems (read-only view of Scene's map).
- */
-struct PlaceholderMap {
-        const std::unordered_map<Entity, Entity> *ptr = nullptr;
-};
-
-/**
  * wrappers for query parameters (Dependency Injection)
  */
 
@@ -122,10 +108,6 @@ template<typename>
 struct is_optional : std::false_type {
 };
 
-template<typename>
-struct is_entity_id : std::false_type {
-};
-
 template<typename T>
 struct is_res<Res<T>> : std::true_type {
 };
@@ -152,10 +134,6 @@ struct is_without<Without<T>> : std::true_type {
 
 template<typename T>
 struct is_optional<Optional<T>> : std::true_type {
-};
-
-template<>
-struct is_entity_id<EntityId> : std::true_type {
 };
 
 /**

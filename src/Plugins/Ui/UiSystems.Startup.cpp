@@ -17,12 +17,16 @@ void update_system(r::ecs::ResMut<UiEvents> events, r::ecs::ResMut<UiInputState>
     events.ptr->clicked.clear();
     events.ptr->entered.clear();
     events.ptr->left.clear();
+    events.ptr->focus_changed.clear();
+    events.ptr->blurred.clear();
+    events.ptr->value_changed.clear();
 
     const ::Vector2 mp = GetMousePosition();
     input.ptr->mouse_position = {mp.x, mp.y};
     input.ptr->mouse_left_pressed = ui.ptr->isMouseButtonPressed(MOUSE_BUTTON_LEFT);
-    input.ptr->mouse_left_released = ui.ptr->isMouseButtonReleased(MOUSE_BUTTON_LEFT);
-    input.ptr->mouse_left_down = ui.ptr->isMouseButtonDown(MOUSE_BUTTON_LEFT);
+    // Use Raylib for down/released to avoid conflating edges
+    input.ptr->mouse_left_down = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
+    input.ptr->mouse_left_released = IsMouseButtonReleased(MOUSE_BUTTON_LEFT);
 
     /* Debug toggle: F1 to draw bounds */
     if (ui.ptr->isKeyPressed(KEY_F1)) {
@@ -30,18 +34,6 @@ void update_system(r::ecs::ResMut<UiEvents> events, r::ecs::ResMut<UiInputState>
     }
 }
 
-void remap_parents_system(
-    r::ecs::Query<r::ecs::Mut<r::Parent>> q,
-    r::ecs::PlaceholderMap map) noexcept
-{
-    if (!map.ptr) return;
-    for (auto [parent] : q) {
-        auto it = map.ptr->find(parent.ptr->id);
-        if (it != map.ptr->end()) {
-            parent.ptr->id = it->second;
-        }
-    }
-}
+// No-op in handle-based mode (kept only for binary compatibility)
 
 } // namespace r::ui
-

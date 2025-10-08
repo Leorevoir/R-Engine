@@ -12,7 +12,6 @@
     #pragma GCC diagnostic ignored "-Wswitch-default"
 #endif
 #include <raylib.h>
-#include <rlgl.h>
 #if defined(__clang__)
     #pragma clang diagnostic pop
 #elif defined(__GNUC__)

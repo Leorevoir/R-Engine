@@ -12,6 +12,11 @@ namespace r {
 struct R_ENGINE_API UiNode {
 };
 
+/* UI handle + logical parent: ECS-agnostic IDs used by UiPlugin */
+struct R_ENGINE_API UiId { u32 value = 0; };
+struct R_ENGINE_API UiParent { u32 handle = 0; };
+struct R_ENGINE_API UiIdGen { u32 next = 1; };
+
 /* Focusable marker (optional). By default UiButton is treated as focusable. */
 struct R_ENGINE_API UiFocusable {
 };
@@ -51,6 +56,7 @@ struct R_ENGINE_API Style {
     f32 max_height = 0.f;    /* 0 -> unset */
     Color background{200, 200, 200, 200};
     i32 z_index = 0;
+    i32 order = 0;           /* layout ordering within parent (lower comes first) */
     f32 margin = 0.f;        /* uniform margin in px */
     f32 padding = 0.f;       /* uniform padding in px */
     LayoutDirection direction = LayoutDirection::Column;

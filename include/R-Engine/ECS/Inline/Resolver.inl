@@ -76,13 +76,6 @@ T r::ecs::Resolver::resolve(std::type_identity<T>)
     return T{};
 }
 
-inline r::ecs::PlaceholderMap r::ecs::Resolver::resolve(std::type_identity<r::ecs::PlaceholderMap>)
-{
-    PlaceholderMap map;
-    map.ptr = &_scene->get_command_buffer_placeholder_map();
-    return map;
-}
-
 /**
  * private
  */

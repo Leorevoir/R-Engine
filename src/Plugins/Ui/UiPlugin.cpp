@@ -23,7 +23,13 @@ void UiPlugin::build(Application &app)
         .insert_resource(UiInputState{})
         .insert_resource(UiEvents{})
         .add_systems(Schedule::STARTUP, ui::startup_system)
-        .add_systems(Schedule::UPDATE, ui::remap_parents_system, ui::update_system, ui::compute_layout_system, ui::keyboard_nav_system, ui::scroll_clamp_system, ui::pointer_system)
+        .add_systems(Schedule::UPDATE,
+            ui::update_system,
+            ui::compute_layout_system,
+            ui::pointer_system,
+            ui::scroll_input_system,
+            ui::scroll_clamp_system,
+            ui::keyboard_nav_system)
         .add_systems(Schedule::RENDER, ui::render_system)
         .add_systems(Schedule::SHUTDOWN, [](r::ecs::ResMut<r::UiTextures> tex, r::ecs::ResMut<r::UiFonts> fonts){
             if (IsWindowReady()) {
@@ -38,4 +44,3 @@ void UiPlugin::build(Application &app)
 }
 
 } // namespace r
-

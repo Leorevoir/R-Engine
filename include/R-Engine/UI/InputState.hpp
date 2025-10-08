@@ -15,10 +15,10 @@ struct R_ENGINE_API UiInputState {
     bool mouse_left_pressed = false;
     bool mouse_left_released = false;
 
-    ecs::Entity hovered = 0;
-    ecs::Entity prev_hovered = 0;
-    ecs::Entity active = 0;
-    ecs::Entity focused = 0;
+    u32 hovered = 0;
+    u32 prev_hovered = 0;
+    u32 active = 0;
+    u32 focused = 0;
 };
 
 } /* namespace r */

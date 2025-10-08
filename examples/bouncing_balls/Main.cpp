@@ -292,21 +292,25 @@ int main()
 
         /* Add systems to the application schedule. */
         /* STARTUP systems run once at the beginning. */
-        .add_systems(r::Schedule::STARTUP, spawn_entities_system, setup_input_system)
+        .add_systems<spawn_entities_system, setup_input_system>(r::Schedule::STARTUP)
 
         /* UPDATE systems run once every frame for game logic and physics. */
         /* The order matters here: input -> physics -> movement. */
-        .add_systems(r::Schedule::UPDATE,
+        .add_systems<
             spawn_on_click_system,
             player_control_system,
             apply_gravity_system,
-            move_system,
             bounce_system
-        )
+        >(r::Schedule::UPDATE)
+
+        /* Add move_system and explicitly state that it must run AFTER player_control_system. */
+        /* The chain continues seamlessly. */
+        .add_systems<move_system>(r::Schedule::UPDATE)
+        .after<player_control_system>()
 
         /* RENDER systems run after UPDATE systems for drawing. */
         /* The RenderPlugin already adds systems to begin and end the drawing context. */
-        .add_systems(r::Schedule::RENDER, render_system)
+        .add_systems<render_system>(r::Schedule::RENDER_2D)
 
         /* Start the main application loop. */
         .run();

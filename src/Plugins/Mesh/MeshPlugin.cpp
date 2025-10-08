@@ -33,5 +33,6 @@ r::MeshPlugin::~MeshPlugin()
 
 void r::MeshPlugin::build(r::Application &app)
 {
-    app.insert_resource(Meshes{}).add_systems(Schedule::RENDER, mesh_render_system);
+    app.insert_resource(Meshes{})
+       .add_systems<mesh_render_system>(Schedule::RENDER_3D);
 }

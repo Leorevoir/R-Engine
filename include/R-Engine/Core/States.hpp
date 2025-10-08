@@ -54,14 +54,6 @@ struct NextState {
 };
 
 template<typename T>
-struct StateCondition {
-        static_assert(std::is_enum_v<T>, "State type must be an enum.");
-        StateTrigger trigger;
-        T state_to;
-        std::optional<T> state_from = std::nullopt;
-};
-
-template<typename T>
 struct OnEnter {
         static_assert(std::is_enum_v<T>, "State type must be an enum.");
         using EnumType = T;

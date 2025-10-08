@@ -10,14 +10,17 @@ static constexpr u16 MAX_KEY = 348;
 bool r::UserInput::isKeyPressed(int key_code) const
 {
     const auto it = keys_pressed.find(key_code);
+
     return it != keys_pressed.end();
 }
 
 bool r::UserInput::isMouseButtonPressed(int button_code) const
 {
     const auto it = mouse_buttons_pressed.find(button_code);
+
     return it != mouse_buttons_pressed.end();
 }
+
 /**
  * @brief Bind an action (action name) to a specific input. Inputs can be keyboard or mouse types.
  * @details This system adds a name to a specific key
@@ -52,12 +55,12 @@ static void input_system(r::ecs::ResMut<r::UserInput> userInput)
 {
     userInput.ptr->keys_pressed.clear();
     for (u16 key = FIRST_KEY; key < MAX_KEY; ++key) {
-        if (IsKeyPressed(key)) {
+        if (IsKeyDown(key)) {
             userInput.ptr->keys_pressed.insert(key);
         }
     }
 
-    /* 3 because we count 3 buttons on the mouse */
+    /* 3 Because we count 3 buttons on the mouse */
     userInput.ptr->mouse_buttons_pressed.clear();
     for (u16 button = 0; button < 3; ++button) {
         if (IsMouseButtonPressed(button)) {

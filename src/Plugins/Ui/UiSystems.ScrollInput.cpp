@@ -1,4 +1,8 @@
-﻿#include <R-Engine/Plugins/Ui/Systems.hpp>
+﻿/**
+ * \file UiSystems.ScrollInput.cpp
+ * \brief Mouse wheel handling for scrollable UI containers.
+ */
+#include <R-Engine/Plugins/Ui/Systems.hpp>
 #include <unordered_map>
 
 namespace r::ui {
@@ -26,7 +30,7 @@ void scroll_input_system(
     }
 
     u32 e = state.ptr->hovered;
-    const float step = 40.f; // pixels per wheel unit
+    const float step = 40.f;
     while (e != 0) {
         auto sit = scrolls.find(e);
         auto stit = styles.find(e);
@@ -42,5 +46,4 @@ void scroll_input_system(
     }
 }
 
-} // namespace r::ui
-
+}

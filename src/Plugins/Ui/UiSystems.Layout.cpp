@@ -1,4 +1,8 @@
-﻿#include <R-Engine/Plugins/Ui/Systems.hpp>
+﻿/**
+ * \file UiSystems.Layout.cpp
+ * \brief Layout computation systems for the UI plugin.
+ */
+#include <R-Engine/Plugins/Ui/Systems.hpp>
 #include <unordered_set>
 #include <unordered_map>
 #include <vector>
@@ -60,7 +64,7 @@ static void _layout_recursive(
         default: lead = 0.f; spacing = 0.f; break;
     }
 
-    // Apply lead only along the main axis
+    /* Apply lead only along the main axis */
     float cursor_x = content.x + (row ? lead : 0.f);
     float cursor_y = content.y + (row ? 0.f : lead);
 
@@ -89,7 +93,7 @@ static void _layout_recursive(
         float y = row ? (content.y + cmargin) : (cursor_y + cmargin);
         if (cs.position == r::PositionType::Absolute) { x = content.x + cs.offset_x; y = content.y + cs.offset_y; }
 
-        // Cross-axis alignment (Center/End) + AlignSelf override
+        /* Cross-axis alignment (Center/End) + AlignSelf override */
         auto resolve_align = [&](const r::Style &child_style) -> r::AlignItems {
             if (child_style.align_self != r::AlignSelf::Auto) {
                 switch (child_style.align_self) {
@@ -106,14 +110,14 @@ static void _layout_recursive(
         const r::AlignItems eff_align = resolve_align(cs);
         if (cs.position == r::PositionType::Relative) {
             if (row) {
-                // cross-axis is vertical
+                /* cross-axis is vertical */
                 switch (eff_align) {
                     case r::AlignItems::Center: y = content.y + (content.h - ch) * 0.5f; break;
                     case r::AlignItems::End:    y = content.y + content.h - ch - cmargin; break;
-                    default: break; // Start already handled; Stretch handled above
+                    default: break;
                 }
             } else {
-                // Column: cross-axis is horizontal
+                /* Column: cross-axis is horizontal */
                 switch (eff_align) {
                     case r::AlignItems::Center: x = content.x + (content.w - cw) * 0.5f; break;
                     case r::AlignItems::End:    x = content.x + content.w - cw - cmargin; break;
@@ -248,4 +252,4 @@ void scroll_clamp_system(
     }
 }
 
-} // namespace r::ui
+}

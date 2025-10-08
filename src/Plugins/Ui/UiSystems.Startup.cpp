@@ -1,3 +1,7 @@
+/**
+ * \file UiSystems.Startup.cpp
+ * \brief Startup and frame update utilities for the UI plugin.
+ */
 #include <R-Engine/Plugins/Ui/Systems.hpp>
 #include <R-Engine/Core/Logger.hpp>
 
@@ -24,7 +28,6 @@ void update_system(r::ecs::ResMut<UiEvents> events, r::ecs::ResMut<UiInputState>
     const ::Vector2 mp = GetMousePosition();
     input.ptr->mouse_position = {mp.x, mp.y};
     input.ptr->mouse_left_pressed = ui.ptr->isMouseButtonPressed(MOUSE_BUTTON_LEFT);
-    // Use Raylib for down/released to avoid conflating edges
     input.ptr->mouse_left_down = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
     input.ptr->mouse_left_released = IsMouseButtonReleased(MOUSE_BUTTON_LEFT);
 
@@ -34,6 +37,5 @@ void update_system(r::ecs::ResMut<UiEvents> events, r::ecs::ResMut<UiInputState>
     }
 }
 
-// No-op in handle-based mode (kept only for binary compatibility)
 
-} // namespace r::ui
+}

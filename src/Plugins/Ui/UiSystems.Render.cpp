@@ -1,4 +1,8 @@
-﻿#include <R-Engine/Plugins/Ui/Systems.hpp>
+﻿/**
+ * \file UiSystems.Render.cpp
+ * \brief Rendering system for the UI plugin using Raylib.
+ */
+#include <R-Engine/Plugins/Ui/Systems.hpp>
 #include <unordered_map>
 #include <vector>
 #include <algorithm>
@@ -145,7 +149,7 @@ void render_system(r::ecs::Res<UiPluginConfig> cfg, r::ecs::Res<r::Camera3d> cam
     }
 
     /* Foreground: images and text */
-    std::unordered_map<u32, const r::ComputedLayout *> layouts2; layouts2 = layouts; // alias for reuse in loop below
+    std::unordered_map<u32, const r::ComputedLayout *> layouts2; layouts2 = layouts;
     std::unordered_map<u32, r::Style> styles2; styles2 = styles;
     std::unordered_map<u32, u32> parents2; parents2 = parents;
 
@@ -230,4 +234,4 @@ void render_system(r::ecs::Res<UiPluginConfig> cfg, r::ecs::Res<r::Camera3d> cam
     BeginMode3D(_to_raylib(*cam.ptr));
 }
 
-} // namespace r::ui
+}

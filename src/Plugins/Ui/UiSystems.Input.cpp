@@ -1,4 +1,8 @@
-﻿#include <R-Engine/Plugins/Ui/Systems.hpp>
+﻿/**
+ * \file UiSystems.Input.cpp
+ * \brief Pointer and keyboard input systems for UI interactions.
+ */
+#include <R-Engine/Plugins/Ui/Systems.hpp>
 #include <unordered_map>
 #include <vector>
 #include <algorithm>
@@ -125,4 +129,4 @@ void keyboard_nav_system(
     }
 }
 
-} // namespace r::ui
+}

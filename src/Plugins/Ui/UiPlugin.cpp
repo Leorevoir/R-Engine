@@ -1,3 +1,7 @@
+/**
+ * \file UiPlugin.cpp
+ * \brief Plugin entry that wires resources and systems for the UI module.
+ */
 #include <R-Engine/Plugins/UiPlugin.hpp>
 
 #include <R-Engine/Application.hpp>
@@ -43,4 +47,4 @@ void UiPlugin::build(Application &app)
     Logger::info("UiPlugin built");
 }
 
-} // namespace r
+}

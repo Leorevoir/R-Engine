@@ -1,10 +1,5 @@
-/**
- * \file UiPlugin.cpp
- * \brief Plugin entry that wires resources and systems for the UI module.
- */
-#include <R-Engine/Plugins/UiPlugin.hpp>
-
 #include <R-Engine/Application.hpp>
+#include <R-Engine/Plugins/UiPlugin.hpp>
 #include <R-Engine/Core/Logger.hpp>
 #include <R-Engine/UI/Fonts.hpp>
 #include <R-Engine/UI/InputState.hpp>
@@ -26,23 +21,24 @@ void UiPlugin::build(Application &app)
         .insert_resource(UiTextures{})
         .insert_resource(UiInputState{})
         .insert_resource(UiEvents{})
-        .add_systems(Schedule::STARTUP, ui::startup_system)
-        .add_systems(Schedule::UPDATE,
+        .add_systems<ui::startup_system>(Schedule::STARTUP)
+        .add_systems<
             ui::update_system,
             ui::compute_layout_system,
             ui::pointer_system,
             ui::scroll_input_system,
             ui::scroll_clamp_system,
-            ui::keyboard_nav_system)
-        .add_systems(Schedule::RENDER, ui::render_system)
-        .add_systems(Schedule::SHUTDOWN, [](r::ecs::ResMut<r::UiTextures> tex, r::ecs::ResMut<r::UiFonts> fonts){
+            ui::keyboard_nav_system
+        >(Schedule::UPDATE)
+        .add_systems<ui::render_system>(Schedule::RENDER_2D)
+        .add_systems<[](r::ecs::ResMut<r::UiTextures> tex, r::ecs::ResMut<r::UiFonts> fonts){
             if (IsWindowReady()) {
                 for (auto &kv : tex.ptr->cache) { UnloadTexture(kv.second); }
                 for (auto &kv : fonts.ptr->cache) { UnloadFont(kv.second); }
             }
             tex.ptr->cache.clear();
             fonts.ptr->cache.clear();
-        });
+        }>(Schedule::SHUTDOWN);
 
     Logger::info("UiPlugin built");
 }

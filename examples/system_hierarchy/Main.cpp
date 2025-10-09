@@ -46,10 +46,10 @@ static void startup_player(r::ecs::Commands &commands)
         Velocity{{.0f, .0f, .0f}}
     ).with_children([&](r::ecs::ChildBuilder &parent)
     {
-        parent.spawn((
+        parent.spawn(
             ForceModule{}, ///<< ForceModule will be updated by the Player
             r::Transform3d{.position = {50.f, 0.f, 0.f}}
-        ));
+        );
     });
 
     commands.spawn(

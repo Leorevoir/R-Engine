@@ -24,14 +24,8 @@ struct State {
         {
         }
 
-        T current() const
-        {
-            return _current;
-        }
-        std::optional<T> previous() const
-        {
-            return _previous;
-        }
+        T current() const;
+        std::optional<T> previous() const;
 
     private:
         friend class Application;
@@ -47,10 +41,7 @@ struct NextState {
         static_assert(std::is_enum_v<T>, "State type must be an enum.");
         std::optional<T> next = std::nullopt;
 
-        void set(T next_state)
-        {
-            next = next_state;
-        }
+        void set(T next_state);
 };
 
 template<typename T>
@@ -76,3 +67,5 @@ struct OnTransition {
 };
 
 }// namespace r
+
+#include "Inline/States.inl"

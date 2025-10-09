@@ -1,5 +1,4 @@
 #include "R-Engine/ECS/Query.hpp"
-#include "raylib.h"
 #include <R-Engine/Application.hpp>
 #include <R-Engine/Core/Backend.hpp>
 #include <R-Engine/Core/States.hpp>

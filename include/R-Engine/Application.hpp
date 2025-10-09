@@ -97,8 +97,8 @@ class R_ENGINE_API Application final
 
         struct States {
                 struct Transition {
-                        size_t from;
-                        size_t to;
+                        std::size_t from;
+                        std::size_t to;
 
                         bool operator==(const Transition &other) const
                         {

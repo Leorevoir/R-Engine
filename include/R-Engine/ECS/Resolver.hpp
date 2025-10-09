@@ -55,6 +55,11 @@ struct R_ENGINE_API Resolver {
         Commands resolve(std::type_identity<Commands>);
 
         /**
+         * @brief Scene
+         */
+        Scene &resolve(std::type_identity<Scene &>);
+
+        /**
         * @brief Query<Wrappers...>
         */
         template<typename... Wrappers>

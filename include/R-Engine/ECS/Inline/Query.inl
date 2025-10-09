@@ -10,6 +10,12 @@ r::ecs::Query<Wrappers...>::Query(Scene *scene, std::vector<Entity> entities) : 
     /* __ctor__ */
 }
 
+template<typename... Wrappers>
+u64 r::ecs::Query<Wrappers...>::size() const
+{
+    return static_cast<u64>(_entities.size());
+}
+
 /**
  * Iterator
  */
@@ -43,6 +49,12 @@ auto r::ecs::Query<Wrappers...>::Iterator::operator*() const
 {
     Entity e = (*_list)[_idx];
     return std::tuple<Wrappers...>{build_wrapper<Wrappers>(_scene, e)...};
+}
+
+template<typename... Wrappers>
+r::ecs::Entity r::ecs::Query<Wrappers...>::Iterator::entity() const
+{
+    return (*_list)[_idx];
 }
 
 template<typename... Wrappers>

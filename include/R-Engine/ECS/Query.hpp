@@ -202,6 +202,8 @@ struct Query {
                 void operator++();
                 auto operator*() const;
 
+                Entity entity() const;
+
                 template<typename W>
                 static W build_wrapper(Scene *scene, Entity e);
 
@@ -213,6 +215,7 @@ struct Query {
 
         Iterator begin() const;
         Iterator end() const;
+        u64 size() const;
 
     private:
         Scene *_scene = nullptr;

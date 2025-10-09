@@ -14,3 +14,8 @@ r::ecs::Commands r::ecs::Resolver::resolve(std::type_identity<Commands>)
 {
     return Commands(_cmd_buffer);
 }
+
+r::ecs::Scene &r::ecs::Resolver::resolve(std::type_identity<Scene &>)
+{
+    return *_scene;
+}

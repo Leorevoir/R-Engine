@@ -7,53 +7,49 @@
 #include <unordered_map>
 #include <vector>
 
-namespace {///<< anonymous
+namespace {// anonymous namespace
 
-using TransformWithoutGlobal = r::ecs::Query<r::ecs::With<r::Transform3d>, r::ecs::Without<r::GlobalTransform3d>>;
-using Orphelins = r::ecs::Query<r::ecs::Without<r::ecs::Parent>>;
+// clang-format off
 
-using TransformQuery =
-    r::ecs::Query<r::ecs::Ref<r::Transform3d>, r::ecs::Mut<r::GlobalTransform3d>, r::ecs::Optional<r::ecs::Ref<r::ecs::Children>>>;
+using TransformWithoutGlobal = r::ecs::Query<
+        r::ecs::With<r::Transform3d>,
+        r::ecs::Without<r::GlobalTransform3d>>;
 
-struct TransformCache {
+using OrphelinsQuery = r::ecs::Query<
+    r::ecs::Without<r::ecs::Parent>>;
+
+using TransformComponentsQuery = r::ecs::Query<
+    r::ecs::Ref<r::Transform3d>,
+    r::ecs::Mut<r::GlobalTransform3d>,
+    r::ecs::Optional<r::ecs::Ref<r::ecs::Children>>>;
+
+struct TransformPluginCache {
     public:
         std::unordered_map<r::ecs::Entity, const r::Transform3d *> local;
         std::unordered_map<r::ecs::Entity, r::GlobalTransform3d *> global;
         std::unordered_map<r::ecs::Entity, const std::vector<r::ecs::Entity> *> children;
 };
 
-/**
-* @brief startup system that adds missing GlobalTransform3d components
-*/
-static void transform_add_missing_global_system(r::ecs::Commands &commands, TransformWithoutGlobal query)
-{
-    for (auto it = query.begin(); it != query.end(); ++it) {
-        commands.entity(it.entity()).insert(r::GlobalTransform3d{});
-    }
-}
+// clang-format on
 
 /**
-* @brief system that propagates local transforms to global transforms
-* @details use a breadth-first search (BFS) approach
-*/
-static void transform_propagate_system(Orphelins roots_q, TransformQuery all_transforms_q)
-{
-    TransformCache cache;
-    std::deque<r::ecs::Entity> queue;
-    const u64 entity_count = all_transforms_q.size();
+ * static helpers
+ */
 
-    if (entity_count == 0) {
-        return;
-    }
+/**
+ * @brief builds a cache of direct component ptr
+ * @param all_transforms_q query containing all transform-related components
+ * @return populated TransformPluginCache
+ */
+TransformPluginCache transform_build_cache(TransformComponentsQuery &all_transforms_q)
+{
+    TransformPluginCache cache;
+    const size_t entity_count = all_transforms_q.size();
 
     cache.local.reserve(entity_count);
     cache.global.reserve(entity_count);
-    cache.children.reserve(entity_count / 4);
+    cache.children.reserve(entity_count / 4);///<< idk maybe a quarter of entities have children? ((to avoid realloc))
 
-    /**
-    * @brief build the cache
-    * @details use an iterator loop to access the entity ID via it.entity()
-    */
     for (auto it = all_transforms_q.begin(); it != all_transforms_q.end(); ++it) {
         const auto [local, global, children_opt] = *it;
         const r::ecs::Entity entity = it.entity();
@@ -61,15 +57,24 @@ static void transform_propagate_system(Orphelins roots_q, TransformQuery all_tra
         cache.local[entity] = local.ptr;
         cache.global[entity] = global.ptr;
 
-        if (children_opt.ptr) {
+        if (children_opt.ptr && children_opt.ptr->ptr) {
             cache.children[entity] = &children_opt.ptr->ptr->entities;
         }
     }
 
-    /**
-    * @brief initialize the queue with root entities
-    * @details use an iterator loop to get the entity ID
-    */
+    return cache;
+}
+
+/**
+ * @brief initializes root transforms and prepares the queue
+ * @param roots_q query to find all root entities
+ * @param cache  pre-built transform cache
+ * @return deque containing all root entities, ready for traversal.
+ */
+std::deque<r::ecs::Entity> transform_get_queue(OrphelinsQuery &roots_q, const TransformPluginCache &cache)
+{
+    std::deque<r::ecs::Entity> queue;
+
     for (auto it = roots_q.begin(); it != roots_q.end(); ++it) {
         const r::ecs::Entity entity = it.entity();
         const auto local_it = cache.local.find(entity);
@@ -88,15 +93,23 @@ static void transform_propagate_system(Orphelins roots_q, TransformQuery all_tra
         queue.push_back(entity);
     }
 
-    /**
-    * @brief BFS loop to propagate transforms
-    * @details foreach entity in the queue -> update its children's global transforms
-    */
+    return queue;
+}
+
+/**
+ * @brief Breadth-First Search to propagate transforms to all descendants
+ * @param queue queue, pre-populated with root entities.
+ * @param cache pre-built transform cache.
+ */
+void transform_bfs_propagation(std::deque<r::ecs::Entity> &queue, const TransformPluginCache &cache)
+{
     while (!queue.empty()) {
         const r::ecs::Entity parent_entity = queue.front();
+
         queue.pop_front();
 
         const auto children_it = cache.children.find(parent_entity);
+
         if (children_it == cache.children.end()) {
             continue;
         }
@@ -113,6 +126,35 @@ static void transform_propagate_system(Orphelins roots_q, TransformQuery all_tra
             queue.push_back(child_entity);
         }
     }
+}
+
+/**
+ * TransformPlugin systems
+ */
+
+/**
+ * @brief as the name suggests, adds missing GlobalTransform3d components
+ */
+static void transform_add_missing_global_system(r::ecs::Commands &commands, TransformWithoutGlobal query)
+{
+    for (auto it = query.begin(); it != query.end(); ++it) {
+        commands.entity(it.entity()).insert(r::GlobalTransform3d{});
+    }
+}
+
+/**
+ * @brief high-level system that orchestrates the transform propagation process
+ */
+static void transform_propagate_system(OrphelinsQuery roots_q, TransformComponentsQuery all_transforms_q)
+{
+    if (all_transforms_q.size() == 0) {
+        return;
+    }
+
+    const TransformPluginCache cache = transform_build_cache(all_transforms_q);
+    std::deque<r::ecs::Entity> queue = transform_get_queue(roots_q, cache);
+
+    transform_bfs_propagation(queue, cache);
 }
 
 }// namespace

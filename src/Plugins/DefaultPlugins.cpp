@@ -1,4 +1,5 @@
 #include <R-Engine/Plugins/DefaultPlugins.hpp>
+#include <R-Engine/Plugins/TransformPlugin.hpp>
 
 #include <R-Engine/Plugins/InputPlugin.hpp>
 #include <R-Engine/Plugins/MeshPlugin.hpp>
@@ -17,6 +18,7 @@ r::DefaultPlugins::DefaultPlugins()
     add<RenderPlugin>();
     add<InputPlugin>();
     add<MeshPlugin>();
+    add<TransformPlugin>();
 }
 
 void r::DefaultPlugins::build(r::Application &app)

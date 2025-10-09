@@ -1,10 +1,9 @@
 #pragma once
 
+#include <R-Engine/Components/Transform3d.hpp>
 #include <R-Engine/Core/Backend.hpp>
 #include <R-Engine/Plugins/Plugin.hpp>
 #include <R-Engine/Types.hpp>
-
-#include <R-Engine/Maths/Vec.hpp>
 
 #include <unordered_map>
 
@@ -106,17 +105,6 @@ struct R_ENGINE_API Meshes final {
 
         std::vector<MeshEntry> _data;
         TextureManager _texture_manager;
-};
-
-/**
- * @brief 3D Transform structure
- * @details holds translation, rotation, and scale vectors for 3D transformations.
- */
-struct R_ENGINE_API Transform3d {
-    public:
-        r::Vec3f translation = {0.f, 0.f, 0.f};
-        r::Vec3f rotation = {0.f, 0.f, 0.f};
-        r::Vec3f scale = {1.f, 1.f, 1.f};
 };
 
 struct R_ENGINE_API Mesh3d final {

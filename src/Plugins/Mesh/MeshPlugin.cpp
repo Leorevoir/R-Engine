@@ -10,7 +10,7 @@ static void mesh_render_system(r::ecs::Query<r::ecs::Ref<r::Mesh3d>, r::ecs::Ref
 {
     for (const auto &[mesh_comp, transform] : query) {
         const auto *t3d = transform.ptr;
-        const auto pos = t3d->translation;
+        const auto pos = t3d->position;
         const auto scale = t3d->scale.x;
 
         meshes.ptr->draw(mesh_comp.ptr->id, pos, scale, mesh_comp.ptr->color);
@@ -33,6 +33,5 @@ r::MeshPlugin::~MeshPlugin()
 
 void r::MeshPlugin::build(r::Application &app)
 {
-    app.insert_resource(Meshes{})
-       .add_systems<mesh_render_system>(Schedule::RENDER_3D);
+    app.insert_resource(Meshes{}).add_systems<mesh_render_system>(Schedule::RENDER_3D);
 }

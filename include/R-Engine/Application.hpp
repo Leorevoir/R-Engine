@@ -1,5 +1,6 @@
 #pragma once
 
+#include "R-Engine/Core/States.hpp"
 #include <R-Engine/R-EngineExport.hpp>
 
 #include <R-Engine/Core/Clock.hpp>
@@ -67,6 +68,7 @@ class R_ENGINE_API Application final
                 SystemTypeId id;
                 SystemFn func = nullptr;
                 std::vector<SystemTypeId> dependencies;
+                std::function<bool(ecs::Scene &)> condition = nullptr;
                 std::vector<SystemSetId> member_of_sets;
                 std::vector<SystemSetId> after_sets;
                 std::vector<SystemSetId> before_sets;
@@ -93,6 +95,24 @@ class R_ENGINE_API Application final
                 bool dirty = true;
         };
 
+        struct States {
+                struct Transition {
+                        usize from;
+                        usize to;
+
+                        bool operator==(const Transition &other) const;
+                };
+
+                struct TransitionHasher {
+                        usize operator()(const Transition &t) const;
+                };
+                std::unordered_map<usize, ScheduleGraph> on_enter;
+                std::unordered_map<usize, ScheduleGraph> on_exit;
+                std::unordered_map<Transition, ScheduleGraph, TransitionHasher> on_transition;
+        };
+        std::unordered_map<std::type_index, States> _states;
+        std::function<void()> _state_transition_runner;
+
         using ScheduleMap = std::unordered_map<Schedule, ScheduleGraph>;
 
     public:
@@ -116,11 +136,8 @@ class R_ENGINE_API Application final
                 }
 
             public:
-                /**
-                * @brief Forwards to Application::add_systems to continue adding more systems.
-                */
-                template<auto... SystemFuncs>
-                SystemConfigurator add_systems(Schedule when) noexcept;
+                template<auto... SystemFuncs, typename ScheduleLabel>
+                SystemConfigurator add_systems(ScheduleLabel label) noexcept;
 
                 /**
                  * @brief Forwards to Application::configure_sets to start configuring sets.
@@ -132,29 +149,18 @@ class R_ENGINE_API Application final
                 * @brief Forwards to Application::insert_resource and returns this configurator.
                 */
                 template<typename ResT>
-                Derived &insert_resource(ResT res) noexcept
-                {
-                    _app->insert_resource(std::move(res));
-                    return static_cast<Derived &>(*this);
-                }
+                Derived &insert_resource(ResT res) noexcept;
 
                 /**
                 * @brief Forwards to Application::add_plugins and returns this configurator.
                 */
                 template<typename... Plugins>
-                Derived &add_plugins(Plugins &&...plugins) noexcept
-                {
-                    _app->add_plugins(std::forward<Plugins>(plugins)...);
-                    return static_cast<Derived &>(*this);
-                }
+                Derived &add_plugins(Plugins &&...plugins) noexcept;
 
                 /**
                 * @brief Forwards to Application::run() to start the application.
                 */
-                void run()
-                {
-                    _app->run();
-                }
+                void run();
         };
 
         /**
@@ -166,7 +172,9 @@ class R_ENGINE_API Application final
         class SystemConfigurator final : public ConfiguratorBase<SystemConfigurator>
         {
             public:
-                SystemConfigurator(Application *app, Schedule schedule, std::vector<SystemTypeId> system_ids) noexcept;
+                SystemConfigurator(Application *app, ScheduleGraph *graph, std::vector<SystemTypeId> system_ids) noexcept;
+
+                using ConfiguratorBase<SystemConfigurator>::add_systems;
 
                 /**
                 * @brief Specifies that the recently added systems must run after a given system.
@@ -211,7 +219,7 @@ class R_ENGINE_API Application final
                 SystemConfigurator &in_set() noexcept;
 
             private:
-                Schedule _schedule;
+                ScheduleGraph *_graph;
                 std::vector<SystemTypeId> _system_ids;
         };
 
@@ -253,15 +261,21 @@ class R_ENGINE_API Application final
         ~Application() = default;
 
         /**
+        * @brief Inits the first state
+        */
+        template<typename T>
+        Application &init_state(T initial_state) noexcept;
+
+        /**
         * @brief Adds one or more systems to the application schedule.
         * @details Returns a SystemConfigurator to allow for chaining calls like .after()
         * or .before() to define execution order dependencies.
-        * @param when The schedule to run the systems in.
+        * @param label The schedule or state event to run the systems in.
         * @param SystemFuncs The system functions to add.
         * @return A SystemConfigurator instance for dependency configuration.
         */
-        template<auto... SystemFuncs>
-        SystemConfigurator add_systems(Schedule when) noexcept;
+        template<auto... SystemFuncs, typename ScheduleLabel>
+        SystemConfigurator add_systems(ScheduleLabel label);
 
         /**
          * @brief Configures ordering constraints for system sets.
@@ -330,6 +344,8 @@ class R_ENGINE_API Application final
         void _sort_schedule(ScheduleGraph &graph);
         void _execute_systems(const ScheduleGraph &graph);
         void _apply_commands();
+        void _apply_state_transitions();
+        void _run_transition_schedule(ScheduleGraph &graph);
 
         /* Graph sorting helpers */
         void _build_adjacency_list(const ScheduleGraph &graph, std::unordered_map<SystemTypeId, int> &in_degree,
@@ -339,14 +355,14 @@ class R_ENGINE_API Application final
         void _perform_topological_sort(ScheduleGraph &graph, std::unordered_map<SystemTypeId, int> &in_degree,
             const std::unordered_map<SystemTypeId, std::vector<SystemTypeId>> &adj_list);
 
-        template<auto SystemFunc>
-        SystemTypeId _add_one_system(Schedule when) noexcept;
-
         template<typename SetType>
-        SystemSetId _ensure_set_exists(Schedule when) noexcept;
+        SystemSetId _ensure_set_exists(ScheduleGraph &graph) noexcept;
 
         template<typename PluginT>
         void _add_one_plugin(PluginT &&plugin) noexcept;
+
+        template<auto SystemFunc>
+        SystemTypeId _add_one_system_to_graph(ScheduleGraph &graph) noexcept;
 
         core::Clock _clock = {};
         ScheduleMap _systems = {};

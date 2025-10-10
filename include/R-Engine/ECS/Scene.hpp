@@ -16,9 +16,9 @@ namespace ecs {
  * @brief Hasher for a vector of type_index, needed for the archetype map.
  */
 struct TypeVecHasher {
-        std::size_t operator()(const std::vector<std::type_index> &vec) const
+        usize operator()(const std::vector<std::type_index> &vec) const
         {
-            std::size_t seed = vec.size();
+            usize seed = vec.size();
             for (const auto &i : vec) {
                 seed ^= i.hash_code() + 0x9e3779b9 + (seed << 6) + (seed >> 2);
             }
@@ -160,8 +160,8 @@ class R_ENGINE_API Scene : public NonCopyable
 
         Entity _next_entity = 1;
 
-        usize _find_or_create_archetype(const std::vector<std::type_index>& types);
-        void _move_entity_between_archetypes(Entity e, EntityLocation& loc, usize new_archetype_idx);
+        usize _find_or_create_archetype(const std::vector<std::type_index> &types);
+        void _move_entity_between_archetypes(Entity e, EntityLocation &loc, usize new_archetype_idx);
 };
 
 }// namespace ecs

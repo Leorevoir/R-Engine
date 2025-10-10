@@ -20,6 +20,22 @@ namespace r::detail {
 }
 
 /**
+* Application::States Implementation
+*/
+
+inline bool r::Application::States::Transition::operator==(const Transition &other) const
+{
+    return from == other.from && to == other.to;
+}
+
+inline usize r::Application::States::TransitionHasher::operator()(const Transition &t) const
+{
+    usize h1 = std::hash<usize>{}(t.from);
+    usize h2 = std::hash<usize>{}(t.to);
+    return h1 ^ (h2 << 1);
+}
+
+/**
 * ConfiguratorBase Implementation
 */
 
@@ -35,6 +51,28 @@ template<typename... SetTypes>
 inline auto r::Application::ConfiguratorBase<Derived>::configure_sets(Schedule when) noexcept -> r::Application::SetConfigurator<SetTypes...>
 {
     return _app->configure_sets<SetTypes...>(when);
+}
+
+template<typename Derived>
+template<typename ResT>
+inline Derived &r::Application::ConfiguratorBase<Derived>::insert_resource(ResT res) noexcept
+{
+    _app->insert_resource(std::move(res));
+    return static_cast<Derived &>(*this);
+}
+
+template<typename Derived>
+template<typename... Plugins>
+inline Derived &r::Application::ConfiguratorBase<Derived>::add_plugins(Plugins &&...plugins) noexcept
+{
+    _app->add_plugins(std::forward<Plugins>(plugins)...);
+    return static_cast<Derived &>(*this);
+}
+
+template<typename Derived>
+inline void r::Application::ConfiguratorBase<Derived>::run()
+{
+    _app->run();
 }
 
 /**
@@ -296,12 +334,12 @@ r::Application &r::Application::init_state(T initial_state) noexcept
         auto &schedules = _states[typeid(T)];
 
         /* 1. Execute OnExit for the `current` state */
-        if (auto it = schedules.on_exit.find(static_cast<size_t>(current)); it != schedules.on_exit.end()) {
+        if (auto it = schedules.on_exit.find(static_cast<usize>(current)); it != schedules.on_exit.end()) {
             _run_transition_schedule(it->second);
         }
 
         /* 2. Execute OnTransition */
-        typename States::Transition transition{static_cast<size_t>(current), static_cast<size_t>(next)};
+        typename States::Transition transition{static_cast<usize>(current), static_cast<usize>(next)};
         if (auto it = schedules.on_transition.find(transition); it != schedules.on_transition.end()) {
             _run_transition_schedule(it->second);
         }
@@ -313,7 +351,7 @@ r::Application &r::Application::init_state(T initial_state) noexcept
         state_res->_current = next;
 
         /* 4. Execute OnEnter for the `next` state */
-        if (auto it = schedules.on_enter.find(static_cast<size_t>(next)); it != schedules.on_enter.end()) {
+        if (auto it = schedules.on_enter.find(static_cast<usize>(next)); it != schedules.on_enter.end()) {
             _run_transition_schedule(it->second);
         }
 
@@ -335,15 +373,15 @@ r::Application::SystemConfigurator r::Application::add_systems(ScheduleLabel lab
     } else if constexpr (detail::is_on_enter<ScheduleLabel>::value) {
         using StateEnum = typename ScheduleLabel::EnumType;
         auto &state_schedules = _states[typeid(StateEnum)];
-        target_graph = &state_schedules.on_enter[static_cast<size_t>(label.state)];
+        target_graph = &state_schedules.on_enter[static_cast<usize>(label.state)];
     } else if constexpr (detail::is_on_exit<ScheduleLabel>::value) {
         using StateEnum = typename ScheduleLabel::EnumType;
         auto &state_schedules = _states[typeid(StateEnum)];
-        target_graph = &state_schedules.on_exit[static_cast<size_t>(label.state)];
+        target_graph = &state_schedules.on_exit[static_cast<usize>(label.state)];
     } else if constexpr (detail::is_on_transition<ScheduleLabel>::value) {
         using StateEnum = typename ScheduleLabel::EnumType;
         auto &state_schedules = _states[typeid(StateEnum)];
-        typename States::Transition transition{static_cast<size_t>(label.from), static_cast<size_t>(label.to)};
+        typename States::Transition transition{static_cast<usize>(label.from), static_cast<usize>(label.to)};
         target_graph = &state_schedules.on_transition[transition];
     } else {
         static_assert(always_false<ScheduleLabel>,

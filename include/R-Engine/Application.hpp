@@ -97,25 +97,17 @@ class R_ENGINE_API Application final
 
         struct States {
                 struct Transition {
-                        std::size_t from;
-                        std::size_t to;
+                        usize from;
+                        usize to;
 
-                        bool operator==(const Transition &other) const
-                        {
-                            return from == other.from && to == other.to;
-                        }
+                        bool operator==(const Transition &other) const;
                 };
 
                 struct TransitionHasher {
-                        std::size_t operator()(const Transition &t) const
-                        {
-                            std::size_t h1 = std::hash<size_t>{}(t.from);
-                            std::size_t h2 = std::hash<size_t>{}(t.to);
-                            return h1 ^ (h2 << 1);
-                        }
+                        usize operator()(const Transition &t) const;
                 };
-                std::unordered_map<size_t, ScheduleGraph> on_enter;
-                std::unordered_map<size_t, ScheduleGraph> on_exit;
+                std::unordered_map<usize, ScheduleGraph> on_enter;
+                std::unordered_map<usize, ScheduleGraph> on_exit;
                 std::unordered_map<Transition, ScheduleGraph, TransitionHasher> on_transition;
         };
         std::unordered_map<std::type_index, States> _states;
@@ -157,29 +149,18 @@ class R_ENGINE_API Application final
                 * @brief Forwards to Application::insert_resource and returns this configurator.
                 */
                 template<typename ResT>
-                Derived &insert_resource(ResT res) noexcept
-                {
-                    _app->insert_resource(std::move(res));
-                    return static_cast<Derived &>(*this);
-                }
+                Derived &insert_resource(ResT res) noexcept;
 
                 /**
                 * @brief Forwards to Application::add_plugins and returns this configurator.
                 */
                 template<typename... Plugins>
-                Derived &add_plugins(Plugins &&...plugins) noexcept
-                {
-                    _app->add_plugins(std::forward<Plugins>(plugins)...);
-                    return static_cast<Derived &>(*this);
-                }
+                Derived &add_plugins(Plugins &&...plugins) noexcept;
 
                 /**
                 * @brief Forwards to Application::run() to start the application.
                 */
-                void run()
-                {
-                    _app->run();
-                }
+                void run();
         };
 
         /**

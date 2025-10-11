@@ -33,8 +33,9 @@ r::Application::Application()
 {
     Logger::info("Application created");
     std::signal(SIGINT, [](i32) {
-        r::Application::quit_from_signal.store(true, std::memory_order_relaxed);
         r::Application::quit.store(true, std::memory_order_relaxed);
+        std::cout << "\r";
+        Logger::warn("SIGINT received, quitting application...");
     });
 }
 
@@ -97,15 +98,8 @@ void r::Application::_shutdown()
     Logger::debug("Main loop exited. Running shutdown schedule...");
     _run_schedule(Schedule::SHUTDOWN);
     _apply_commands();
-    if (quit.load(std::memory_order_relaxed)) {
-        std::cout << "\r";
-        if (quit_from_signal.load(std::memory_order_relaxed)) {
-            Logger::warn("SIGINT received, quitting application...");
-        } else {
-            Logger::info("Quit requested, shutting down...");
-        }
-    }
     Logger::debug("Shutdown schedule complete. Application exiting.");
+    Logger::info("Quiting the application...");
 }
 
 /**

@@ -2,6 +2,7 @@
 
 #include <R-Engine/ECS/Entity.hpp>
 #include <R-Engine/ECS/Scene.hpp>
+
 #include <functional>
 #include <limits>
 #include <vector>
@@ -10,6 +11,29 @@ namespace r::ecs {
 
 class CommandBuffer;
 struct Commands;
+class EntityCommands;
+
+struct Children;
+struct Parent;
+
+/**
+ * @brief Builder for spawning child entities.
+ */
+class R_ENGINE_API ChildBuilder
+{
+    public:
+        explicit ChildBuilder(Commands *commands, Entity parent) noexcept;
+
+        /**
+         * @brief Spawn a child entity with components
+         */
+        template<typename... Components>
+        EntityCommands spawn(Components &&...components) noexcept;
+
+    private:
+        Commands *_commands;
+        Entity _parent;
+};
 
 /**
  * @brief A handle for creating commands for a specific entity.
@@ -40,6 +64,13 @@ class R_ENGINE_API EntityCommands
          * that is only valid within this command buffer cycle.
          */
         Entity id() const noexcept;
+
+        /**
+         * @brief Spawn child entities for this entity.
+         * @param builder_fn Function that receives a ChildBuilder to spawn children.
+         */
+        template<typename FuncT>
+        EntityCommands &with_children(FuncT &&func) noexcept;
 
     private:
         CommandBuffer *_buffer;
@@ -84,13 +115,24 @@ class R_ENGINE_API CommandBuffer
          */
         Entity spawn_entity();
 
+        /**
+         * @brief Schedules adding a child to a parent's Children component.
+         */
+        void add_child(Entity parent, Entity child);
+
+        /**
+         * @brief Returns a Commands interface for this buffer.
+         */
+        Commands *get_commands() noexcept;
+
     private:
         friend struct Commands;
 
-        void add_command(std::function<void(Scene &)> &&command);
+        void _add_command(std::function<void(Scene &)> &&command);
 
         std::vector<std::function<void(Scene &)>> _commands;
         Entity _next_placeholder = std::numeric_limits<Entity>::max();
+        Commands *_commands_wrapper = nullptr;
 };
 
 /**
@@ -134,8 +176,27 @@ struct R_ENGINE_API Commands {
          */
         void despawn(Entity e) noexcept;
 
+        /**
+         * @brief Internal: Add a child to a parent's Children component.
+         */
+        void add_child(Entity parent, Entity child) noexcept;
+
     private:
         CommandBuffer *_buffer;
+};
+
+/**
+ * @brief Component that marks an entity as having children.
+ */
+struct R_ENGINE_API Children final {
+        std::vector<Entity> entities;
+};
+
+/**
+ * @brief Component that marks an entity as having a parent.
+ */
+struct R_ENGINE_API Parent final {
+        Entity entity = NULL_ENTITY;
 };
 
 }// namespace r::ecs

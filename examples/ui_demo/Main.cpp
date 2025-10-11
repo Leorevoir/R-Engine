@@ -43,14 +43,12 @@ static void build_menu_ui(r::ecs::Commands &cmds, r::ecs::Res<r::WindowPluginCon
         r::Style{ .width_pct = 100.f, .height_pct = 100.f, .background = r::Color{0,0,0,0}, .padding = 8.f },
         r::ComputedLayout{}, r::Visibility::Visible);
     state.ptr->root = root.id();
-    /* UiId no longer required: systems use entity IDs directly */
 
     auto center = cmds.spawn(
     r::UiNode{}, r::Parent{ state.ptr->root },
         r::Style{ .width_pct = 100.f, .height_pct = 100.f, .background = r::Color{0,0,0,0}, .direction = r::LayoutDirection::Column, .justify = r::JustifyContent::Center, .align = r::AlignItems::Center, .gap = 12.f },
         r::ComputedLayout{}, r::Visibility::Visible);
     const r::ecs::Entity center_id = center.id();
-    /* UiId no longer required */
 
     {
         auto title = cmds.spawn(
@@ -58,7 +56,6 @@ static void build_menu_ui(r::ecs::Commands &cmds, r::ecs::Res<r::WindowPluginCon
             r::Style{ .width = 480.f, .height = 64.f, .background = r::Color{0,0,0,0}, .order = 0, .margin = 6.f, .direction = r::LayoutDirection::Column, .justify = r::JustifyContent::Center, .align = r::AlignItems::Center },
             r::UiText{ .content = std::string("R-Type"), .font_size = 40, .wrap_width = 0.f, .color = r::Color{180,220,255,255} },
             r::ComputedLayout{}, r::Visibility::Visible);
-    /* UiId no longer required */
     }
 
     auto buttons_panel = cmds.spawn(
@@ -66,35 +63,30 @@ static void build_menu_ui(r::ecs::Commands &cmds, r::ecs::Res<r::WindowPluginCon
         r::Style{ .width = 420.f, .height = 200.f, .background = r::Color{0,0,0,0}, .order = 1, .direction = r::LayoutDirection::Column, .justify = r::JustifyContent::Center, .align = r::AlignItems::Center, .gap = 10.f },
         r::ComputedLayout{}, r::Visibility::Visible);
     const r::ecs::Entity panel_id = buttons_panel.id();
-    /* UiId no longer required */
 
     state.ptr->btn_play = cmds.spawn(
     r::UiNode{}, r::Parent{ panel_id }, r::UiButton{},
         r::Style{ .width = 360.f, .height = 44.f, .order = 0, .margin = 6.f, .direction = r::LayoutDirection::Column, .justify = r::JustifyContent::Center, .align = r::AlignItems::Center },
         r::UiText{ .content = std::string("Play"), .font_size = 22 },
         r::ComputedLayout{}, r::Visibility::Visible).id();
-    /* UiId no longer required */
 
     state.ptr->btn_options = cmds.spawn(
     r::UiNode{}, r::Parent{ panel_id }, r::UiButton{},
         r::Style{ .width = 360.f, .height = 44.f, .order = 1, .margin = 6.f, .direction = r::LayoutDirection::Column, .justify = r::JustifyContent::Center, .align = r::AlignItems::Center },
         r::UiText{ .content = std::string("Options"), .font_size = 22 },
         r::ComputedLayout{}, r::Visibility::Visible).id();
-    /* UiId no longer required */
 
     state.ptr->btn_quit = cmds.spawn(
     r::UiNode{}, r::Parent{ panel_id }, r::UiButton{},
         r::Style{ .width = 360.f, .height = 44.f, .order = 2, .margin = 6.f, .direction = r::LayoutDirection::Column, .justify = r::JustifyContent::Center, .align = r::AlignItems::Center },
         r::UiText{ .content = std::string("Quit"), .font_size = 22 },
         r::ComputedLayout{}, r::Visibility::Visible).id();
-    /* UiId no longer required */
 
     auto scroll_panel = cmds.spawn(
     r::UiNode{}, r::Parent{ center_id }, r::UiScroll{},
         r::Style{ .width = 420.f, .height = 220.f, .background = r::Color{0,0,0,0}, .order = 2, .direction = r::LayoutDirection::Column, .justify = r::JustifyContent::Start, .align = r::AlignItems::Stretch, .gap = 6.f, .clip_children = true },
         r::ComputedLayout{}, r::Visibility::Visible);
     const r::ecs::Entity scroll_id = scroll_panel.id();
-    /* UiId no longer required */
 
     for (int i = 1; i <= 24; ++i) {
         char buf[64];
@@ -104,7 +96,6 @@ static void build_menu_ui(r::ecs::Commands &cmds, r::ecs::Res<r::WindowPluginCon
             r::Style{ .width = 400.f, .height = 28.f, .background = r::Color{20, (u8)(20 + i * 2), (u8)(28 + i), 180}, .order = i, .margin = 4.f, .padding = 6.f, .direction = r::LayoutDirection::Row, .justify = r::JustifyContent::Start, .align = r::AlignItems::Center },
             r::UiText{ .content = std::string(buf), .font_size = 18 },
             r::ComputedLayout{}, r::Visibility::Visible);
-    /* UiId no longer required */
     }
 }
 

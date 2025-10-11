@@ -209,6 +209,17 @@ class R_ENGINE_API Application final
                 SystemConfigurator &before() noexcept;
 
                 /**
+                 * @brief Specifies a condition that must be met for the systems to run.
+                 * @details The provided function is a "predicate" that will be called
+                 * before the systems are executed. If it returns false, the systems are skipped.
+                 * The predicate can take any valid system parameters (e.g., Res<State<T>>).
+                 * @tparam PredicateFunc The predicate function.
+                 * @return A reference to this SystemConfigurator for chaining.
+                 */
+                template<auto PredicateFunc>
+                SystemConfigurator &run_if() noexcept;
+
+                /**
                 * @brief Adds the recently added systems to a named set.
                 * @details Systems in the same set can be ordered as a group using configure_sets().
                 * A system can belong to multiple sets.

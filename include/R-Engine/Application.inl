@@ -1,6 +1,7 @@
 #pragma once
 
 #include <R-Engine/Application.hpp>
+#include <R-Engine/ECS/System.hpp>
 #include <R-Engine/Plugins/Plugin.hpp>
 #include <type_traits>
 #include <utility>
@@ -144,6 +145,23 @@ inline r::Application::SystemConfigurator &r::Application::SystemConfigurator::b
         _graph->nodes.at(system_id).before_sets.push_back(dependent_set_id);
     }
     _graph->dirty = true;
+    return *this;
+}
+
+template<auto PredicateFunc>
+inline r::Application::SystemConfigurator &r::Application::SystemConfigurator::run_if() noexcept
+{
+    using traits = ecs::function_traits<std::remove_cvref_t<decltype(PredicateFunc)>>;
+    using args = typename traits::args;
+
+    auto condition_wrapper = [app = this->_app](ecs::Scene &scene) -> bool {
+        return ecs::call_predicate_with_resolved(
+            PredicateFunc, scene, app->_command_buffer, args{}, std::make_index_sequence<std::tuple_size_v<args>>{});
+    };
+
+    for (const auto &system_id : _system_ids) {
+        _graph->nodes.at(system_id).condition = condition_wrapper;
+    }
     return *this;
 }
 

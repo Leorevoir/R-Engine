@@ -320,7 +320,7 @@ class R_ENGINE_API Application final
         void run();
 
         static inline std::atomic_bool quit{false};
-        // True only when quit was triggered by a SIGINT handler
+        /* True only when quit was triggered by a SIGINT handler */
         static inline std::atomic_bool quit_from_signal{false};
 
     private:

@@ -26,7 +26,7 @@ void pointer_system(
     size_t ord = 0;
     for (auto it = q.begin(); it != q.end(); ++it) {
         auto [node, layout, style_opt, vis_opt, parent_opt, button_opt, scroll_opt] = *it;
-        (void)node;
+        
         if (vis_opt.ptr && (*vis_opt.ptr != r::Visibility::Visible)) continue;
         const u32 id = static_cast<u32>(it.entity());
         const u32 pid = parent_opt.ptr ? static_cast<u32>(parent_opt.ptr->entity) : 0u;
@@ -106,7 +106,7 @@ void keyboard_nav_system(
 
     auto find_index = [&](u32 h) {
         for (size_t i = 0; i < order.size(); ++i) {
-            if (order[i] == h) return (int)i;
+            if (order[i] == h) return static_cast<int>(i);
         }
         return -1;
     };
@@ -115,8 +115,8 @@ void keyboard_nav_system(
     if (input.ptr->isKeyPressed(KEY_TAB)) {
         const u32 prev = state.ptr->focused;
         int idx = find_index(state.ptr->focused);
-        if (idx < 0) idx = 0; else idx = shift ? (idx - 1 + (int)order.size()) % (int)order.size() : (idx + 1) % (int)order.size();
-        state.ptr->focused = order[(size_t)idx];
+        if (idx < 0) idx = 0; else idx = shift ? (idx - 1 + static_cast<int>(order.size())) % static_cast<int>(order.size()) : (idx + 1) % static_cast<int>(order.size());
+        state.ptr->focused = order[static_cast<size_t>(idx)];
         if (prev != 0 && prev != state.ptr->focused) events.ptr->blurred.push_back(prev);
         events.ptr->focus_changed.push_back(state.ptr->focused);
         r::Logger::info(std::string{"UI focus -> handle "} + std::to_string(state.ptr->focused));

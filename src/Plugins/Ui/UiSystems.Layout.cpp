@@ -150,7 +150,7 @@ void compute_layout_system(
     r::ecs::Res<r::UiTheme> theme)
 {
     UI_THEME_SPACING = theme.ptr->spacing;
-    UI_THEME_PADDING = (float)theme.ptr->padding;
+    UI_THEME_PADDING = static_cast<float>(theme.ptr->padding);
 
     std::unordered_map<u32, std::vector<u32>> children_map;
     std::unordered_map<u32, r::Style> styles;
@@ -179,8 +179,8 @@ void compute_layout_system(
         else children_map[n.parent].push_back(n.id);
     }
 
-    const float ww = (float)GetRenderWidth();
-    const float wh = (float)GetRenderHeight();
+    const float ww = static_cast<float>(GetRenderWidth());
+    const float wh = static_cast<float>(GetRenderHeight());
     for (auto root : roots) {
         const r::Style rs = styles[root];
         float rw = (rs.width_pct >= 0.f) ? (ww * (rs.width_pct / 100.f)) : ((rs.width > 0.f) ? rs.width : ww);
@@ -194,7 +194,7 @@ void compute_layout_system(
         if (auto lit = layouts.find(root); lit != layouts.end() && lit->second) {
             *lit->second = r::ComputedLayout{ rx, ry, rw, rh, rs.z_index };
         }
-        const float root_padding = (rs.padding > 0.f) ? rs.padding : (float)theme.ptr->padding;
+        const float root_padding = (rs.padding > 0.f) ? rs.padding : static_cast<float>(theme.ptr->padding);
         const Rect content{ rx + root_padding, ry + root_padding, rw - root_padding * 2.f, rh - root_padding * 2.f };
         _layout_recursive(children_map, styles, layouts, root, content);
     }

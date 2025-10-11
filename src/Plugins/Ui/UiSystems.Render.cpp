@@ -55,7 +55,7 @@ void render_system(r::ecs::Res<UiPluginConfig> cfg, r::ecs::Res<r::Camera3d> cam
     auto intersect = [](int x, int y, int w, int h, int x2, int y2, int w2, int h2) {
         int nx = std::max(x, x2); int ny = std::max(y, y2); int r1 = x + w; int r2 = x2 + w2; int b1 = y + h; int b2 = y2 + h2;
         int nw = std::max(0, std::min(r1, r2) - nx); int nh = std::max(0, std::min(b1, b2) - ny);
-        return ::Rectangle{ (float)nx, (float)ny, (float)nw, (float)nh };
+        return ::Rectangle{ static_cast<float>(nx), static_cast<float>(ny), static_cast<float>(nw), static_cast<float>(nh) };
     };
 
     auto scroll_of = [&](u32 e){ float sx=0.f, sy=0.f; u32 p = e; while (p!=0){ auto pit=parents.find(p); if (pit==parents.end()) break; p = pit->second; auto sit=styles.find(p); auto scit = scrolls.find(p); if (sit!=styles.end() && (sit->second.clip_children || sit->second.overflow_clip) && scit!=scrolls.end()) { sx -= scit->second->x; sy -= scit->second->y; } } return std::pair<float,float>{sx,sy}; };
@@ -74,7 +74,7 @@ void render_system(r::ecs::Res<UiPluginConfig> cfg, r::ecs::Res<r::Camera3d> cam
     for (const auto &it : items) {
         auto ss = scroll_of(it.handle);
         const float sx = ss.first; const float sy = ss.second;
-        const int x = (int)it.layout->x; const int y = (int)it.layout->y; const int w = (int)it.layout->w; const int h = (int)it.layout->h;
+        const int x = static_cast<int>(it.layout->x); const int y = static_cast<int>(it.layout->y); const int w = static_cast<int>(it.layout->w); const int h = static_cast<int>(it.layout->h);
 
         bool applied_scissor = false; ::Rectangle scissor = {0, 0, 0, 0};
         u32 p = it.parent; bool first = true;
@@ -83,17 +83,17 @@ void render_system(r::ecs::Res<UiPluginConfig> cfg, r::ecs::Res<r::Camera3d> cam
             if (psit != styles.end() && plit != layouts.end()) {
                 const r::Style &ps = psit->second; const r::ComputedLayout *pl = plit->second;
                 if (ps.clip_children) {
-                    const int cx = (int)(pl->x + ps.padding); const int cy = (int)(pl->y + ps.padding);
-                    const int cw = (int)(pl->w - ps.padding * 2.f); const int ch = (int)(pl->h - ps.padding * 2.f);
-                    if (first) { scissor = { (float)cx, (float)cy, (float)cw, (float)ch }; first = false; }
-                    else { scissor = intersect((int)scissor.x, (int)scissor.y, (int)scissor.width, (int)scissor.height, cx, cy, cw, ch); }
+                    const int cx = static_cast<int>(pl->x + ps.padding); const int cy = static_cast<int>(pl->y + ps.padding);
+                    const int cw = static_cast<int>(pl->w - ps.padding * 2.f); const int ch = static_cast<int>(pl->h - ps.padding * 2.f);
+                    if (first) { scissor = { static_cast<float>(cx), static_cast<float>(cy), static_cast<float>(cw), static_cast<float>(ch) }; first = false; }
+                    else { scissor = intersect(static_cast<int>(scissor.x), static_cast<int>(scissor.y), static_cast<int>(scissor.width), static_cast<int>(scissor.height), cx, cy, cw, ch); }
                     applied_scissor = true;
                 }
             }
             auto pit = parents.find(p); if (pit == parents.end()) break; p = pit->second;
         }
 
-        if (applied_scissor) BeginScissorMode((int)scissor.x, (int)scissor.y, (int)scissor.width, (int)scissor.height);
+        if (applied_scissor) BeginScissorMode(static_cast<int>(scissor.x), static_cast<int>(scissor.y), static_cast<int>(scissor.width), static_cast<int>(scissor.height));
 
         r::Color bg = it.style.background; r::Color border = it.style.border_color; float border_thickness = it.style.border_thickness;
 
@@ -105,10 +105,10 @@ void render_system(r::ecs::Res<UiPluginConfig> cfg, r::ecs::Res<r::Camera3d> cam
         }
         if (!it.is_button && bg.a == 0) { bg = theme.ptr->panel_bg; }
 
-        DrawRectangle((int)((float)x + sx), (int)((float)y + sy), w, h, {bg.r, bg.g, bg.b, bg.a});
+        DrawRectangle(static_cast<int>(static_cast<float>(x) + sx), static_cast<int>(static_cast<float>(y) + sy), w, h, {bg.r, bg.g, bg.b, bg.a});
         if (border_thickness > 0.f) {
-            ::Rectangle rec{ ((float)x + sx), ((float)y + sy), (float)w, (float)h };
-            DrawRectangleLinesEx(rec, (int)border_thickness, { border.r, border.g, border.b, border.a });
+            ::Rectangle rec{ static_cast<float>(x) + sx, static_cast<float>(y) + sy, static_cast<float>(w), static_cast<float>(h) };
+            DrawRectangleLinesEx(rec, static_cast<float>(border_thickness), { border.r, border.g, border.b, border.a });
         }
 
         if (applied_scissor) EndScissorMode();
@@ -127,7 +127,7 @@ void render_system(r::ecs::Res<UiPluginConfig> cfg, r::ecs::Res<r::Camera3d> cam
         for (auto it = q.begin(); it != q.end(); ++it) {
             auto [node, layout, style_opt, vis_opt, parent_opt, text_opt, image_opt, button_opt, scroll_opt] = *it;
             (void)node; (void)style_opt; (void)vis_opt; (void)text_opt; (void)image_opt; (void)button_opt; (void)scroll_opt; (void)parent_opt;
-            const int x = (int)layout.ptr->x; const int y = (int)layout.ptr->y; const int w = (int)layout.ptr->w; const int h = (int)layout.ptr->h;
+            const int x = static_cast<int>(layout.ptr->x); const int y = static_cast<int>(layout.ptr->y); const int w = static_cast<int>(layout.ptr->w); const int h = static_cast<int>(layout.ptr->h);
             DrawRectangleLines(x, y, w, h, {120,120,120,120});
         }
         auto draw_highlight = [&](u32 h, ::Color c){ if (h==0) return; for (auto it = q.begin(); it != q.end(); ++it){ auto [node, layout, sopt, vopt, popt, topt, iopt, bopt, scopt] = *it; (void)node;(void)sopt;(void)vopt;(void)popt;(void)topt;(void)iopt;(void)bopt;(void)scopt; u32 eid = static_cast<u32>(it.entity()); if (eid==h){ ::Rectangle r{layout.ptr->x, layout.ptr->y, layout.ptr->w, layout.ptr->h}; DrawRectangleLinesEx(r, 2, c); break; } } };
@@ -139,15 +139,15 @@ void render_system(r::ecs::Res<UiPluginConfig> cfg, r::ecs::Res<r::Camera3d> cam
     /* Scrollbars */
     for (const auto &kv : scrolls) {
         u32 cont = kv.first; const auto *pl = layouts[cont]; const r::Style ps = styles[cont];
-        const float pad = (ps.padding > 0.f) ? ps.padding : (float)theme.ptr->padding;
+        const float pad = (ps.padding > 0.f) ? ps.padding : static_cast<float>(theme.ptr->padding);
         const float viewport_h = pl->h - pad * 2.f;
         const float content_h = std::max(0.f, content_bottom[cont] - (pl->y + pad));
         if (content_h <= viewport_h + 1.f) continue;
         const float max_scroll = content_h - viewport_h; const float scroll_y = std::min(std::max(0.f, kv.second->y), max_scroll);
-        const int track_x = (int)(pl->x + pl->w - 6); const int track_y = (int)(pl->y + pad); const int track_w = 4; const int track_h = (int)viewport_h;
+        const int track_x = static_cast<int>(pl->x + pl->w - 6); const int track_y = static_cast<int>(pl->y + pad); const int track_w = 4; const int track_h = static_cast<int>(viewport_h);
         DrawRectangle(track_x, track_y, track_w, track_h, {70,70,70,180});
-        const int thumb_h = std::max(20, (int)(viewport_h * (viewport_h / content_h)));
-        const int thumb_y = track_y + (int)(((float)viewport_h - (float)thumb_h) * (scroll_y / max_scroll));
+        const int thumb_h = std::max(20, static_cast<int>(viewport_h * (viewport_h / content_h)));
+        const int thumb_y = track_y + static_cast<int>((viewport_h - static_cast<float>(thumb_h)) * (scroll_y / max_scroll));
         DrawRectangle(track_x, thumb_y, track_w, thumb_h, {200,200,200,220});
         DrawRectangleLines(track_x, track_y, track_w, track_h, {220,220,220,120});
     }
@@ -164,9 +164,9 @@ void render_system(r::ecs::Res<UiPluginConfig> cfg, r::ecs::Res<r::Camera3d> cam
         (void)node;
         if (vis_opt.ptr && (*vis_opt.ptr != r::Visibility::Visible)) continue;
         auto ssp = scroll_of2(static_cast<u32>(it.entity())); const float sx = ssp.first; const float sy = ssp.second;
-        const int x = (int)layout.ptr->x; const int y = (int)layout.ptr->y; const int w = (int)layout.ptr->w; const int h = (int)layout.ptr->h;
+        const int x = static_cast<int>(layout.ptr->x); const int y = static_cast<int>(layout.ptr->y); const int w = static_cast<int>(layout.ptr->w); const int h = static_cast<int>(layout.ptr->h);
         const r::Style s = style_opt.ptr ? *style_opt.ptr : r::Style{};
-        const int cx = x + (int)s.padding; const int cy = y + (int)s.padding; const int cw = w - (int)(s.padding * 2.f); const int ch = h - (int)(s.padding * 2.f);
+        const int cx = x + static_cast<int>(s.padding); const int cy = y + static_cast<int>(s.padding); const int cw = w - static_cast<int>(s.padding * 2.f); const int ch = h - static_cast<int>(s.padding * 2.f);
 
         bool sc_apply = false; ::Rectangle sc_rect = {0,0,0,0};
         for (u32 pp = parent_opt.ptr ? static_cast<u32>(parent_opt.ptr->entity) : 0u; pp != 0u; ) {
@@ -174,15 +174,15 @@ void render_system(r::ecs::Res<UiPluginConfig> cfg, r::ecs::Res<r::Camera3d> cam
             if (psit != styles2.end() && plit != layouts2.end()) {
                 const r::Style &ps = psit->second; const r::ComputedLayout *pl = plit->second;
                 if (ps.clip_children || ps.overflow_clip) {
-                    int scx = (int)(pl->x + ps.padding); int scy = (int)(pl->y + ps.padding);
-                    int scw = (int)(pl->w - ps.padding * 2.f); int sch = (int)(pl->h - ps.padding * 2.f);
-                    if (!sc_apply) { sc_rect = { (float)scx, (float)scy, (float)scw, (float)sch }; sc_apply = true; }
-                    else { sc_rect = intersect((int)sc_rect.x, (int)sc_rect.y, (int)sc_rect.width, (int)sc_rect.height, scx, scy, scw, sch); }
+                    int scx = static_cast<int>(pl->x + ps.padding); int scy = static_cast<int>(pl->y + ps.padding);
+                    int scw = static_cast<int>(pl->w - ps.padding * 2.f); int sch = static_cast<int>(pl->h - ps.padding * 2.f);
+                    if (!sc_apply) { sc_rect = { static_cast<float>(scx), static_cast<float>(scy), static_cast<float>(scw), static_cast<float>(sch) }; sc_apply = true; }
+                    else { sc_rect = intersect(static_cast<int>(sc_rect.x), static_cast<int>(sc_rect.y), static_cast<int>(sc_rect.width), static_cast<int>(sc_rect.height), scx, scy, scw, sch); }
                 }
             }
             auto pit = parents2.find(pp); if (pit == parents2.end()) break; pp = pit->second;
         }
-        if (sc_apply) BeginScissorMode((int)sc_rect.x, (int)sc_rect.y, (int)sc_rect.width, (int)sc_rect.height);
+        if (sc_apply) BeginScissorMode(static_cast<int>(sc_rect.x), static_cast<int>(sc_rect.y), static_cast<int>(sc_rect.width), static_cast<int>(sc_rect.height));
 
         if (image_opt.ptr && !image_opt.ptr->path.empty()) {
             auto &cache = textures.ptr->cache; const std::string &path = image_opt.ptr->path; const ::Texture2D *tex = nullptr;
@@ -190,8 +190,8 @@ void render_system(r::ecs::Res<UiPluginConfig> cfg, r::ecs::Res<r::Camera3d> cam
             if (itc == cache.end()) { auto t = LoadTexture(path.c_str()); if (t.id != 0) cache[path] = t; auto it2 = cache.find(path); if (it2 != cache.end()) tex = &it2->second; }
             else { tex = &itc->second; }
             if (tex && tex->id != 0) {
-                ::Rectangle src{0,0,(float)tex->width,(float)tex->height}; float dw = (float)cw; float dh = (float)ch; float dx = (float)cx; float dy = (float)cy;
-                if (image_opt.ptr->keep_aspect && tex->height > 0) { float ar = (float)tex->width / (float)tex->height; float box_ar = (float)cw / (float)ch; if (box_ar > ar) { dw = (float)ch * ar; dx = (float)cx + ((float)cw - dw) * 0.5f; } else { dh = (float)cw / ar; dy = (float)cy + ((float)ch - dh) * 0.5f; } }
+                ::Rectangle src{0,0,static_cast<float>(tex->width),static_cast<float>(tex->height)}; float dw = static_cast<float>(cw); float dh = static_cast<float>(ch); float dx = static_cast<float>(cx); float dy = static_cast<float>(cy);
+                if (image_opt.ptr->keep_aspect && tex->height > 0) { float ar = static_cast<float>(tex->width) / static_cast<float>(tex->height); float box_ar = static_cast<float>(cw) / static_cast<float>(ch); if (box_ar > ar) { dw = static_cast<float>(ch) * ar; dx = static_cast<float>(cx) + (static_cast<float>(cw) - dw) * 0.5f; } else { dh = static_cast<float>(cw) / ar; dy = static_cast<float>(cy) + (static_cast<float>(ch) - dh) * 0.5f; } }
                 ::Rectangle dst{dx + sx, dy + sy, dw, dh}; DrawTexturePro(*tex, src, dst, {0,0}, 0.f, { image_opt.ptr->tint.r, image_opt.ptr->tint.g, image_opt.ptr->tint.b, image_opt.ptr->tint.a });
             }
         }
@@ -207,9 +207,9 @@ void render_system(r::ecs::Res<UiPluginConfig> cfg, r::ecs::Res<r::Camera3d> cam
 
             std::string text = text_opt.ptr->content;
             if (text_opt.ptr->wrap_width > 0.f && cw > 0) {
-                float maxw = std::min(text_opt.ptr->wrap_width, (float)cw);
+                float maxw = std::min(text_opt.ptr->wrap_width, static_cast<float>(cw));
                 std::string out; std::string line; size_t i = 0; const size_t n = text.size();
-                while (i < n) { size_t j = i; while (j < n && text[j] != ' ') j++; std::string word = text.substr(i, j - i); std::string candidate = line.empty() ? word : line + " " + word; float width = MeasureTextEx(font, candidate.c_str(), (float)fs, spacing).x; if (width <= maxw || line.empty()) line = candidate; else { out += line + "\n"; line = word; } i = (j < n && text[j] == ' ') ? j + 1 : j; }
+                while (i < n) { size_t j = i; while (j < n && text[j] != ' ') j++; std::string word = text.substr(i, j - i); std::string candidate = line.empty() ? word : line + " " + word; float width = MeasureTextEx(font, candidate.c_str(), static_cast<float>(fs), spacing).x; if (width <= maxw || line.empty()) line = candidate; else { out += line + "\n"; line = word; } i = (j < n && text[j] == ' ') ? j + 1 : j; }
                 if (!line.empty()) out += line;
                 text = out;
             }
@@ -218,20 +218,20 @@ void render_system(r::ecs::Res<UiPluginConfig> cfg, r::ecs::Res<r::Camera3d> cam
                 while (true) {
                     size_t nl = t.find('\n', start);
                     std::string ln = (nl == std::string::npos) ? t.substr(start) : t.substr(start, nl - start);
-                    ::Vector2 sz = MeasureTextEx(font, ln.c_str(), (float)fs, spacing);
+                    ::Vector2 sz = MeasureTextEx(font, ln.c_str(), static_cast<float>(fs), spacing);
                     if (sz.x > maxw) maxw = sz.x;
-                    totalh += (float)fs;
+                    totalh += static_cast<float>(fs);
                     if (nl == std::string::npos) break;
                     start = nl + 1;
                 }
                 return ::Vector2{maxw, totalh};
             };
 
-            ::Vector2 sz = measure_multiline(text); float tx = (float)cx + sx; float ty = (float)cy + sy;
+            ::Vector2 sz = measure_multiline(text); float tx = static_cast<float>(cx) + sx; float ty = static_cast<float>(cy) + sy;
             const bool centerX = (s.align == r::AlignItems::Center); const bool centerY = (button_opt.ptr != nullptr) || (s.justify == r::JustifyContent::Center);
-            if (centerX) tx = (float)cx + ((float)cw - sz.x) * 0.5f + sx;
-            if (centerY) ty = (float)cy + ((float)ch - sz.y) * 0.5f + sy;
-            DrawTextEx(font, text.c_str(), { tx, ty }, (float)fs, spacing, col);
+            if (centerX) tx = static_cast<float>(cx) + (static_cast<float>(cw) - sz.x) * 0.5f + sx;
+            if (centerY) ty = static_cast<float>(cy) + (static_cast<float>(ch) - sz.y) * 0.5f + sy;
+            DrawTextEx(font, text.c_str(), { tx, ty }, static_cast<float>(fs), spacing, col);
         }
         if (sc_apply) EndScissorMode();
     }

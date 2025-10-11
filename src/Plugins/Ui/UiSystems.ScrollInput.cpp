@@ -14,7 +14,6 @@ void scroll_input_system(
     r::ecs::ResMut<r::UiEvents> events,
     r::ecs::Query<r::ecs::Optional<r::ecs::Parent>, r::ecs::Optional<r::Style>, r::ecs::Optional<r::UiScroll>> q) noexcept
 {
-    (void)events;
     const float wheel = GetMouseWheelMove();
     if (wheel == 0.0f) return;
 

@@ -106,6 +106,12 @@ class R_ENGINE_API CommandBuffer
         void remove_component(Entity e);
 
         /**
+         * @brief Schedules a command to insert a new resource.
+         */
+        template<typename T>
+        void insert_resource(T resource);
+
+        /**
          * @brief Schedules a command to despawn an entity.
          */
         void despawn(Entity e);
@@ -170,6 +176,13 @@ struct R_ENGINE_API Commands {
          */
         template<typename T>
         void add_component(Entity e, T comp) noexcept;
+
+        /**
+         * @brief Schedules a resource to be inserted into the scene.
+         * @details If a resource of this type already exists, it will be overwritten.
+         */
+        template<typename T>
+        void insert_resource(T res) noexcept;
 
         /**
          * @brief Schedules an entity and all its components to be despawned.

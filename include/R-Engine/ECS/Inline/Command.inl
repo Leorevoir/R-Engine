@@ -63,6 +63,12 @@ inline void r::ecs::CommandBuffer::remove_component(Entity e)
     });
 }
 
+template<typename T>
+inline void r::ecs::CommandBuffer::insert_resource(T resource)
+{
+    _add_command([res = std::move(resource)](Scene &scene) mutable { scene.insert_resource<T>(std::move(res)); });
+}
+
 /**
  * Commands
  */
@@ -74,6 +80,14 @@ inline r::ecs::EntityCommands r::ecs::Commands::spawn(Components &&...components
 
     (entity_cmds.insert(std::forward<Components>(components)), ...);
     return entity_cmds;
+}
+
+template<typename T>
+inline void r::ecs::Commands::insert_resource(T res) noexcept
+{
+    if (_buffer) {
+        _buffer->insert_resource<T>(std::move(res));
+    }
 }
 
 /**

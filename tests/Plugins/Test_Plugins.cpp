@@ -135,3 +135,86 @@ Test(Plugins, BevyStyleSet, .init = _redirect_all_stdout)
 
     app.add_systems<assert_bevy_style_set_system>(r::Schedule::STARTUP);
 }
+
+// A simple state machine for testing purposes.
+enum class TestState { A, B };
+
+// A resource to track the side effects of state systems.
+struct TestStateTracker {
+        bool on_enter_b_called = false;
+        bool on_exit_a_called = false;
+        bool on_transition_a_to_b_called = false;
+        int frame = 0;
+};
+
+// Systems that will be run on state changes.
+static void on_exit_a_system(r::ecs::ResMut<TestStateTracker> tracker)
+{
+    // This system should run when we leave state A.
+    tracker.ptr->on_exit_a_called = true;
+}
+
+static void on_enter_b_system(r::ecs::ResMut<TestStateTracker> tracker)
+{
+    // This system should run when we enter state B.
+    tracker.ptr->on_enter_b_called = true;
+}
+
+static void on_transition_a_to_b_system(r::ecs::ResMut<TestStateTracker> tracker)
+{
+    // This system should run specifically for the A -> B transition.
+    tracker.ptr->on_transition_a_to_b_called = true;
+}
+
+// A system that runs every UPDATE to drive the test logic.
+static void test_driver_system(r::ecs::Res<r::State<TestState>> state, r::ecs::ResMut<r::NextState<TestState>> next_state,
+    r::ecs::ResMut<TestStateTracker> tracker)
+{
+    tracker.ptr->frame++;
+
+    if (tracker.ptr->frame == 1) {
+        // On the first frame, we are in state A. Request a transition to B.
+        cr_assert_eq(state.ptr->current(), TestState::A, "Should start in state A.");
+        next_state.ptr->set(TestState::B);
+    } else if (tracker.ptr->frame == 2) {
+        // On the second frame, the transition should be complete.
+        // We can now check the side effects of the state-triggered systems.
+        cr_assert_eq(state.ptr->current(), TestState::B, "Should have transitioned to state B.");
+
+        // Verify that all the correct state systems were executed.
+        cr_assert(tracker.ptr->on_exit_a_called, "OnExit(A) system did not run.");
+        cr_assert(tracker.ptr->on_enter_b_called, "OnEnter(B) system did not run.");
+        cr_assert(tracker.ptr->on_transition_a_to_b_called, "OnTransition(A, B) system did not run.");
+
+        // The test has passed, so we can quit the application loop.
+        r::Application::quit = true;
+    }
+}
+
+// Integration test that runs a minimal app to verify state schedules.
+Test(Plugins, StateSchedules, .init = _redirect_all_stdout)
+{
+    // Ensure the quit flag is reset before the test runs.
+    r::Application::quit = false;
+
+    // Build and run the application.
+    // The assertions happen inside the `test_driver_system`.
+    // The test passes if the application runs and exits cleanly after assertions.
+    r::Application{}// Add resources needed for the test.
+        .insert_resource(TestStateTracker{})
+        .init_state(TestState::A)
+
+        // Add systems to the state schedules.
+        .add_systems<on_exit_a_system>(r::OnExit(TestState::A))
+        .add_systems<on_enter_b_system>(r::OnEnter(TestState::B))
+        .add_systems<on_transition_a_to_b_system>(r::OnTransition(TestState::A, TestState::B))
+
+        // Add the main driver system to the UPDATE schedule.
+        .add_systems<test_driver_system>(r::Schedule::UPDATE)
+
+        // Run the app. It will exit automatically when the test is done.
+        .run();
+
+    // Final check to ensure we exited correctly.
+    cr_assert(r::Application::quit, "Application did not quit as expected.");
+}

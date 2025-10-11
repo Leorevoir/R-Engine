@@ -1,4 +1,4 @@
-﻿/**
+/**
  * \file UiSystems.Input.cpp
  * \brief Pointer and keyboard input systems for UI interactions.
  */
@@ -7,13 +7,14 @@
 #include <vector>
 #include <algorithm>
 #include <R-Engine/Core/Logger.hpp>
+#include <R-Engine/ECS/Command.hpp>
 
 namespace r::ui {
 
 void pointer_system(
     r::ecs::ResMut<UiInputState> state,
     r::ecs::ResMut<UiEvents> events,
-    r::ecs::Query<r::ecs::Ref<r::UiNode>, r::ecs::Ref<r::ComputedLayout>, r::ecs::Optional<r::Style>, r::ecs::Optional<r::Visibility>, r::ecs::Optional<r::Parent>, r::ecs::Optional<r::UiButton>, r::ecs::Optional<r::UiScroll>> q) noexcept
+    r::ecs::Query<r::ecs::Ref<r::UiNode>, r::ecs::Ref<r::ComputedLayout>, r::ecs::Optional<r::Style>, r::ecs::Optional<r::Visibility>, r::ecs::Optional<r::ecs::Parent>, r::ecs::Optional<r::UiButton>, r::ecs::Optional<r::UiScroll>> q) noexcept
 {
     struct Item { int z; size_t ord; u32 handle; const r::ComputedLayout* layout; r::Style style; u32 parent; bool disabled; const r::UiScroll* scroll; };
     std::vector<Item> items; items.reserve(256);
@@ -28,7 +29,7 @@ void pointer_system(
         (void)node;
         if (vis_opt.ptr && (*vis_opt.ptr != r::Visibility::Visible)) continue;
         const u32 id = static_cast<u32>(it.entity());
-        const u32 pid = parent_opt.ptr ? static_cast<u32>(parent_opt.ptr->id) : 0u;
+        const u32 pid = parent_opt.ptr ? static_cast<u32>(parent_opt.ptr->entity) : 0u;
         r::Style s = style_opt.ptr ? *style_opt.ptr : r::Style{};
         const bool disabled = button_opt.ptr && button_opt.ptr->disabled;
         items.push_back({ s.z_index, ord++, id, layout.ptr, s, pid, disabled, scroll_opt.ptr });

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * \file UiSystems.Render.cpp
  * \brief Rendering system for the UI plugin using Raylib.
  */
@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <vector>
 #include <algorithm>
+#include <R-Engine/ECS/Command.hpp>
 
 namespace r::ui {
 
@@ -25,7 +26,7 @@ void render_system(r::ecs::Res<UiPluginConfig> cfg, r::ecs::Res<r::Camera3d> cam
     r::ecs::Res<r::UiTheme> theme,
     r::ecs::ResMut<r::UiTextures> textures,
     r::ecs::ResMut<r::UiFonts> fonts,
-    r::ecs::Query<r::ecs::Ref<r::UiNode>, r::ecs::Ref<r::ComputedLayout>, r::ecs::Optional<r::Style>, r::ecs::Optional<r::Visibility>, r::ecs::Optional<r::Parent>, r::ecs::Optional<r::UiText>, r::ecs::Optional<r::UiImage>, r::ecs::Optional<r::UiButton>, r::ecs::Optional<r::UiScroll>> q) noexcept
+    r::ecs::Query<r::ecs::Ref<r::UiNode>, r::ecs::Ref<r::ComputedLayout>, r::ecs::Optional<r::Style>, r::ecs::Optional<r::Visibility>, r::ecs::Optional<r::ecs::Parent>, r::ecs::Optional<r::UiText>, r::ecs::Optional<r::UiImage>, r::ecs::Optional<r::UiButton>, r::ecs::Optional<r::UiScroll>> q) noexcept
 {
     EndMode3D();
 
@@ -44,7 +45,7 @@ void render_system(r::ecs::Res<UiPluginConfig> cfg, r::ecs::Res<r::Camera3d> cam
         const bool is_button = button_opt.ptr != nullptr;
         const bool is_disabled = (button_opt.ptr && button_opt.ptr->disabled);
         const u32 id = static_cast<u32>(it.entity());
-        const u32 pid = parent_opt.ptr ? static_cast<u32>(parent_opt.ptr->id) : 0u;
+        const u32 pid = parent_opt.ptr ? static_cast<u32>(parent_opt.ptr->entity) : 0u;
         items.push_back({ s.z_index, ord++, id, layout.ptr, s, pid, is_button, is_disabled });
         layouts[id] = layout.ptr; styles[id] = s; parents[id] = pid; if (scroll_opt.ptr) scrolls[id] = scroll_opt.ptr;
     }
@@ -168,7 +169,7 @@ void render_system(r::ecs::Res<UiPluginConfig> cfg, r::ecs::Res<r::Camera3d> cam
         const int cx = x + (int)s.padding; const int cy = y + (int)s.padding; const int cw = w - (int)(s.padding * 2.f); const int ch = h - (int)(s.padding * 2.f);
 
         bool sc_apply = false; ::Rectangle sc_rect = {0,0,0,0};
-        for (u32 pp = parent_opt.ptr ? static_cast<u32>(parent_opt.ptr->id) : 0u; pp != 0u; ) {
+        for (u32 pp = parent_opt.ptr ? static_cast<u32>(parent_opt.ptr->entity) : 0u; pp != 0u; ) {
             auto psit = styles2.find(pp); auto plit = layouts2.find(pp);
             if (psit != styles2.end() && plit != layouts2.end()) {
                 const r::Style &ps = psit->second; const r::ComputedLayout *pl = plit->second;

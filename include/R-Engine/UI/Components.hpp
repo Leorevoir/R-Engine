@@ -4,23 +4,10 @@
 #include <R-Engine/Types.hpp>
 #include <R-Engine/ECS/Entity.hpp>
 
-#include <vector>
-
 namespace r {
 
 /* Marker component for UI entities */
 struct R_ENGINE_API UiNode {
-};
-
-/* Legacy UI handle/parent components removed: systems now use ECS entity IDs and Parent */
-
-/* Hierarchy */
-struct R_ENGINE_API Parent {
-    ecs::Entity id = 0; /* 0 -> no parent */
-};
-
-struct R_ENGINE_API Children {
-    std::vector<ecs::Entity> ids;
 };
 
 /* Visibility */

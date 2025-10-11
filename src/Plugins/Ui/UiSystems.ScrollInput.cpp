@@ -1,9 +1,10 @@
-﻿/**
+/**
  * \file UiSystems.ScrollInput.cpp
  * \brief Mouse wheel handling for scrollable UI containers.
  */
 #include <R-Engine/Plugins/Ui/Systems.hpp>
 #include <unordered_map>
+#include <R-Engine/ECS/Command.hpp>
 
 namespace r::ui {
 
@@ -11,7 +12,7 @@ void scroll_input_system(
     r::ecs::Res<r::UiInputState> state,
     r::ecs::Res<r::UserInput> /*input*/,
     r::ecs::ResMut<r::UiEvents> events,
-    r::ecs::Query<r::ecs::Optional<r::Parent>, r::ecs::Optional<r::Style>, r::ecs::Optional<r::UiScroll>> q) noexcept
+    r::ecs::Query<r::ecs::Optional<r::ecs::Parent>, r::ecs::Optional<r::Style>, r::ecs::Optional<r::UiScroll>> q) noexcept
 {
     (void)events;
     const float wheel = GetMouseWheelMove();
@@ -24,7 +25,7 @@ void scroll_input_system(
     for (auto it = q.begin(); it != q.end(); ++it) {
         auto [parent_opt, style_opt, scroll_opt] = *it;
         const u32 id = static_cast<u32>(it.entity());
-        if (parent_opt.ptr) parents[id] = static_cast<u32>(parent_opt.ptr->id);
+        if (parent_opt.ptr) parents[id] = static_cast<u32>(parent_opt.ptr->entity);
         if (style_opt.ptr) styles[id] = *style_opt.ptr;
         if (scroll_opt.ptr) scrolls[id] = const_cast<r::UiScroll*>(scroll_opt.ptr);
     }

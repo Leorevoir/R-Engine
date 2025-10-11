@@ -1,4 +1,4 @@
-﻿/**
+/**
  * \file UiSystems.Layout.cpp
  * \brief Layout computation systems for the UI plugin.
  */
@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <vector>
 #include <algorithm>
+#include <R-Engine/ECS/Command.hpp>
 
 namespace r::ui {
 
@@ -143,7 +144,7 @@ void compute_layout_system(
         r::ecs::Mut<r::ComputedLayout>,
         r::ecs::Optional<r::Style>,
         r::ecs::Optional<r::Visibility>,
-        r::ecs::Optional<r::Parent>,
+        r::ecs::Optional<r::ecs::Parent>,
         r::ecs::Optional<r::UiScroll>
     > q,
     r::ecs::Res<r::UiTheme> theme)
@@ -163,7 +164,7 @@ void compute_layout_system(
         auto [layout, style_opt, vis_opt, parent_opt, scroll_opt] = *it;
         (void)scroll_opt;
         const u32 id = static_cast<u32>(it.entity());
-        const u32 p = parent_opt.ptr ? static_cast<u32>(parent_opt.ptr->id) : 0u;
+        const u32 p = parent_opt.ptr ? static_cast<u32>(parent_opt.ptr->entity) : 0u;
         present.insert(id);
         styles[id] = style_opt.ptr ? *style_opt.ptr : r::Style{};
         layouts[id] = layout.ptr;
@@ -201,7 +202,7 @@ void compute_layout_system(
 
 void scroll_clamp_system(
     r::ecs::Query<r::ecs::Mut<r::UiScroll>, r::ecs::Ref<r::ComputedLayout>> scq,
-    r::ecs::Query<r::ecs::Ref<r::ComputedLayout>, r::ecs::Optional<r::Style>, r::ecs::Optional<r::Parent>> allq,
+    r::ecs::Query<r::ecs::Ref<r::ComputedLayout>, r::ecs::Optional<r::Style>, r::ecs::Optional<r::ecs::Parent>> allq,
     r::ecs::Res<r::UiTheme> theme)
 {
     (void)theme;
@@ -234,7 +235,7 @@ void scroll_clamp_system(
 
     for (auto it = allq.begin(); it != allq.end(); ++it) {
         auto [layout, style_opt, parent_opt] = *it; (void)style_opt;
-        const u32 ph = parent_opt.ptr ? static_cast<u32>(parent_opt.ptr->id) : 0u;
+        const u32 ph = parent_opt.ptr ? static_cast<u32>(parent_opt.ptr->entity) : 0u;
         if (containers.find(ph) == containers.end()) continue;
         const float bottom = layout.ptr->y + layout.ptr->h;
         auto it2 = content_bottom.find(ph);

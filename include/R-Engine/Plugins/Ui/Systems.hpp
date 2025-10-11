@@ -35,7 +35,7 @@ void update_system(r::ecs::ResMut<UiEvents> events, r::ecs::ResMut<UiInputState>
 void pointer_system(
     r::ecs::ResMut<UiInputState> state,
     r::ecs::ResMut<UiEvents> events,
-    r::ecs::Query<r::ecs::Ref<r::UiNode>, r::ecs::Ref<r::ComputedLayout>, r::ecs::Optional<r::Style>, r::ecs::Optional<r::Visibility>, r::ecs::Optional<r::Parent>, r::ecs::Optional<r::UiButton>, r::ecs::Optional<r::UiScroll>> q) noexcept;
+    r::ecs::Query<r::ecs::Ref<r::UiNode>, r::ecs::Ref<r::ComputedLayout>, r::ecs::Optional<r::Style>, r::ecs::Optional<r::Visibility>, r::ecs::Optional<r::ecs::Parent>, r::ecs::Optional<r::UiButton>, r::ecs::Optional<r::UiScroll>> q) noexcept;
 
 /**
  * @brief Keyboard navigation (TAB/Shift+TAB focus, Enter/Space activate).
@@ -53,7 +53,7 @@ void scroll_input_system(
     r::ecs::Res<r::UiInputState> state,
     r::ecs::Res<r::UserInput> input,
     r::ecs::ResMut<r::UiEvents> events,
-    r::ecs::Query<r::ecs::Optional<r::Parent>, r::ecs::Optional<r::Style>, r::ecs::Optional<r::UiScroll>> q) noexcept;
+    r::ecs::Query<r::ecs::Optional<r::ecs::Parent>, r::ecs::Optional<r::Style>, r::ecs::Optional<r::UiScroll>> q) noexcept;
 
 /**
  * @brief Compute recursive flex-like layout for all UiNodes.
@@ -63,7 +63,7 @@ void compute_layout_system(
         r::ecs::Mut<r::ComputedLayout>,
         r::ecs::Optional<r::Style>,
         r::ecs::Optional<r::Visibility>,
-        r::ecs::Optional<r::Parent>,
+        r::ecs::Optional<r::ecs::Parent>,
         r::ecs::Optional<r::UiScroll>
     > q,
     r::ecs::Res<r::UiTheme> theme);
@@ -73,7 +73,7 @@ void compute_layout_system(
  */
 void scroll_clamp_system(
     r::ecs::Query<r::ecs::Mut<r::UiScroll>, r::ecs::Ref<r::ComputedLayout>> scq,
-    r::ecs::Query<r::ecs::Ref<r::ComputedLayout>, r::ecs::Optional<r::Style>, r::ecs::Optional<r::Parent>> allq,
+    r::ecs::Query<r::ecs::Ref<r::ComputedLayout>, r::ecs::Optional<r::Style>, r::ecs::Optional<r::ecs::Parent>> allq,
     r::ecs::Res<r::UiTheme> theme);
 
 /**
@@ -84,6 +84,6 @@ void render_system(r::ecs::Res<UiPluginConfig> cfg, r::ecs::Res<r::Camera3d> cam
     r::ecs::Res<r::UiTheme> theme,
     r::ecs::ResMut<r::UiTextures> textures,
     r::ecs::ResMut<r::UiFonts> fonts,
-    r::ecs::Query<r::ecs::Ref<r::UiNode>, r::ecs::Ref<r::ComputedLayout>, r::ecs::Optional<r::Style>, r::ecs::Optional<r::Visibility>, r::ecs::Optional<r::Parent>, r::ecs::Optional<r::UiText>, r::ecs::Optional<r::UiImage>, r::ecs::Optional<r::UiButton>, r::ecs::Optional<r::UiScroll>> q) noexcept;
+    r::ecs::Query<r::ecs::Ref<r::UiNode>, r::ecs::Ref<r::ComputedLayout>, r::ecs::Optional<r::Style>, r::ecs::Optional<r::Visibility>, r::ecs::Optional<r::ecs::Parent>, r::ecs::Optional<r::UiText>, r::ecs::Optional<r::UiImage>, r::ecs::Optional<r::UiButton>, r::ecs::Optional<r::UiScroll>> q) noexcept;
 
 }

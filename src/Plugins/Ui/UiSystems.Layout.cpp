@@ -143,9 +143,8 @@ void compute_layout_system(
         r::ecs::Mut<r::ComputedLayout>,
         r::ecs::Optional<r::Style>,
         r::ecs::Optional<r::Visibility>,
-        r::ecs::Optional<r::UiParent>,
-        r::ecs::Optional<r::UiScroll>,
-        r::ecs::Optional<r::UiId>
+        r::ecs::Optional<r::Parent>,
+        r::ecs::Optional<r::UiScroll>
     > q,
     r::ecs::Res<r::UiTheme> theme)
 {
@@ -157,25 +156,26 @@ void compute_layout_system(
     std::unordered_map<u32, r::ComputedLayout*> layouts;
     std::unordered_set<u32> present;
 
-    struct NodeInfo { u32 handle; u32 parent; bool visible; };
+    struct NodeInfo { u32 id; u32 parent; bool visible; };
     std::vector<NodeInfo> nodes;
 
-    for (auto [layout, style_opt, vis_opt, parent_opt, scroll_opt, id_opt] : q) {
+    for (auto it = q.begin(); it != q.end(); ++it) {
+        auto [layout, style_opt, vis_opt, parent_opt, scroll_opt] = *it;
         (void)scroll_opt;
-        const u32 h = id_opt.ptr ? id_opt.ptr->value : 0u;
-        const u32 p = parent_opt.ptr ? parent_opt.ptr->handle : 0u;
-        present.insert(h);
-        styles[h] = style_opt.ptr ? *style_opt.ptr : r::Style{};
-        layouts[h] = layout.ptr;
+        const u32 id = static_cast<u32>(it.entity());
+        const u32 p = parent_opt.ptr ? static_cast<u32>(parent_opt.ptr->id) : 0u;
+        present.insert(id);
+        styles[id] = style_opt.ptr ? *style_opt.ptr : r::Style{};
+        layouts[id] = layout.ptr;
         const bool visible = (!vis_opt.ptr || *vis_opt.ptr == r::Visibility::Visible);
-        nodes.push_back(NodeInfo{h, p, visible});
+        nodes.push_back(NodeInfo{id, p, visible});
     }
 
     std::vector<u32> roots;
     for (const auto &n : nodes) {
         if (!n.visible) continue;
-        if (n.parent == 0 || present.count(n.parent) == 0) roots.push_back(n.handle);
-        else children_map[n.parent].push_back(n.handle);
+        if (n.parent == 0 || present.count(n.parent) == 0) roots.push_back(n.id);
+        else children_map[n.parent].push_back(n.id);
     }
 
     const float ww = (float)GetRenderWidth();
@@ -200,8 +200,8 @@ void compute_layout_system(
 }
 
 void scroll_clamp_system(
-    r::ecs::Query<r::ecs::Mut<r::UiScroll>, r::ecs::Ref<r::ComputedLayout>, r::ecs::Optional<r::UiId>> scq,
-    r::ecs::Query<r::ecs::Ref<r::ComputedLayout>, r::ecs::Optional<r::Style>, r::ecs::Optional<r::UiParent>, r::ecs::Optional<r::UiId>> allq,
+    r::ecs::Query<r::ecs::Mut<r::UiScroll>, r::ecs::Ref<r::ComputedLayout>> scq,
+    r::ecs::Query<r::ecs::Ref<r::ComputedLayout>, r::ecs::Optional<r::Style>, r::ecs::Optional<r::Parent>> allq,
     r::ecs::Res<r::UiTheme> theme)
 {
     (void)theme;
@@ -209,19 +209,19 @@ void scroll_clamp_system(
     std::unordered_map<u32, const r::ComputedLayout *> cont_layout;
     std::unordered_map<u32, float> cont_pad;
 
-    for (auto [scroll, layout, id_opt] : scq) {
-        (void)scroll;
-        const u32 h = id_opt.ptr ? id_opt.ptr->value : 0u;
-        if (h == 0) continue;
-        containers.insert(h);
-        cont_layout[h] = layout.ptr;
+    for (auto it = scq.begin(); it != scq.end(); ++it) {
+        auto [scroll, layout] = *it; (void)scroll;
+        const u32 id = static_cast<u32>(it.entity());
+        containers.insert(id);
+        cont_layout[id] = layout.ptr;
     }
 
-    for (auto [layout, style_opt, parent_opt, id_opt] : allq) {
-        const u32 h = id_opt.ptr ? id_opt.ptr->value : 0u;
-        if (containers.find(h) != containers.end()) {
+    for (auto it = allq.begin(); it != allq.end(); ++it) {
+        auto [layout, style_opt, parent_opt] = *it; (void)layout; (void)parent_opt;
+        const u32 id = static_cast<u32>(it.entity());
+        if (containers.find(id) != containers.end()) {
             const r::Style s = style_opt.ptr ? *style_opt.ptr : r::Style{};
-            cont_pad[h] = (s.padding > 0.f) ? s.padding : UI_THEME_PADDING;
+            cont_pad[id] = (s.padding > 0.f) ? s.padding : UI_THEME_PADDING;
         }
     }
 
@@ -232,17 +232,18 @@ void scroll_clamp_system(
         content_bottom[kv] = pl->y + pad; /* initial top */
     }
 
-    for (auto [layout, style_opt, parent_opt, id_opt] : allq) {
-        const u32 ph = parent_opt.ptr ? parent_opt.ptr->handle : 0u;
+    for (auto it = allq.begin(); it != allq.end(); ++it) {
+        auto [layout, style_opt, parent_opt] = *it; (void)style_opt;
+        const u32 ph = parent_opt.ptr ? static_cast<u32>(parent_opt.ptr->id) : 0u;
         if (containers.find(ph) == containers.end()) continue;
         const float bottom = layout.ptr->y + layout.ptr->h;
-        auto it = content_bottom.find(ph);
-        if (it != content_bottom.end()) it->second = std::max(it->second, bottom);
+        auto it2 = content_bottom.find(ph);
+        if (it2 != content_bottom.end()) it2->second = std::max(it2->second, bottom);
     }
 
-    for (auto [scroll, layout, id_opt] : scq) {
-        const u32 e = id_opt.ptr ? id_opt.ptr->value : 0u;
-        if (e == 0) continue;
+    for (auto it = scq.begin(); it != scq.end(); ++it) {
+        auto [scroll, layout] = *it;
+        const u32 e = static_cast<u32>(it.entity());
         const float pad = cont_pad[e];
         const float viewport = layout.ptr->h - pad * 2.f;
         float content_h = std::max(0.f, content_bottom[e] - (layout.ptr->y + pad));

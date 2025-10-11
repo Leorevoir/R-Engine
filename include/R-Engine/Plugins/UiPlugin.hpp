@@ -41,8 +41,3 @@ class R_ENGINE_API UiPlugin final : public Plugin {
 };
 
 }
-
-#ifndef R_UIPLUGIN_ADDSYSTEMS_COMPAT
-#define R_UIPLUGIN_ADDSYSTEMS_COMPAT
-#define add_systems(when, ...) add_systems<__VA_ARGS__>(when)
-#endif

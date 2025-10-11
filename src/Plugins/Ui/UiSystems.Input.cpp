@@ -13,7 +13,7 @@ namespace r::ui {
 void pointer_system(
     r::ecs::ResMut<UiInputState> state,
     r::ecs::ResMut<UiEvents> events,
-    r::ecs::Query<r::ecs::Ref<r::UiNode>, r::ecs::Ref<r::ComputedLayout>, r::ecs::Optional<r::Style>, r::ecs::Optional<r::Visibility>, r::ecs::Optional<r::UiParent>, r::ecs::Optional<r::UiId>, r::ecs::Optional<r::UiButton>, r::ecs::Optional<r::UiScroll>> q) noexcept
+    r::ecs::Query<r::ecs::Ref<r::UiNode>, r::ecs::Ref<r::ComputedLayout>, r::ecs::Optional<r::Style>, r::ecs::Optional<r::Visibility>, r::ecs::Optional<r::Parent>, r::ecs::Optional<r::UiButton>, r::ecs::Optional<r::UiScroll>> q) noexcept
 {
     struct Item { int z; size_t ord; u32 handle; const r::ComputedLayout* layout; r::Style style; u32 parent; bool disabled; const r::UiScroll* scroll; };
     std::vector<Item> items; items.reserve(256);
@@ -23,15 +23,16 @@ void pointer_system(
     std::unordered_map<u32, const r::UiScroll*> scrolls;
 
     size_t ord = 0;
-    for (auto [node, layout, style_opt, vis_opt, parent_opt, id_opt, button_opt, scroll_opt] : q) {
+    for (auto it = q.begin(); it != q.end(); ++it) {
+        auto [node, layout, style_opt, vis_opt, parent_opt, button_opt, scroll_opt] = *it;
         (void)node;
         if (vis_opt.ptr && (*vis_opt.ptr != r::Visibility::Visible)) continue;
-        const u32 h = id_opt.ptr ? id_opt.ptr->value : 0u;
-        const u32 ph = parent_opt.ptr ? parent_opt.ptr->handle : 0u;
+        const u32 id = static_cast<u32>(it.entity());
+        const u32 pid = parent_opt.ptr ? static_cast<u32>(parent_opt.ptr->id) : 0u;
         r::Style s = style_opt.ptr ? *style_opt.ptr : r::Style{};
         const bool disabled = button_opt.ptr && button_opt.ptr->disabled;
-        items.push_back({ s.z_index, ord++, h, layout.ptr, s, ph, disabled, scroll_opt.ptr });
-        layouts[h] = layout.ptr; styles[h] = s; parents[h] = ph; if (scroll_opt.ptr) scrolls[h] = scroll_opt.ptr;
+        items.push_back({ s.z_index, ord++, id, layout.ptr, s, pid, disabled, scroll_opt.ptr });
+        layouts[id] = layout.ptr; styles[id] = s; parents[id] = pid; if (scroll_opt.ptr) scrolls[id] = scroll_opt.ptr;
     }
     std::stable_sort(items.begin(), items.end(), [](const Item&a,const Item&b){ if (a.z!=b.z) return a.z < b.z; return a.ord < b.ord; });
 
@@ -91,13 +92,14 @@ void keyboard_nav_system(
     r::ecs::Res<r::UserInput> input,
     r::ecs::ResMut<r::UiInputState> state,
     r::ecs::ResMut<r::UiEvents> events,
-    r::ecs::Query<r::ecs::Optional<r::UiButton>, r::ecs::Optional<r::Visibility>, r::ecs::Optional<r::UiId>> q)
+    r::ecs::Query<r::ecs::Optional<r::UiButton>, r::ecs::Optional<r::Visibility>> q)
 {
     std::vector<u32> order; order.reserve(64);
-    for (auto [btn_opt, vis_opt, id_opt] : q) {
+    for (auto it = q.begin(); it != q.end(); ++it) {
+        auto [btn_opt, vis_opt] = *it;
         if (vis_opt.ptr && (*vis_opt.ptr != r::Visibility::Visible)) continue;
         const bool focusable = (btn_opt.ptr && !btn_opt.ptr->disabled);
-        if (focusable) order.push_back(id_opt.ptr ? id_opt.ptr->value : 0u);
+        if (focusable) order.push_back(static_cast<u32>(it.entity()));
     }
     if (order.empty()) return;
 

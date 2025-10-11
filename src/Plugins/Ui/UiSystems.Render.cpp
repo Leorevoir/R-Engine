@@ -25,7 +25,7 @@ void render_system(r::ecs::Res<UiPluginConfig> cfg, r::ecs::Res<r::Camera3d> cam
     r::ecs::Res<r::UiTheme> theme,
     r::ecs::ResMut<r::UiTextures> textures,
     r::ecs::ResMut<r::UiFonts> fonts,
-    r::ecs::Query<r::ecs::Ref<r::UiNode>, r::ecs::Ref<r::ComputedLayout>, r::ecs::Optional<r::Style>, r::ecs::Optional<r::Visibility>, r::ecs::Optional<r::UiParent>, r::ecs::Optional<r::Parent>, r::ecs::Optional<r::UiText>, r::ecs::Optional<r::UiImage>, r::ecs::Optional<r::UiButton>, r::ecs::Optional<r::UiScroll>, r::ecs::Optional<r::UiId>> q) noexcept
+    r::ecs::Query<r::ecs::Ref<r::UiNode>, r::ecs::Ref<r::ComputedLayout>, r::ecs::Optional<r::Style>, r::ecs::Optional<r::Visibility>, r::ecs::Optional<r::Parent>, r::ecs::Optional<r::UiText>, r::ecs::Optional<r::UiImage>, r::ecs::Optional<r::UiButton>, r::ecs::Optional<r::UiScroll>> q) noexcept
 {
     EndMode3D();
 
@@ -36,15 +36,17 @@ void render_system(r::ecs::Res<UiPluginConfig> cfg, r::ecs::Res<r::Camera3d> cam
     std::unordered_map<u32, const r::ComputedLayout *> layouts; std::unordered_map<u32, r::Style> styles; std::unordered_map<u32, u32> parents;
 
     size_t ord = 0;
-    for (auto [node, layout, style_opt, vis_opt, ui_parent_opt, parent_opt, text_opt, image_opt, button_opt, scroll_opt, id_opt] : q) {
+    for (auto it = q.begin(); it != q.end(); ++it) {
+        auto [node, layout, style_opt, vis_opt, parent_opt, text_opt, image_opt, button_opt, scroll_opt] = *it;
         (void)node; (void)text_opt; (void)image_opt;
         if (vis_opt.ptr && (*vis_opt.ptr != r::Visibility::Visible)) continue;
         const r::Style s = style_opt.ptr ? *style_opt.ptr : r::Style{};
         const bool is_button = button_opt.ptr != nullptr;
         const bool is_disabled = (button_opt.ptr && button_opt.ptr->disabled);
-        const u32 h = id_opt.ptr ? id_opt.ptr->value : 0u; const u32 ph = ui_parent_opt.ptr ? ui_parent_opt.ptr->handle : 0u;
-        items.push_back({ s.z_index, ord++, h, layout.ptr, s, ph, is_button, is_disabled });
-        layouts[h] = layout.ptr; styles[h] = s; parents[h] = ph; if (scroll_opt.ptr) scrolls[h] = scroll_opt.ptr;
+        const u32 id = static_cast<u32>(it.entity());
+        const u32 pid = parent_opt.ptr ? static_cast<u32>(parent_opt.ptr->id) : 0u;
+        items.push_back({ s.z_index, ord++, id, layout.ptr, s, pid, is_button, is_disabled });
+        layouts[id] = layout.ptr; styles[id] = s; parents[id] = pid; if (scroll_opt.ptr) scrolls[id] = scroll_opt.ptr;
     }
 
     std::stable_sort(items.begin(), items.end(), [](const DrawItem &a, const DrawItem &b) { if (a.z != b.z) return a.z < b.z; return a.order < b.order; });
@@ -121,12 +123,13 @@ void render_system(r::ecs::Res<UiPluginConfig> cfg, r::ecs::Res<r::Camera3d> cam
 
     /* Debug bounds and highlights */
     if (cfg.ptr->debug_draw_bounds) {
-        for (auto [node, layout, style_opt, vis_opt, ui_parent_opt, parent_opt, text_opt, image_opt, button_opt, scroll_opt, id_opt] : q) {
-            (void)node; (void)style_opt; (void)vis_opt; (void)text_opt; (void)image_opt; (void)button_opt; (void)scroll_opt; (void)ui_parent_opt; (void)parent_opt;
+        for (auto it = q.begin(); it != q.end(); ++it) {
+            auto [node, layout, style_opt, vis_opt, parent_opt, text_opt, image_opt, button_opt, scroll_opt] = *it;
+            (void)node; (void)style_opt; (void)vis_opt; (void)text_opt; (void)image_opt; (void)button_opt; (void)scroll_opt; (void)parent_opt;
             const int x = (int)layout.ptr->x; const int y = (int)layout.ptr->y; const int w = (int)layout.ptr->w; const int h = (int)layout.ptr->h;
             DrawRectangleLines(x, y, w, h, {120,120,120,120});
         }
-        auto draw_highlight = [&](u32 h, ::Color c){ if (h==0) return; for (auto [node, layout, sopt, vopt, upopt, popt, topt, iopt, bopt, scopt, id_opt] : q){ u32 hid = id_opt.ptr ? id_opt.ptr->value : 0u; if (hid==h){ ::Rectangle r{layout.ptr->x, layout.ptr->y, layout.ptr->w, layout.ptr->h}; DrawRectangleLinesEx(r, 2, c); break; } } };
+        auto draw_highlight = [&](u32 h, ::Color c){ if (h==0) return; for (auto it = q.begin(); it != q.end(); ++it){ auto [node, layout, sopt, vopt, popt, topt, iopt, bopt, scopt] = *it; (void)node;(void)sopt;(void)vopt;(void)popt;(void)topt;(void)iopt;(void)bopt;(void)scopt; u32 eid = static_cast<u32>(it.entity()); if (eid==h){ ::Rectangle r{layout.ptr->x, layout.ptr->y, layout.ptr->w, layout.ptr->h}; DrawRectangleLinesEx(r, 2, c); break; } } };
         draw_highlight(input.ptr->hovered, {0,255,0,200});
         draw_highlight(input.ptr->active, {255,165,0,200});
         draw_highlight(input.ptr->focused, {255,255,0,200});
@@ -155,16 +158,17 @@ void render_system(r::ecs::Res<UiPluginConfig> cfg, r::ecs::Res<r::Camera3d> cam
 
     auto scroll_of2 = [&](u32 e){ float sx=0.f, sy=0.f; u32 p = e; while (p!=0){ auto pit=parents2.find(p); if (pit==parents2.end()) break; p = pit->second; auto sit=styles2.find(p); auto scit = scrolls.find(p); if (sit!=styles2.end() && (sit->second.clip_children || sit->second.overflow_clip) && scit!=scrolls.end()) { sx -= scit->second->x; sy -= scit->second->y; } } return std::pair<float,float>{sx,sy}; };
 
-    for (auto [node, layout, style_opt, vis_opt, ui_parent_opt, parent_opt, text_opt, image_opt, button_opt, scroll_opt, id] : q) {
+    for (auto it = q.begin(); it != q.end(); ++it) {
+        auto [node, layout, style_opt, vis_opt, parent_opt, text_opt, image_opt, button_opt, scroll_opt] = *it;
         (void)node;
         if (vis_opt.ptr && (*vis_opt.ptr != r::Visibility::Visible)) continue;
-        auto ssp = scroll_of2(id.ptr ? id.ptr->value : 0u); const float sx = ssp.first; const float sy = ssp.second;
+        auto ssp = scroll_of2(static_cast<u32>(it.entity())); const float sx = ssp.first; const float sy = ssp.second;
         const int x = (int)layout.ptr->x; const int y = (int)layout.ptr->y; const int w = (int)layout.ptr->w; const int h = (int)layout.ptr->h;
         const r::Style s = style_opt.ptr ? *style_opt.ptr : r::Style{};
         const int cx = x + (int)s.padding; const int cy = y + (int)s.padding; const int cw = w - (int)(s.padding * 2.f); const int ch = h - (int)(s.padding * 2.f);
 
         bool sc_apply = false; ::Rectangle sc_rect = {0,0,0,0};
-        for (u32 pp = ui_parent_opt.ptr ? ui_parent_opt.ptr->handle : 0u; pp != 0u; ) {
+        for (u32 pp = parent_opt.ptr ? static_cast<u32>(parent_opt.ptr->id) : 0u; pp != 0u; ) {
             auto psit = styles2.find(pp); auto plit = layouts2.find(pp);
             if (psit != styles2.end() && plit != layouts2.end()) {
                 const r::Style &ps = psit->second; const r::ComputedLayout *pl = plit->second;
@@ -181,9 +185,9 @@ void render_system(r::ecs::Res<UiPluginConfig> cfg, r::ecs::Res<r::Camera3d> cam
 
         if (image_opt.ptr && !image_opt.ptr->path.empty()) {
             auto &cache = textures.ptr->cache; const std::string &path = image_opt.ptr->path; const ::Texture2D *tex = nullptr;
-            auto it = cache.find(path);
-            if (it == cache.end()) { auto t = LoadTexture(path.c_str()); if (t.id != 0) cache[path] = t; auto it2 = cache.find(path); if (it2 != cache.end()) tex = &it2->second; }
-            else { tex = &it->second; }
+            auto itc = cache.find(path);
+            if (itc == cache.end()) { auto t = LoadTexture(path.c_str()); if (t.id != 0) cache[path] = t; auto it2 = cache.find(path); if (it2 != cache.end()) tex = &it2->second; }
+            else { tex = &itc->second; }
             if (tex && tex->id != 0) {
                 ::Rectangle src{0,0,(float)tex->width,(float)tex->height}; float dw = (float)cw; float dh = (float)ch; float dx = (float)cx; float dy = (float)cy;
                 if (image_opt.ptr->keep_aspect && tex->height > 0) { float ar = (float)tex->width / (float)tex->height; float box_ar = (float)cw / (float)ch; if (box_ar > ar) { dw = (float)ch * ar; dx = (float)cx + ((float)cw - dw) * 0.5f; } else { dh = (float)cw / ar; dy = (float)cy + ((float)ch - dh) * 0.5f; } }

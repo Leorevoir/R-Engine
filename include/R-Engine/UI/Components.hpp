@@ -12,14 +12,7 @@ namespace r {
 struct R_ENGINE_API UiNode {
 };
 
-/* UI handle + logical parent: ECS-agnostic IDs used by UiPlugin */
-struct R_ENGINE_API UiId { u32 value = 0; };
-struct R_ENGINE_API UiParent { u32 handle = 0; };
-struct R_ENGINE_API UiIdGen { u32 next = 1; };
-
-/* Focusable marker (optional). By default UiButton is treated as focusable. */
-struct R_ENGINE_API UiFocusable {
-};
+/* Legacy UI handle/parent components removed: systems now use ECS entity IDs and Parent */
 
 /* Hierarchy */
 struct R_ENGINE_API Parent {

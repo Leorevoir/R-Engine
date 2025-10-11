@@ -11,7 +11,7 @@ void scroll_input_system(
     r::ecs::Res<r::UiInputState> state,
     r::ecs::Res<r::UserInput> /*input*/,
     r::ecs::ResMut<r::UiEvents> events,
-    r::ecs::Query<r::ecs::Optional<r::UiId>, r::ecs::Optional<r::UiParent>, r::ecs::Optional<r::Style>, r::ecs::Optional<r::UiScroll>> q) noexcept
+    r::ecs::Query<r::ecs::Optional<r::Parent>, r::ecs::Optional<r::Style>, r::ecs::Optional<r::UiScroll>> q) noexcept
 {
     (void)events;
     const float wheel = GetMouseWheelMove();
@@ -21,12 +21,12 @@ void scroll_input_system(
     std::unordered_map<u32, r::Style> styles;
     std::unordered_map<u32, r::UiScroll*> scrolls;
 
-    for (auto [id_opt, parent_opt, style_opt, scroll_opt] : q) {
-        const u32 h = id_opt.ptr ? id_opt.ptr->value : 0u;
-        if (h == 0) continue;
-        if (parent_opt.ptr) parents[h] = parent_opt.ptr->handle;
-        if (style_opt.ptr) styles[h] = *style_opt.ptr;
-        if (scroll_opt.ptr) scrolls[h] = const_cast<r::UiScroll*>(scroll_opt.ptr);
+    for (auto it = q.begin(); it != q.end(); ++it) {
+        auto [parent_opt, style_opt, scroll_opt] = *it;
+        const u32 id = static_cast<u32>(it.entity());
+        if (parent_opt.ptr) parents[id] = static_cast<u32>(parent_opt.ptr->id);
+        if (style_opt.ptr) styles[id] = *style_opt.ptr;
+        if (scroll_opt.ptr) scrolls[id] = const_cast<r::UiScroll*>(scroll_opt.ptr);
     }
 
     u32 e = state.ptr->hovered;

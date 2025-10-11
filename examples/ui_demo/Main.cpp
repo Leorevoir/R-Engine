@@ -43,68 +43,68 @@ static void build_menu_ui(r::ecs::Commands &cmds, r::ecs::Res<r::WindowPluginCon
         r::Style{ .width_pct = 100.f, .height_pct = 100.f, .background = r::Color{0,0,0,0}, .padding = 8.f },
         r::ComputedLayout{}, r::Visibility::Visible);
     state.ptr->root = root.id();
-    cmds.entity(state.ptr->root).insert(r::UiId{ (u32)state.ptr->root });
+    /* UiId no longer required: systems use entity IDs directly */
 
     auto center = cmds.spawn(
-        r::UiNode{}, r::Parent{ state.ptr->root }, r::UiParent{ (u32)state.ptr->root },
+    r::UiNode{}, r::Parent{ state.ptr->root },
         r::Style{ .width_pct = 100.f, .height_pct = 100.f, .background = r::Color{0,0,0,0}, .direction = r::LayoutDirection::Column, .justify = r::JustifyContent::Center, .align = r::AlignItems::Center, .gap = 12.f },
         r::ComputedLayout{}, r::Visibility::Visible);
     const r::ecs::Entity center_id = center.id();
-    cmds.entity(center_id).insert(r::UiId{ (u32)center_id });
+    /* UiId no longer required */
 
     {
         auto title = cmds.spawn(
-            r::UiNode{}, r::Parent{ center_id }, r::UiParent{ (u32)center_id },
+            r::UiNode{}, r::Parent{ center_id },
             r::Style{ .width = 480.f, .height = 64.f, .background = r::Color{0,0,0,0}, .order = 0, .margin = 6.f, .direction = r::LayoutDirection::Column, .justify = r::JustifyContent::Center, .align = r::AlignItems::Center },
             r::UiText{ .content = std::string("R-Type"), .font_size = 40, .wrap_width = 0.f, .color = r::Color{180,220,255,255} },
             r::ComputedLayout{}, r::Visibility::Visible);
-        cmds.entity(title.id()).insert(r::UiId{ (u32)title.id() });
+    /* UiId no longer required */
     }
 
     auto buttons_panel = cmds.spawn(
-        r::UiNode{}, r::Parent{ center_id }, r::UiParent{ (u32)center_id },
+    r::UiNode{}, r::Parent{ center_id },
         r::Style{ .width = 420.f, .height = 200.f, .background = r::Color{0,0,0,0}, .order = 1, .direction = r::LayoutDirection::Column, .justify = r::JustifyContent::Center, .align = r::AlignItems::Center, .gap = 10.f },
         r::ComputedLayout{}, r::Visibility::Visible);
     const r::ecs::Entity panel_id = buttons_panel.id();
-    cmds.entity(panel_id).insert(r::UiId{ (u32)panel_id });
+    /* UiId no longer required */
 
     state.ptr->btn_play = cmds.spawn(
-        r::UiNode{}, r::Parent{ panel_id }, r::UiParent{ (u32)panel_id }, r::UiButton{},
+    r::UiNode{}, r::Parent{ panel_id }, r::UiButton{},
         r::Style{ .width = 360.f, .height = 44.f, .order = 0, .margin = 6.f, .direction = r::LayoutDirection::Column, .justify = r::JustifyContent::Center, .align = r::AlignItems::Center },
         r::UiText{ .content = std::string("Play"), .font_size = 22 },
         r::ComputedLayout{}, r::Visibility::Visible).id();
-    cmds.entity(state.ptr->btn_play).insert(r::UiId{ (u32)state.ptr->btn_play });
+    /* UiId no longer required */
 
     state.ptr->btn_options = cmds.spawn(
-        r::UiNode{}, r::Parent{ panel_id }, r::UiParent{ (u32)panel_id }, r::UiButton{},
+    r::UiNode{}, r::Parent{ panel_id }, r::UiButton{},
         r::Style{ .width = 360.f, .height = 44.f, .order = 1, .margin = 6.f, .direction = r::LayoutDirection::Column, .justify = r::JustifyContent::Center, .align = r::AlignItems::Center },
         r::UiText{ .content = std::string("Options"), .font_size = 22 },
         r::ComputedLayout{}, r::Visibility::Visible).id();
-    cmds.entity(state.ptr->btn_options).insert(r::UiId{ (u32)state.ptr->btn_options });
+    /* UiId no longer required */
 
     state.ptr->btn_quit = cmds.spawn(
-        r::UiNode{}, r::Parent{ panel_id }, r::UiParent{ (u32)panel_id }, r::UiButton{},
+    r::UiNode{}, r::Parent{ panel_id }, r::UiButton{},
         r::Style{ .width = 360.f, .height = 44.f, .order = 2, .margin = 6.f, .direction = r::LayoutDirection::Column, .justify = r::JustifyContent::Center, .align = r::AlignItems::Center },
         r::UiText{ .content = std::string("Quit"), .font_size = 22 },
         r::ComputedLayout{}, r::Visibility::Visible).id();
-    cmds.entity(state.ptr->btn_quit).insert(r::UiId{ (u32)state.ptr->btn_quit });
+    /* UiId no longer required */
 
     auto scroll_panel = cmds.spawn(
-        r::UiNode{}, r::Parent{ center_id }, r::UiParent{ (u32)center_id }, r::UiScroll{},
+    r::UiNode{}, r::Parent{ center_id }, r::UiScroll{},
         r::Style{ .width = 420.f, .height = 220.f, .background = r::Color{0,0,0,0}, .order = 2, .direction = r::LayoutDirection::Column, .justify = r::JustifyContent::Start, .align = r::AlignItems::Stretch, .gap = 6.f, .clip_children = true },
         r::ComputedLayout{}, r::Visibility::Visible);
     const r::ecs::Entity scroll_id = scroll_panel.id();
-    cmds.entity(scroll_id).insert(r::UiId{ (u32)scroll_id });
+    /* UiId no longer required */
 
     for (int i = 1; i <= 24; ++i) {
         char buf[64];
         snprintf(buf, sizeof(buf), "List item %02d", i);
         auto item = cmds.spawn(
-            r::UiNode{}, r::Parent{ scroll_id }, r::UiParent{ (u32)scroll_id },
+            r::UiNode{}, r::Parent{ scroll_id },
             r::Style{ .width = 400.f, .height = 28.f, .background = r::Color{20, (u8)(20 + i * 2), (u8)(28 + i), 180}, .order = i, .margin = 4.f, .padding = 6.f, .direction = r::LayoutDirection::Row, .justify = r::JustifyContent::Start, .align = r::AlignItems::Center },
             r::UiText{ .content = std::string(buf), .font_size = 18 },
             r::ComputedLayout{}, r::Visibility::Visible);
-        cmds.entity(item.id()).insert(r::UiId{ (u32)item.id() });
+    /* UiId no longer required */
     }
 }
 
@@ -149,7 +149,7 @@ int main()
         )
         .add_plugins(r::UiPlugin{})
         .insert_resource(MenuState{})
-        .add_systems(r::Schedule::STARTUP, setup_controls, build_menu_ui)
-        .add_systems(r::Schedule::UPDATE, theme_toggle_system, menu_logic_system)
+    .add_systems<setup_controls, build_menu_ui>(r::Schedule::STARTUP)
+    .add_systems<theme_toggle_system, menu_logic_system>(r::Schedule::UPDATE)
         .run();
 }

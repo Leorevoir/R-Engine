@@ -335,12 +335,18 @@ r::Application &r::Application::init_state(T initial_state) noexcept
     insert_resource(NextState<T>());
 
     _state_transition_runner = [this]() {
+        auto *state_res = _scene.get_resource_ptr<State<T>>();
         auto *next_state_res = _scene.get_resource_ptr<NextState<T>>();
+
+        /* If no transition is queued, clear the previous state. This ensures `state_changed` is a one-shot condition
+        that is only true for the single frame where the transition occurs. */
         if (!next_state_res || !next_state_res->next.has_value()) {
+            if (state_res) {
+                state_res->_previous.reset();
+            }
             return;
         }
 
-        auto *state_res = _scene.get_resource_ptr<State<T>>();
         T next = next_state_res->next.value();
         T current = state_res->current();
 

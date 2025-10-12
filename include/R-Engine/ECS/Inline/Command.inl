@@ -69,6 +69,12 @@ inline void r::ecs::CommandBuffer::insert_resource(T resource)
     _add_command([res = std::move(resource)](Scene &scene) mutable { scene.insert_resource<T>(std::move(res)); });
 }
 
+template<typename T>
+inline void r::ecs::CommandBuffer::remove_resource()
+{
+    _add_command([](Scene &scene) { scene.remove_resource<T>(); });
+}
+
 /**
  * Commands
  */
@@ -87,6 +93,14 @@ inline void r::ecs::Commands::insert_resource(T res) noexcept
 {
     if (_buffer) {
         _buffer->insert_resource<T>(std::move(res));
+    }
+}
+
+template<typename T>
+inline void r::ecs::Commands::remove_resource() noexcept
+{
+    if (_buffer) {
+        _buffer->remove_resource<T>();
     }
 }
 

@@ -112,6 +112,12 @@ class R_ENGINE_API CommandBuffer
         void insert_resource(T resource);
 
         /**
+         * @brief Schedules a command to remove a resource.
+         */
+        template<typename T>
+        void remove_resource();
+
+        /**
          * @brief Schedules a command to despawn an entity.
          */
         void despawn(Entity e);
@@ -183,6 +189,12 @@ struct R_ENGINE_API Commands {
          */
         template<typename T>
         void insert_resource(T res) noexcept;
+
+        /**
+         * @brief Schedules a resource to be removed from the scene.
+         */
+        template<typename T>
+        void remove_resource() noexcept;
 
         /**
          * @brief Schedules an entity and all its components to be despawned.

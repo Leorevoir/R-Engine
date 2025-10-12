@@ -345,6 +345,15 @@ class R_ENGINE_API Application final
         */
         void run();
 
+        /**
+         * @brief Gets a pointer to a resource from the application's scene.
+         * @details Useful for inspecting state, especially in tests.
+         * @tparam T The type of the resource to get.
+         * @return A pointer to the resource, or nullptr if it doesn't exist.
+         */
+        template<typename T>
+        T *get_resource_ptr() noexcept;
+
         static inline std::atomic_bool quit{false};
 
     private:

@@ -231,6 +231,12 @@ inline auto r::Application::SetConfigurator<SetTypes...>::after() noexcept
 * Application Implementation
 */
 
+template<typename T>
+T *r::Application::get_resource_ptr() noexcept
+{
+    return _scene.get_resource_ptr<T>();
+}
+
 template<auto SystemFunc>
 static void system_invoker_template(r::ecs::Scene &scene, r::ecs::CommandBuffer &cmd)
 {

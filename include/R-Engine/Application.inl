@@ -288,13 +288,13 @@ namespace r {
 namespace detail {
 
 /**
-* @brief system to clear events after they have been processed
+* @brief system to update events after they have been processed
 */
 template<typename EventT>
-static void __clear_events_system(ecs::ResMut<ecs::Events<EventT>> events)
+static void __update_events_system(ecs::ResMut<ecs::Events<EventT>> events)
 {
     if (events.ptr) {
-        events.ptr->clear();
+        events.ptr->update();
     }
 }
 
@@ -306,7 +306,7 @@ template<typename... EventTs>
 r::Application &r::Application::add_events() noexcept
 {
     (insert_resource(ecs::Events<EventTs>{}), ...);
-    (add_systems<detail::__clear_events_system<EventTs>>(Schedule::EVENT_CLEANUP), ...);
+    (add_systems<detail::__update_events_system<EventTs>>(Schedule::EVENT_CLEANUP), ...);
 
     return *this;
 }

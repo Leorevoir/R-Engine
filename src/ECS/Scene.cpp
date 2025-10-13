@@ -84,6 +84,7 @@ usize r::ecs::Scene::_find_or_create_archetype(const std::vector<std::type_index
 void r::ecs::Scene::_move_entity_between_archetypes(Entity e, EntityLocation &loc, usize new_archetype_idx)
 {
     const usize old_archetype_idx = loc.archetype_index;
+    const usize old_row = loc.table_row;
     Archetype &old_archetype = _archetypes[old_archetype_idx];
     Archetype &new_archetype = _archetypes[new_archetype_idx];
     Table &old_table = old_archetype.table;
@@ -108,12 +109,12 @@ void r::ecs::Scene::_move_entity_between_archetypes(Entity e, EntityLocation &lo
     }
 
     /** Clean up the old table */
-    Entity swapped_entity = old_table.remove_entity_swap_back(loc.table_row);
+    Entity swapped_entity = old_table.remove_entity_swap_back(old_row);
 
     /** Update entity locations */
     loc.archetype_index = new_archetype_idx;
     loc.table_row = new_row;
     if (swapped_entity != 0) {
-        _entity_locations.at(swapped_entity).table_row = loc.table_row;
+        _entity_locations.at(swapped_entity).table_row = old_row;
     }
 }

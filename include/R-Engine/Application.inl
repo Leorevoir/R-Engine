@@ -56,9 +56,9 @@ inline auto r::Application::ConfiguratorBase<Derived>::configure_sets(Schedule w
 
 template<typename Derived>
 template<typename ResT>
-inline Derived &r::Application::ConfiguratorBase<Derived>::insert_resource(ResT res) noexcept
+inline Derived &r::Application::ConfiguratorBase<Derived>::insert_resource(ResT &&res) noexcept
 {
-    _app->insert_resource(std::move(res));
+    _app->insert_resource(std::forward<ResT>(res));
     return static_cast<Derived &>(*this);
 }
 
@@ -263,9 +263,9 @@ inline auto r::Application::configure_sets(Schedule when) noexcept
 }
 
 template<typename ResT>
-r::Application &r::Application::insert_resource(ResT res) noexcept
+r::Application &r::Application::insert_resource(ResT &&res) noexcept
 {
-    _scene.insert_resource<ResT>(std::move(res));
+    _scene.insert_resource(std::forward<ResT>(res));
     return *this;
 }
 // clang-format on

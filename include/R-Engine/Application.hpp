@@ -150,7 +150,7 @@ class R_ENGINE_API Application final
                 * @brief Forwards to Application::insert_resource and returns this configurator.
                 */
                 template<typename ResT>
-                Derived &insert_resource(ResT res) noexcept;
+                Derived &insert_resource(ResT &&res) noexcept;
 
                 /**
                 * @brief Forwards to Application::add_plugins and returns this configurator.
@@ -307,7 +307,7 @@ class R_ENGINE_API Application final
         * @return A reference to the Application for chaining.
         */
         template<typename ResT>
-        Application &insert_resource(ResT res) noexcept;
+        Application &insert_resource(ResT &&res) noexcept;
 
         /**
          * @brief Adds one or more plugins to the application.

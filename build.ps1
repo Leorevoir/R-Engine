@@ -1,6 +1,5 @@
 #!/usr/bin/env pwsh
 
-# Color definitions
 $GREEN = "`e[1;32m"
 $RED = "`e[1;31m"
 $ILC = "`e[3m"
@@ -10,7 +9,8 @@ $RST = "`e[0m"
 $PROGRAM_NAME = "r-engine examples"
 $UNIT_TESTS_NAME = "unit_tests"
 
-function Write-Error-Exit {
+function Write-Error-Exit
+{
     param(
         [string]$Message,
         [string]$Detail
@@ -20,17 +20,20 @@ function Write-Error-Exit {
     exit 84
 }
 
-function Write-Success {
+function Write-Success
+{
     param([string]$Message)
     Write-Host "${GREEN}[✅] SUCCESS:`t${RST} ${ILC}$Message${RST}"
 }
 
-function Write-Info {
+function Write-Info
+{
     param([string]$Message)
     Write-Host "${ORG}[🚧] RUNNING:`t${RST} ${ILC}$Message${RST}"
 }
 
-function Invoke-BaseRun {
+function Invoke-BaseRun
+{
     param(
         [string]$CmakeArgs,
         [string]$BuildType
@@ -65,17 +68,20 @@ function Invoke-BaseRun {
     }
 }
 
-function Invoke-All {
+function Invoke-All
+{
     Invoke-BaseRun "-DCMAKE_BUILD_TYPE=Release -DENABLE_DEBUG=OFF" $PROGRAM_NAME
     exit 0
 }
 
-function Invoke-Debug {
+function Invoke-Debug
+{
     Invoke-BaseRun "-DCMAKE_BUILD_TYPE=Debug -DENABLE_DEBUG=ON" $PROGRAM_NAME
     exit 0
 }
 
-function Invoke-TestsRun {
+function Invoke-TestsRun
+{
     Invoke-BaseRun "-DCMAKE_BUILD_TYPE=Debug -DENABLE_DEBUG=ON -DENABLE_TESTS=ON" $UNIT_TESTS_NAME
 
     Push-Location "build"
@@ -100,13 +106,15 @@ function Invoke-TestsRun {
     exit 0
 }
 
-function Invoke-Clean {
+function Invoke-Clean
+{
     if (Test-Path "build") {
         Remove-Item -Recurse -Force "build"
     }
 }
 
-function Invoke-FClean {
+function Invoke-FClean
+{
     Invoke-Clean
 
     $itemsToRemove = @(
@@ -125,7 +133,6 @@ function Invoke-FClean {
         }
     }
 
-    # Remove pattern-based files
     Get-ChildItem -Path "." -Filter "r-engine__*" -ErrorAction SilentlyContinue | Remove-Item -Force
     Get-ChildItem -Path "." -Filter "$UNIT_TESTS_NAME-*.profraw" -ErrorAction SilentlyContinue | Remove-Item -Force
     Get-ChildItem -Path "." -Filter "$UNIT_TESTS_NAME.profdata" -ErrorAction SilentlyContinue | Remove-Item -Force
@@ -134,7 +141,8 @@ function Invoke-FClean {
     Get-ChildItem -Path "." -Filter "libr*" -ErrorAction SilentlyContinue | Remove-Item -Force
 }
 
-function Show-Help {
+function Show-Help
+{
     $scriptName = $MyInvocation.ScriptName
     if (-not $scriptName) { $scriptName = "build.ps1" }
 
@@ -152,7 +160,6 @@ ARGUMENTS:
 "@
 }
 
-# Main argument processing
 if ($args.Count -eq 0) {
     Invoke-All
     exit 0

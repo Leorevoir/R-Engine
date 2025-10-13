@@ -102,7 +102,7 @@ struct R_ENGINE_API Meshes final {
         /**
         * @brief draw a mesh at a given position, scale, and tint color
         */
-        void draw(const MeshHandle handle, const Vec3f &position, const f32 scale, const Color tint) const;
+        void draw(const MeshHandle handle, const Vec3f &position, const Vec3f &rotation, const Vec3f &scale, const Color tint) const;
 
         /**
         * @brief remove a mesh from the manager and free its resources

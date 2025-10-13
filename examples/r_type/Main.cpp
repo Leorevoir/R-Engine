@@ -95,7 +95,8 @@ static void startup_system(
                 Player{},
                 r::Transform3d{
                     .position = {-5.0f, 0.0f, 0.0f},
-                    .scale = {0.5f, 0.5f, 0.5f}
+                    .rotation = {static_cast<float>(M_PI) / 2.0f, 0.0f, static_cast<float>(M_PI) / 2.0f},
+                    .scale = {3.0f, 3.0f, 3.0f}
                 },
                 Velocity{{0.0f, 0.0f, 0.0f}},
                 Collider{0.5f},

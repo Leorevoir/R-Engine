@@ -162,5 +162,5 @@ static void transform_propagate_system(OrphelinsQuery roots_q, TransformComponen
 void r::TransformPlugin::build(Application &app)
 {
     app.add_systems<transform_add_missing_global_system>(r::Schedule::UPDATE)
-        .add_systems<transform_propagate_system>(r::Schedule::BEFORE_RENDER_2D);
+        .add_systems<transform_propagate_system>(r::Schedule::BEFORE_RENDER_3D);
 }

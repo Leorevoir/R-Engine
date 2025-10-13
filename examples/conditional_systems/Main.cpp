@@ -1,8 +1,8 @@
 #include <R-Engine/Application.hpp>
 #include <R-Engine/Core/Backend.hpp>
-#include <R-Engine/Core/RunConditions.hpp>
 #include <R-Engine/Core/States.hpp>
 #include <R-Engine/ECS/Event.hpp>
+#include <R-Engine/ECS/RunConditions.hpp>
 #include <R-Engine/Plugins/DefaultPlugins.hpp>
 #include <R-Engine/Plugins/WindowPlugin.hpp>
 #include <iostream>

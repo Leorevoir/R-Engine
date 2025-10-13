@@ -5,8 +5,8 @@
 
 #include <R-Engine/Core/Clock.hpp>
 #include <R-Engine/Core/Flagable.hpp>
-#include <R-Engine/Core/RunConditions.hpp>
 #include <R-Engine/ECS/Command.hpp>
+#include <R-Engine/ECS/RunConditions.hpp>
 #include <R-Engine/ECS/Scene.hpp>
 #include <R-Engine/ECS/System.hpp>
 
@@ -355,6 +355,8 @@ class R_ENGINE_API Application final
         T *get_resource_ptr() noexcept;
 
         static inline std::atomic_bool quit{false};
+        /* True only when quit was triggered by a SIGINT handler */
+        static inline std::atomic_bool quit_from_signal{false};
 
     private:
         void _startup();

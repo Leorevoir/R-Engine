@@ -1,9 +1,9 @@
 #include "../Test.hpp"
 
 #include <R-Engine/Application.hpp>
-#include <R-Engine/Core/RunConditions.hpp>
 #include <R-Engine/Core/States.hpp>
 #include <R-Engine/ECS/Event.hpp>
+#include <R-Engine/ECS/RunConditions.hpp>
 #include <criterion/redirect.h>
 
 // --- Setup ---

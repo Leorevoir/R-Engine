@@ -62,10 +62,32 @@ struct R_ENGINE_API AudioPlayer {
  */
 struct R_ENGINE_API AudioSink {
     public:
-        f32 volume = 1.f;
-        f32 pitch = 1.f;
-        bool paused = false;
-        bool muted = false;
+        AudioSink() noexcept = default;
+        AudioSink(const f32 volume, const f32 pitch, const bool paused, const bool mute) noexcept;
+
+        void play() noexcept;
+        void pause() noexcept;
+        void stop() noexcept;
+        void toggle() noexcept;
+
+        void set_volume(const f32 volume) noexcept;
+        void set_pitch(const f32 pitch) noexcept;
+        void set_mute(const bool mute) noexcept;
+        void set_paused(const bool pause) noexcept;
+
+        bool is_playing() const noexcept;
+        bool is_paused() const noexcept;
+        bool is_stopped() const noexcept;
+        bool is_muted() const noexcept;
+        f32 get_volume() const noexcept;
+        f32 get_pitch() const noexcept;
+
+    private:
+        f32 _volume = 1.f;
+        f32 _pitch = 1.f;
+        bool _paused = false;
+        bool _muted = false;
+        bool _stopped = false;
 };
 
 /**

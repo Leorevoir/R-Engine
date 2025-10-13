@@ -5,8 +5,8 @@
 
 #include <R-Engine/Core/Clock.hpp>
 #include <R-Engine/Core/Flagable.hpp>
-#include <R-Engine/ECS/RunConditions.hpp>
 #include <R-Engine/ECS/Command.hpp>
+#include <R-Engine/ECS/RunConditions.hpp>
 #include <R-Engine/ECS/Scene.hpp>
 #include <R-Engine/ECS/System.hpp>
 

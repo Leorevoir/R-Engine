@@ -15,9 +15,11 @@ UiFonts::~UiFonts()
 const ::Font *UiFonts::load(const std::string &path)
 {
     auto it = cache.find(path);
-    if (it != cache.end()) return &it->second;
+    if (it != cache.end())
+        return &it->second;
     ::Font f = LoadFont(path.c_str());
-    if (f.baseSize == 0) return nullptr;
+    if (f.baseSize == 0)
+        return nullptr;
     cache[path] = f;
     return &cache[path];
 }
@@ -25,7 +27,8 @@ const ::Font *UiFonts::load(const std::string &path)
 void UiFonts::unload(const std::string &path)
 {
     auto it = cache.find(path);
-    if (it == cache.end()) return;
+    if (it == cache.end())
+        return;
     UnloadFont(it->second);
     cache.erase(it);
 }

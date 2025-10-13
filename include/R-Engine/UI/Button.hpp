@@ -8,8 +8,7 @@ namespace r {
  * @brief Button marker + state.
  */
 struct R_ENGINE_API UiButton {
-    bool disabled = false;
+        bool disabled = false;
 };
 
 } /* namespace r */
-

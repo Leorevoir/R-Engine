@@ -34,4 +34,4 @@ bool Archetype::has_component(const std::type_index &type) const
     return component_map.count(type);
 }
 
-} // namespace r::ecs
+}// namespace r::ecs

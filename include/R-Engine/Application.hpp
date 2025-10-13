@@ -61,7 +61,7 @@ class R_ENGINE_API Application final
         using SystemSetId = std::type_index;
         using SystemFn = void (*)(ecs::Scene &, ecs::CommandBuffer &);
 
-        struct SystemNode {
+        struct R_ENGINE_API SystemNode {
                 SystemNode();
                 SystemNode(const std::string &p_name, SystemTypeId p_id, SystemFn p_func, std::vector<SystemTypeId> p_dependencies);
 
@@ -80,7 +80,7 @@ class R_ENGINE_API Application final
          * @details Systems can belong to multiple sets. Sets can have ordering constraints
          * relative to other sets using before_sets and after_sets.
          */
-        struct SystemSet {
+        struct R_ENGINE_API SystemSet {
                 SystemSet(const std::string &pname, SystemSetId pid) noexcept;
 
                 std::string name;

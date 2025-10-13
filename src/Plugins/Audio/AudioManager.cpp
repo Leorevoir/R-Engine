@@ -9,7 +9,10 @@
 r::AudioManager::~AudioManager()
 {
     for (auto &s : _sounds) {
-        UnloadSound(s);
+
+        if (s.frameCount > 0) {
+            UnloadSound(s);
+        }
     }
 
     _sounds.clear();
@@ -65,8 +68,14 @@ void r::AudioManager::unload(const AudioHandle handle) noexcept
         return;
     }
 
-    UnloadSound(_sounds[handle]);
-    _sounds[handle].frameCount = 0;
+    auto &sound = _sounds[handle];
+
+    if (sound.frameCount == 0) {
+        return;
+    }
+
+    UnloadSound(sound);
+    sound.frameCount = 0;
 }
 
 const ::Sound *r::AudioManager::get(AudioHandle handle) const noexcept

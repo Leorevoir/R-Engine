@@ -17,7 +17,7 @@ class EventReader;
 /**
  * @brief Internal storage for events of type EventT.
  * @details This is stored as a resource in the Scene.
- * Uses double buffering to avoid iterator invalidation during reads.
+ * Uses double buffering to make events from frame N readable in frame N+1.
  */
 template<typename EventT>
 class Events
@@ -29,11 +29,13 @@ class Events
         void send(EventT &&event);
 
         const std::vector<EventT> &get_events() const;
-        void clear();
+        void update();
         bool has_events() const;
 
     private:
-        std::vector<EventT> _events;
+        std::vector<EventT> _a;
+        std::vector<EventT> _b;
+        bool _reading_a = true;
 };
 
 /**

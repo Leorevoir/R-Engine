@@ -90,6 +90,24 @@ static inline auto call_with_resolved(Func &&f, Scene &scene, CommandBuffer &cmd
 }
 
 /**
+ * @brief invoke a predicate function with arguments resolved from the ECS Scene.
+ *
+ * similar to `call_with_resolved`, but specifically for predicates that return a boolean.
+ *
+ * @param p predicate function type
+ * @param args argument types (deduced from function_traits)
+ * @return the boolean result of the predicate.
+ */
+template<typename Predicate, typename... Args, size_t... I>
+static inline bool call_predicate_with_resolved(Predicate &&p, Scene &scene, CommandBuffer &cmd, std::tuple<Args...>,
+    std::index_sequence<I...>)
+{
+    Resolver resolver(&scene, &cmd);
+    auto resolved_args = std::make_tuple(resolver.resolve(std::type_identity<Args>{})...);
+    return static_cast<bool>(std::apply(std::forward<Predicate>(p), resolved_args));
+}
+
+/**
  * @brief entry point to execute a system.
  *
  * deduces the system function's argument list via function_traits,

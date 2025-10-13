@@ -122,6 +122,12 @@ void r::ecs::Scene::insert_resource(T r) noexcept
 }
 
 template<typename T>
+void r::ecs::Scene::remove_resource() noexcept
+{
+    _resources.erase(std::type_index(typeid(T)));
+}
+
+template<typename T>
 T *r::ecs::Scene::get_resource_ptr() noexcept
 {
     const auto it = _resources.find(std::type_index(typeid(T)));

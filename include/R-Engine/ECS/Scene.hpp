@@ -99,6 +99,13 @@ class R_ENGINE_API Scene : public NonCopyable
         void insert_resource(T r) noexcept;
 
         /**
+         * @brief Removes a resource from the scene.
+         * @tparam T The type of the resource to remove.
+         */
+        template<typename T>
+        void remove_resource() noexcept;
+
+        /**
          * @brief Gets a pointer to a resource of type T.
          * @tparam T The type of the resource to get.
          * @return A pointer to the resource, or nullptr if it doesn't exist.

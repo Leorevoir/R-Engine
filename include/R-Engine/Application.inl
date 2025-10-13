@@ -1,6 +1,7 @@
 #pragma once
 
 #include <R-Engine/Application.hpp>
+#include <R-Engine/ECS/System.hpp>
 #include <R-Engine/Plugins/Plugin.hpp>
 #include <type_traits>
 #include <utility>
@@ -147,6 +148,23 @@ inline r::Application::SystemConfigurator &r::Application::SystemConfigurator::b
     return *this;
 }
 
+template<auto PredicateFunc>
+inline r::Application::SystemConfigurator &r::Application::SystemConfigurator::run_if() noexcept
+{
+    using traits = ecs::function_traits<std::remove_cvref_t<decltype(PredicateFunc)>>;
+    using args = typename traits::args;
+
+    auto condition_wrapper = [app = this->_app](ecs::Scene &scene) -> bool {
+        return ecs::call_predicate_with_resolved(
+            PredicateFunc, scene, app->_command_buffer, args{}, std::make_index_sequence<std::tuple_size_v<args>>{});
+    };
+
+    for (const auto &system_id : _system_ids) {
+        _graph->nodes.at(system_id).condition = condition_wrapper;
+    }
+    return *this;
+}
+
 template<typename SetType>
 inline r::Application::SystemConfigurator &r::Application::SystemConfigurator::in_set() noexcept
 {
@@ -213,6 +231,12 @@ inline auto r::Application::SetConfigurator<SetTypes...>::after() noexcept
 * Application Implementation
 */
 
+template<typename T>
+T *r::Application::get_resource_ptr() noexcept
+{
+    return _scene.get_resource_ptr<T>();
+}
+
 template<auto SystemFunc>
 static void system_invoker_template(r::ecs::Scene &scene, r::ecs::CommandBuffer &cmd)
 {
@@ -270,13 +294,13 @@ namespace r {
 namespace detail {
 
 /**
-* @brief system to clear events after they have been processed
+* @brief system to update events after they have been processed
 */
 template<typename EventT>
-static void __clear_events_system(ecs::ResMut<ecs::Events<EventT>> events)
+static void __update_events_system(ecs::ResMut<ecs::Events<EventT>> events)
 {
     if (events.ptr) {
-        events.ptr->clear();
+        events.ptr->update();
     }
 }
 
@@ -288,7 +312,7 @@ template<typename... EventTs>
 r::Application &r::Application::add_events() noexcept
 {
     (insert_resource(ecs::Events<EventTs>{}), ...);
-    (add_systems<detail::__clear_events_system<EventTs>>(Schedule::EVENT_CLEANUP), ...);
+    (add_systems<detail::__update_events_system<EventTs>>(Schedule::EVENT_CLEANUP), ...);
 
     return *this;
 }
@@ -317,12 +341,18 @@ r::Application &r::Application::init_state(T initial_state) noexcept
     insert_resource(NextState<T>());
 
     _state_transition_runner = [this]() {
+        auto *state_res = _scene.get_resource_ptr<State<T>>();
         auto *next_state_res = _scene.get_resource_ptr<NextState<T>>();
+
+        /* If no transition is queued, clear the previous state. This ensures `state_changed` is a one-shot condition
+        that is only true for the single frame where the transition occurs. */
         if (!next_state_res || !next_state_res->next.has_value()) {
+            if (state_res) {
+                state_res->_previous.reset();
+            }
             return;
         }
 
-        auto *state_res = _scene.get_resource_ptr<State<T>>();
         T next = next_state_res->next.value();
         T current = state_res->current();
 

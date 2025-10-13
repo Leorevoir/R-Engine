@@ -1,5 +1,7 @@
 #pragma once
 
+#include "R-Engine/ECS/Event.hpp"
+
 /**
 * Events
 */
@@ -7,31 +9,47 @@
 template<typename EventT>
 void r::ecs::Events<EventT>::send(const EventT &event)
 {
-    _events.push_back(event);
+    if (_reading_a) {
+        _b.push_back(event);
+    } else {
+        _a.push_back(event);
+    }
 }
 
 template<typename EventT>
 void r::ecs::Events<EventT>::send(EventT &&event)
 {
-    _events.push_back(std::move(event));
+    if (_reading_a) {
+        _b.push_back(std::move(event));
+    } else {
+        _a.push_back(std::move(event));
+    }
 }
 
 template<typename EventT>
 const std::vector<EventT> &r::ecs::Events<EventT>::get_events() const
 {
-    return _events;
+    return _reading_a ? _a : _b;
 }
 
 template<typename EventT>
-void r::ecs::Events<EventT>::clear()
+void r::ecs::Events<EventT>::update()
 {
-    _events.clear();
+    /* Swap which buffer is for reading and which is for writing. */
+    _reading_a = !_reading_a;
+
+    /* Clear the new write buffer. */
+    if (_reading_a) { /* We are now reading from A, so B is the write buffer. */
+        _b.clear();
+    } else { /* We are now reading from B, so A is the write buffer. */
+        _a.clear();
+    }
 }
 
 template<typename EventT>
 bool r::ecs::Events<EventT>::has_events() const
 {
-    return !_events.empty();
+    return _reading_a ? !_a.empty() : !_b.empty();
 }
 
 /**

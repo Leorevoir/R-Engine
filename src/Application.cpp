@@ -262,6 +262,9 @@ void r::Application::_perform_topological_sort(ScheduleGraph &graph, std::unorde
 void r::Application::_execute_systems(const ScheduleGraph &graph)
 {
     for (const auto *node_ptr : graph.execution_order) {
+        if (node_ptr->condition && !node_ptr->condition(_scene)) {
+            continue;
+        }
         node_ptr->func(_scene, _command_buffer);
     }
 }
@@ -291,10 +294,11 @@ void r::Application::_apply_state_transitions()
     }
 }
 
-void r::Application::_run_transition_schedule(ScheduleGraph& graph)
+void r::Application::_run_transition_schedule(ScheduleGraph &graph)
 {
-    if (graph.nodes.empty()) return;
-    
+    if (graph.nodes.empty())
+        return;
+
     if (graph.dirty) {
         _sort_schedule(graph);
     }

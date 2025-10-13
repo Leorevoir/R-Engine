@@ -123,3 +123,5 @@ examples/assets/
 intra_assets/*
 
 *.pdf
+*.ogg
+*.wav

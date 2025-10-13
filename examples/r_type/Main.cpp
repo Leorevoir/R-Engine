@@ -11,6 +11,7 @@
 #include <R-Engine/Plugins/RenderPlugin.hpp>
 #include <R-Engine/Plugins/WindowPlugin.hpp>
 
+#include <cmath>
 #include <cstdlib>
 #include <vector>
 
@@ -84,10 +85,10 @@ static void startup_system(
     input_map.ptr->bindAction("Fire", r::KEYBOARD, KEY_SPACE);
 
     /* --- Spawn Player --- */
-    ::Mesh player_mesh_data = r::Mesh3d::Cube(1.0f);
+    ::Model player_model_data = r::Mesh3d::Glb("examples/r_type/assets/R-9.glb");
 
-    if (player_mesh_data.vertexCount > 0 && player_mesh_data.vertices) {
-        r::MeshHandle player_mesh_handle = meshes.ptr->add(player_mesh_data);
+    if (player_model_data.meshCount > 0) {
+        r::MeshHandle player_mesh_handle = meshes.ptr->add(player_model_data);
 
         if (player_mesh_handle != r::MeshInvalidHandle) {
             commands.spawn(
@@ -100,14 +101,14 @@ static void startup_system(
                 Collider{0.5f},
                 r::Mesh3d{
                     player_mesh_handle,
-                    r::Color{80, 150, 255, 255} /* Blue color for the player */
+                    r::Color{255, 255, 255, 255} /* White tint to show original texture */
                 }
             );
         } else {
-             r::Logger::error("startup_system: Failed to register player mesh with mesh manager.");
+             r::Logger::error("startup_system: Failed to register player model with mesh manager.");
         }
     } else {
-        r::Logger::error("startup_system: Failed to generate player cube mesh.");
+        r::Logger::error("startup_system: Failed to load player model 'assets/R-9.glb'.");
     }
 }
 

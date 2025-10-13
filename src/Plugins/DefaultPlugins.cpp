@@ -1,12 +1,10 @@
+#include <R-Engine/Plugins/AudioPlugin.hpp>
 #include <R-Engine/Plugins/DefaultPlugins.hpp>
-#include <R-Engine/Plugins/TransformPlugin.hpp>
-
 #include <R-Engine/Plugins/InputPlugin.hpp>
 #include <R-Engine/Plugins/MeshPlugin.hpp>
 #include <R-Engine/Plugins/RenderPlugin.hpp>
+#include <R-Engine/Plugins/TransformPlugin.hpp>
 #include <R-Engine/Plugins/WindowPlugin.hpp>
-
-#include <R-Engine/Application.hpp>
 
 /**
 * public
@@ -19,6 +17,7 @@ r::DefaultPlugins::DefaultPlugins()
     add<InputPlugin>();
     add<MeshPlugin>();
     add<TransformPlugin>();
+    add<AudioPlugin>();
 }
 
 void r::DefaultPlugins::build(r::Application &app)

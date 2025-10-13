@@ -4,21 +4,21 @@
 
 namespace r {
 
-class R_ENGINE_API Logger
+class Logger
 {
     public:
         enum class Level { Debug, Info, Warn, Error };
 
-        static void debug(const std::string_view message, const std::string_view file = __builtin_FILE(),
+        static void R_ENGINE_API debug(const std::string_view message, const std::string_view file = __builtin_FILE(),
             int line = __builtin_LINE()) noexcept;
 
-        static void info(const std::string_view message, const std::string_view file = __builtin_FILE(),
+        static void R_ENGINE_API info(const std::string_view message, const std::string_view file = __builtin_FILE(),
             int line = __builtin_LINE()) noexcept;
 
-        static void warn(const std::string_view message, const std::string_view file = __builtin_FILE(),
+        static void R_ENGINE_API warn(const std::string_view message, const std::string_view file = __builtin_FILE(),
             int line = __builtin_LINE()) noexcept;
 
-        static void error(const std::string_view message, const std::string_view file = __builtin_FILE(),
+        static void R_ENGINE_API error(const std::string_view message, const std::string_view file = __builtin_FILE(),
             int line = __builtin_LINE()) noexcept;
 
     private:

@@ -36,6 +36,7 @@ r::Mesh3d::Mesh3d(const u32 mesh_handle, const r::Color &mesh_color) noexcept : 
     mesh.vertices = (f32 *) MemAlloc(vertex_count * 3 * sizeof(f32));
     mesh.normals = (f32 *) MemAlloc(vertex_count * 3 * sizeof(f32));
     mesh.texcoords = (f32 *) MemAlloc(vertex_count * 2 * sizeof(f32));
+    mesh.indices = (unsigned short *) MemAlloc(slices * 3 * sizeof(unsigned short));
 
     mesh.vertices[0] = center.x;
     mesh.vertices[1] = center.y;
@@ -66,6 +67,14 @@ r::Mesh3d::Mesh3d(const u32 mesh_handle, const r::Color &mesh_color) noexcept : 
 
         mesh.texcoords[t + 0] = (x / radius + 1.f) * 0.5f;
         mesh.texcoords[t + 1] = (z / radius + 1.f) * 0.5f;
+    }
+
+    /* Populate the indices to form triangles. */
+    for (u32 i = 0; i < slices; i++) {
+        const u32 idx = i * 3;
+        mesh.indices[idx + 0] = 0;
+        mesh.indices[idx + 1] = static_cast<unsigned short>(i + 1);
+        mesh.indices[idx + 2] = static_cast<unsigned short>(i + 2);
     }
 
     UploadMesh(&mesh, false);

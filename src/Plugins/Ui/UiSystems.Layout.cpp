@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <vector>
 #include <algorithm>
+#include <limits>
 #include <R-Engine/ECS/Command.hpp>
 
 namespace r::ui {
@@ -17,10 +18,10 @@ static float UI_THEME_PADDING = 8.f;
 struct Rect { float x; float y; float w; float h; };
 
 static void _layout_recursive(
-    const std::unordered_map<u32, std::vector<u32>> &children,
-    const std::unordered_map<u32, r::Style> &styles,
-    std::unordered_map<u32, r::ComputedLayout*> &layouts,
-    u32 node,
+    const std::unordered_map<r::ecs::Entity, std::vector<r::ecs::Entity>> &children,
+    const std::unordered_map<r::ecs::Entity, r::Style> &styles,
+    std::unordered_map<r::ecs::Entity, r::ComputedLayout*> &layouts,
+    r::ecs::Entity node,
     const Rect &content)
 {
     auto it = children.find(node);
@@ -29,8 +30,8 @@ static void _layout_recursive(
     const r::Style parent_style = [&]() { auto ps = styles.find(node); return (ps != styles.end()) ? ps->second : r::Style{}; }();
 
     const auto &kids = it->second;
-    std::vector<u32> ordered_kids = kids;
-    std::stable_sort(ordered_kids.begin(), ordered_kids.end(), [&](u32 a, u32 b){
+    std::vector<r::ecs::Entity> ordered_kids = kids;
+    std::stable_sort(ordered_kids.begin(), ordered_kids.end(), [&](r::ecs::Entity a, r::ecs::Entity b){
         auto sa = styles.find(a); auto sb = styles.find(b);
         int oa = (sa != styles.end()) ? sa->second.order : 0;
         int ob = (sb != styles.end()) ? sb->second.order : 0;
@@ -145,44 +146,61 @@ void compute_layout_system(
         r::ecs::Optional<r::Style>,
         r::ecs::Optional<r::Visibility>,
         r::ecs::Optional<r::ecs::Parent>,
-        r::ecs::Optional<r::UiScroll>
+        r::ecs::Optional<r::UiScroll>,
+        r::ecs::Optional<r::ecs::Children>
     > q,
     r::ecs::Res<r::UiTheme> theme)
 {
     UI_THEME_SPACING = theme.ptr->spacing;
     UI_THEME_PADDING = static_cast<float>(theme.ptr->padding);
 
-    std::unordered_map<u32, std::vector<u32>> children_map;
-    std::unordered_map<u32, r::Style> styles;
-    std::unordered_map<u32, r::ComputedLayout*> layouts;
-    std::unordered_set<u32> present;
+    std::unordered_map<r::ecs::Entity, std::vector<r::ecs::Entity>> children_map;
+    std::unordered_map<r::ecs::Entity, r::Style> styles;
+    std::unordered_map<r::ecs::Entity, r::ComputedLayout*> layouts;
+    std::unordered_set<r::ecs::Entity> present;
+    std::unordered_map<r::ecs::Entity, r::ecs::Entity> parent_from_children;
 
-    struct NodeInfo { u32 id; u32 parent; bool visible; };
+    struct NodeInfo { r::ecs::Entity id; r::ecs::Entity parent; bool visible; };
     std::vector<NodeInfo> nodes;
 
     for (auto it = q.begin(); it != q.end(); ++it) {
-        auto [layout, style_opt, vis_opt, parent_opt, scroll_opt] = *it;
+        auto [layout, style_opt, vis_opt, parent_opt, scroll_opt, children_opt] = *it;
         (void)scroll_opt;
-        const u32 id = static_cast<u32>(it.entity());
-        const u32 p = parent_opt.ptr ? static_cast<u32>(parent_opt.ptr->entity) : 0u;
+        const auto id = static_cast<r::ecs::Entity>(it.entity());
+        const auto p = parent_opt.ptr ? parent_opt.ptr->entity : r::ecs::NULL_ENTITY;
         present.insert(id);
         styles[id] = style_opt.ptr ? *style_opt.ptr : r::Style{};
         layouts[id] = layout.ptr;
         const bool visible = (!vis_opt.ptr || *vis_opt.ptr == r::Visibility::Visible);
         nodes.push_back(NodeInfo{id, p, visible});
+        if (children_opt.ptr) {
+            for (auto child : children_opt.ptr->entities) {
+                parent_from_children[child] = id;
+            }
+        }
     }
 
-    std::vector<u32> roots;
+    constexpr auto PLACEHOLDER = std::numeric_limits<r::ecs::Entity>::max();
+    for (auto &node : nodes) {
+        auto it = parent_from_children.find(node.id);
+        if (it != parent_from_children.end()) {
+            node.parent = it->second;
+        } else if (node.parent == PLACEHOLDER) {
+            node.parent = r::ecs::NULL_ENTITY;
+        }
+    }
+
+    std::vector<r::ecs::Entity> roots;
     for (const auto &n : nodes) {
         if (!n.visible) continue;
-        if (n.parent == 0 || present.count(n.parent) == 0) roots.push_back(n.id);
+        if (n.parent == r::ecs::NULL_ENTITY || present.count(n.parent) == 0) roots.push_back(n.id);
         else children_map[n.parent].push_back(n.id);
     }
 
     const float ww = static_cast<float>(GetRenderWidth());
     const float wh = static_cast<float>(GetRenderHeight());
     for (auto root : roots) {
-        const r::Style rs = styles[root];
+    const r::Style rs = styles[root];
         float rw = (rs.width_pct >= 0.f) ? (ww * (rs.width_pct / 100.f)) : ((rs.width > 0.f) ? rs.width : ww);
         float rh = (rs.height_pct >= 0.f) ? (wh * (rs.height_pct / 100.f)) : ((rs.height > 0.f) ? rs.height : wh);
         if (rs.min_width > 0.f) rw = std::max(rw, rs.min_width);
@@ -202,40 +220,53 @@ void compute_layout_system(
 
 void scroll_clamp_system(
     r::ecs::Query<r::ecs::Mut<r::UiScroll>, r::ecs::Ref<r::ComputedLayout>> scq,
-    r::ecs::Query<r::ecs::Ref<r::ComputedLayout>, r::ecs::Optional<r::Style>, r::ecs::Optional<r::ecs::Parent>> allq,
+    r::ecs::Query<r::ecs::Ref<r::ComputedLayout>, r::ecs::Optional<r::Style>, r::ecs::Optional<r::ecs::Parent>, r::ecs::Optional<r::ecs::Children>> allq,
     r::ecs::Res<r::UiTheme> theme)
 {
     (void)theme;
-    std::unordered_set<u32> containers;
-    std::unordered_map<u32, const r::ComputedLayout *> cont_layout;
-    std::unordered_map<u32, float> cont_pad;
+    std::unordered_set<r::ecs::Entity> containers;
+    std::unordered_map<r::ecs::Entity, const r::ComputedLayout *> cont_layout;
+    std::unordered_map<r::ecs::Entity, float> cont_pad;
 
     for (auto it = scq.begin(); it != scq.end(); ++it) {
         auto [scroll, layout] = *it; (void)scroll;
-        const u32 id = static_cast<u32>(it.entity());
+        const auto id = static_cast<r::ecs::Entity>(it.entity());
         containers.insert(id);
         cont_layout[id] = layout.ptr;
     }
 
     for (auto it = allq.begin(); it != allq.end(); ++it) {
-        auto [layout, style_opt, parent_opt] = *it; (void)layout; (void)parent_opt;
-        const u32 id = static_cast<u32>(it.entity());
+        auto [layout, style_opt, parent_opt, children_opt] = *it; (void)layout; (void)parent_opt; (void)children_opt;
+        const auto id = static_cast<r::ecs::Entity>(it.entity());
         if (containers.find(id) != containers.end()) {
             const r::Style s = style_opt.ptr ? *style_opt.ptr : r::Style{};
             cont_pad[id] = (s.padding > 0.f) ? s.padding : UI_THEME_PADDING;
         }
     }
 
-    std::unordered_map<u32, float> content_bottom;
+    std::unordered_map<r::ecs::Entity, float> content_bottom;
     for (const auto &kv : containers) {
         const auto *pl = cont_layout[kv];
         const float pad = cont_pad[kv];
         content_bottom[kv] = pl->y + pad; /* initial top */
     }
 
+    std::unordered_map<r::ecs::Entity, r::ecs::Entity> parent_from_children;
     for (auto it = allq.begin(); it != allq.end(); ++it) {
-        auto [layout, style_opt, parent_opt] = *it; (void)style_opt;
-        const u32 ph = parent_opt.ptr ? static_cast<u32>(parent_opt.ptr->entity) : 0u;
+        auto [layout, style_opt, parent_opt, children_opt] = *it;
+        (void)layout; (void)style_opt; (void)parent_opt;
+        if (children_opt.ptr) {
+            const auto id = static_cast<r::ecs::Entity>(it.entity());
+            for (auto child : children_opt.ptr->entities) parent_from_children[child] = id;
+        }
+    }
+
+    for (auto it = allq.begin(); it != allq.end(); ++it) {
+        auto [layout, style_opt, parent_opt, children_opt] = *it; (void)style_opt; (void)children_opt;
+        auto ph = parent_opt.ptr ? parent_opt.ptr->entity : r::ecs::NULL_ENTITY;
+        if (auto pit = parent_from_children.find(static_cast<r::ecs::Entity>(it.entity())); pit != parent_from_children.end()) {
+            ph = pit->second;
+        }
         if (containers.find(ph) == containers.end()) continue;
         const float bottom = layout.ptr->y + layout.ptr->h;
         auto it2 = content_bottom.find(ph);
@@ -244,7 +275,7 @@ void scroll_clamp_system(
 
     for (auto it = scq.begin(); it != scq.end(); ++it) {
         auto [scroll, layout] = *it;
-        const u32 e = static_cast<u32>(it.entity());
+        const auto e = static_cast<r::ecs::Entity>(it.entity());
         const float pad = cont_pad[e];
         const float viewport = layout.ptr->h - pad * 2.f;
         float content_h = std::max(0.f, content_bottom[e] - (layout.ptr->y + pad));

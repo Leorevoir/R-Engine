@@ -1,8 +1,8 @@
 #include "R-Engine/ECS/Query.hpp"
-#include <R-Engine/Plugins/InputPlugin.hpp>
 #include <R-Engine/Application.hpp>
-#include <R-Engine/Core/Logger.hpp>
 #include <R-Engine/Core/Backend.hpp>
+#include <R-Engine/Core/Logger.hpp>
+#include <R-Engine/Plugins/InputPlugin.hpp>
 
 static constexpr u16 FIRST_KEY = 32;
 static constexpr u16 MAX_KEY = 348;
@@ -25,7 +25,7 @@ bool r::UserInput::isMouseButtonPressed(int button_code) const
  * @brief Bind an action (action name) to a specific input. Inputs can be keyboard or mouse types.
  * @details This system adds a name to a specific key
  */
-void r::InputMap::bindAction(const std::string& action_name, InputType type, u16 key_code)
+void r::InputMap::bindAction(const std::string &action_name, InputType type, u16 key_code)
 {
     action_to_keys[action_name].push_back({type, key_code});
 }
@@ -34,7 +34,7 @@ void r::InputMap::bindAction(const std::string& action_name, InputType type, u16
  * @brief Check if an input has been triggered by his name
  *  
  */
-bool r::InputMap::isActionPressed(const std::string& action_name, const r::UserInput& userInput) const
+bool r::InputMap::isActionPressed(const std::string &action_name, const r::UserInput &userInput) const
 {
     const auto it = action_to_keys.find(action_name);
 
@@ -69,12 +69,9 @@ static void input_system(r::ecs::ResMut<r::UserInput> userInput)
     }
 }
 
-void r::InputPlugin::build(Application& app)
+void r::InputPlugin::build(Application &app)
 {
-    app
-        .insert_resource(UserInput{})
-        .insert_resource(InputMap{})
-        .add_systems<input_system>(Schedule::UPDATE);
+    app.insert_resource(UserInput{}).insert_resource(InputMap{}).add_systems<input_system>(Schedule::UPDATE);
 
     Logger::info("InputPlugin built");
 }

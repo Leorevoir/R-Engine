@@ -1,17 +1,17 @@
 #include <R-Engine/Application.hpp>
 #include <R-Engine/Core/Backend.hpp>
+#include <R-Engine/Core/Logger.hpp>
 #include <R-Engine/ECS/Command.hpp>
 #include <R-Engine/Plugins/DefaultPlugins.hpp>
 #include <R-Engine/Plugins/InputPlugin.hpp>
-#include <R-Engine/Plugins/UiPlugin.hpp>
 #include <R-Engine/Plugins/Ui/Systems.hpp>
+#include <R-Engine/Plugins/UiPlugin.hpp>
 #include <R-Engine/Plugins/WindowPlugin.hpp>
 #include <R-Engine/UI/Button.hpp>
 #include <R-Engine/UI/Components.hpp>
 #include <R-Engine/UI/Events.hpp>
-#include <R-Engine/UI/InputState.hpp>
-#include <R-Engine/Core/Logger.hpp>
 #include <R-Engine/UI/Image.hpp>
+#include <R-Engine/UI/InputState.hpp>
 #include <R-Engine/UI/Text.hpp>
 #include <R-Engine/UI/Theme.hpp>
 
@@ -25,7 +25,7 @@ enum class MenuAction {
 };
 
 struct MenuButton {
-    MenuAction action = MenuAction::None;
+        MenuAction action = MenuAction::None;
 };
 
 static void toggle_theme_now(r::ecs::ResMut<r::UiTheme> theme, r::ecs::ResMut<r::UiPluginConfig> cfg)
@@ -47,116 +47,112 @@ static void build_menu_ui(r::ecs::Commands &cmds, r::ecs::Res<r::WindowPluginCon
 
     cmds.spawn(r::UiNode{}, r::Style{.width_pct = 100.f, .height_pct = 100.f, .background = r::Color{0, 0, 0, 0}, .padding = 8.f},
             r::ComputedLayout{}, r::Visibility::Visible)
-            .with_children([&](r::ecs::ChildBuilder &parent) {
-                /* Center container */
-                parent
-                    .spawn(r::UiNode{},
-                        r::Style{.width_pct = 100.f,
-                            .height_pct = 100.f,
+        .with_children([&](r::ecs::ChildBuilder &parent) {
+            /* Center container */
+            parent
+                .spawn(r::UiNode{},
+                    r::Style{.width_pct = 100.f,
+                        .height_pct = 100.f,
+                        .background = r::Color{0, 0, 0, 0},
+                        .direction = r::LayoutDirection::Column,
+                        .justify = r::JustifyContent::Center,
+                        .align = r::AlignItems::Center,
+                        .gap = 12.f},
+                    r::ComputedLayout{}, r::Visibility::Visible)
+                .with_children([&](r::ecs::ChildBuilder &center) {
+                    /* Title */
+                    center.spawn(r::UiNode{},
+                        r::Style{.width = 480.f,
+                            .height = 64.f,
                             .background = r::Color{0, 0, 0, 0},
+                            .order = 0,
+                            .margin = 6.f,
                             .direction = r::LayoutDirection::Column,
                             .justify = r::JustifyContent::Center,
-                            .align = r::AlignItems::Center,
-                            .gap = 12.f},
-                        r::ComputedLayout{}, r::Visibility::Visible)
-                    .with_children([&](r::ecs::ChildBuilder &center) {
-                        /* Title */
-                        center.spawn(r::UiNode{},
-                            r::Style{.width = 480.f,
-                                .height = 64.f,
+                            .align = r::AlignItems::Center},
+                        r::UiText{.content = std::string("R-Type"),
+                            .font_size = 40,
+                            .wrap_width = 0.f,
+                            .color = r::Color{180, 220, 255, 255}},
+                        r::ComputedLayout{}, r::Visibility::Visible);
+
+                    /* Buttons Panel */
+                    center
+                        .spawn(r::UiNode{},
+                            r::Style{.width = 420.f,
+                                .height = 200.f,
                                 .background = r::Color{0, 0, 0, 0},
-                                .order = 0,
-                                .margin = 6.f,
+                                .order = 1,
                                 .direction = r::LayoutDirection::Column,
                                 .justify = r::JustifyContent::Center,
-                                .align = r::AlignItems::Center},
-                            r::UiText{.content = std::string("R-Type"),
-                                .font_size = 40,
-                                .wrap_width = 0.f,
-                                .color = r::Color{180, 220, 255, 255}},
-                            r::ComputedLayout{}, r::Visibility::Visible);
-
-                        /* Buttons Panel */
-                        center
-                            .spawn(r::UiNode{},
-                                r::Style{.width = 420.f,
-                                    .height = 200.f,
-                                    .background = r::Color{0, 0, 0, 0},
-                                    .order = 1,
+                                .align = r::AlignItems::Center,
+                                .gap = 10.f},
+                            r::ComputedLayout{}, r::Visibility::Visible)
+                        .with_children([&](r::ecs::ChildBuilder &panel) {
+                            panel.spawn(r::UiNode{}, r::UiButton{}, MenuButton{MenuAction::Play},
+                                r::Style{.width = 360.f,
+                                    .height = 44.f,
+                                    .order = 0,
+                                    .margin = 6.f,
                                     .direction = r::LayoutDirection::Column,
                                     .justify = r::JustifyContent::Center,
-                                    .align = r::AlignItems::Center,
-                                    .gap = 10.f},
-                                r::ComputedLayout{}, r::Visibility::Visible)
-                            .with_children([&](r::ecs::ChildBuilder &panel) {
-                                panel.spawn(r::UiNode{}, r::UiButton{}, MenuButton{MenuAction::Play},
-                                    r::Style{.width = 360.f,
-                                        .height = 44.f,
-                                        .order = 0,
-                                        .margin = 6.f,
-                                        .direction = r::LayoutDirection::Column,
-                                        .justify = r::JustifyContent::Center,
-                                        .align = r::AlignItems::Center},
-                                    r::UiText{.content = std::string("Play"), .font_size = 22},
-                                    r::ComputedLayout{}, r::Visibility::Visible);
+                                    .align = r::AlignItems::Center},
+                                r::UiText{.content = std::string("Play"), .font_size = 22}, r::ComputedLayout{}, r::Visibility::Visible);
 
-                                panel.spawn(r::UiNode{}, r::UiButton{}, MenuButton{MenuAction::Options},
-                                    r::Style{.width = 360.f,
-                                        .height = 44.f,
-                                        .order = 1,
-                                        .margin = 6.f,
-                                        .direction = r::LayoutDirection::Column,
-                                        .justify = r::JustifyContent::Center,
-                                        .align = r::AlignItems::Center},
-                                    r::UiText{.content = std::string("Options"), .font_size = 22},
-                                    r::ComputedLayout{}, r::Visibility::Visible);
-
-                                panel.spawn(r::UiNode{}, r::UiButton{}, MenuButton{MenuAction::Quit},
-                                    r::Style{.width = 360.f,
-                                        .height = 44.f,
-                                        .order = 2,
-                                        .margin = 6.f,
-                                        .direction = r::LayoutDirection::Column,
-                                        .justify = r::JustifyContent::Center,
-                                        .align = r::AlignItems::Center},
-                                    r::UiText{.content = std::string("Quit"), .font_size = 22},
-                                    r::ComputedLayout{}, r::Visibility::Visible);
-                            });
-
-                        /* Scrollable Panel */
-                        center
-                            .spawn(r::UiNode{}, r::UiScroll{},
-                                r::Style{.width = 420.f,
-                                    .height = 220.f,
-                                    .background = r::Color{0, 0, 0, 0},
-                                    .order = 2,
+                            panel.spawn(r::UiNode{}, r::UiButton{}, MenuButton{MenuAction::Options},
+                                r::Style{.width = 360.f,
+                                    .height = 44.f,
+                                    .order = 1,
+                                    .margin = 6.f,
                                     .direction = r::LayoutDirection::Column,
-                                    .justify = r::JustifyContent::Start,
-                                    .align = r::AlignItems::Stretch,
-                                    .gap = 6.f,
-                                    .clip_children = true},
-                                r::ComputedLayout{}, r::Visibility::Visible)
-                            .with_children([&](r::ecs::ChildBuilder &scroll_panel) {
-                                for (int i = 1; i <= 24; ++i) {
-                                    char buf[64];
-                                    snprintf(buf, sizeof(buf), "List item %02d", i);
-                                    scroll_panel.spawn(r::UiNode{},
-                                        r::Style{.width = 400.f,
-                                            .height = 28.f,
-                                            .background = r::Color{20, (u8) (20 + i * 2), (u8) (28 + i), 180},
-                                            .order = i,
-                                            .margin = 4.f,
-                                            .padding = 6.f,
-                                            .direction = r::LayoutDirection::Row,
-                                            .justify = r::JustifyContent::Start,
-                                            .align = r::AlignItems::Center},
-                                        r::UiText{.content = std::string(buf), .font_size = 18}, r::ComputedLayout{},
-                                        r::Visibility::Visible);
-                                }
-                            });
-                    });
-            })
-            .id();
+                                    .justify = r::JustifyContent::Center,
+                                    .align = r::AlignItems::Center},
+                                r::UiText{.content = std::string("Options"), .font_size = 22}, r::ComputedLayout{}, r::Visibility::Visible);
+
+                            panel.spawn(r::UiNode{}, r::UiButton{}, MenuButton{MenuAction::Quit},
+                                r::Style{.width = 360.f,
+                                    .height = 44.f,
+                                    .order = 2,
+                                    .margin = 6.f,
+                                    .direction = r::LayoutDirection::Column,
+                                    .justify = r::JustifyContent::Center,
+                                    .align = r::AlignItems::Center},
+                                r::UiText{.content = std::string("Quit"), .font_size = 22}, r::ComputedLayout{}, r::Visibility::Visible);
+                        });
+
+                    /* Scrollable Panel */
+                    center
+                        .spawn(r::UiNode{}, r::UiScroll{},
+                            r::Style{.width = 420.f,
+                                .height = 220.f,
+                                .background = r::Color{0, 0, 0, 0},
+                                .order = 2,
+                                .direction = r::LayoutDirection::Column,
+                                .justify = r::JustifyContent::Start,
+                                .align = r::AlignItems::Stretch,
+                                .gap = 6.f,
+                                .clip_children = true},
+                            r::ComputedLayout{}, r::Visibility::Visible)
+                        .with_children([&](r::ecs::ChildBuilder &scroll_panel) {
+                            for (int i = 1; i <= 24; ++i) {
+                                char buf[64];
+                                snprintf(buf, sizeof(buf), "List item %02d", i);
+                                scroll_panel.spawn(r::UiNode{},
+                                    r::Style{.width = 400.f,
+                                        .height = 28.f,
+                                        .background = r::Color{20, (u8) (20 + i * 2), (u8) (28 + i), 180},
+                                        .order = i,
+                                        .margin = 4.f,
+                                        .padding = 6.f,
+                                        .direction = r::LayoutDirection::Row,
+                                        .justify = r::JustifyContent::Start,
+                                        .align = r::AlignItems::Center},
+                                    r::UiText{.content = std::string(buf), .font_size = 18}, r::ComputedLayout{}, r::Visibility::Visible);
+                            }
+                        });
+                });
+        })
+        .id();
 }
 
 static void theme_toggle_system(r::ecs::Res<r::UserInput> ui, r::ecs::Res<r::InputMap> map, r::ecs::ResMut<r::UiTheme> theme,
@@ -216,7 +212,7 @@ int main()
         .add_systems<setup_controls, build_menu_ui>(r::Schedule::STARTUP)
         .add_systems<theme_toggle_system>(r::Schedule::UPDATE)
         .add_systems<menu_logic_system>(r::Schedule::UPDATE)
-            .after<r::ui::pointer_system>()
-            .before<r::ui::clear_click_state_system>()
+        .after<r::ui::pointer_system>()
+        .before<r::ui::clear_click_state_system>()
         .run();
 }

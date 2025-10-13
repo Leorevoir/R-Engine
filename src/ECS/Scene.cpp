@@ -64,7 +64,7 @@ const std::unordered_map<r::ecs::Entity, r::ecs::Entity> &r::ecs::Scene::get_com
     return _placeholder_map;
 }
 
-usize r::ecs::Scene::_find_or_create_archetype(const std::vector<std::type_index>& types)
+usize r::ecs::Scene::_find_or_create_archetype(const std::vector<std::type_index> &types)
 {
     const auto arch_it = _archetype_map.find(types);
     if (arch_it != _archetype_map.end()) {
@@ -81,7 +81,7 @@ usize r::ecs::Scene::_find_or_create_archetype(const std::vector<std::type_index
     return new_archetype_idx;
 }
 
-void r::ecs::Scene::_move_entity_between_archetypes(Entity e, EntityLocation& loc, usize new_archetype_idx)
+void r::ecs::Scene::_move_entity_between_archetypes(Entity e, EntityLocation &loc, usize new_archetype_idx)
 {
     const usize old_archetype_idx = loc.archetype_index;
     Archetype &old_archetype = _archetypes[old_archetype_idx];
@@ -96,7 +96,7 @@ void r::ecs::Scene::_move_entity_between_archetypes(Entity e, EntityLocation& lo
     }
 
     // Iterate over the destination archetype's components and pull them from the source.
-    for (const auto& [type_idx, new_col_idx] : new_archetype.component_map) {
+    for (const auto &[type_idx, new_col_idx] : new_archetype.component_map) {
         auto old_it = old_archetype.component_map.find(type_idx);
         if (old_it != old_archetype.component_map.end()) {
             const usize old_col_idx = old_it->second;

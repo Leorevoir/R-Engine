@@ -24,7 +24,8 @@
 static constexpr float PLAYER_SPEED = 3.5f;
 static constexpr float BULLET_SPEED = 8.0f;
 static constexpr float ENEMY_SPEED = 2.0f;
-static constexpr float ENEMY_SPAWN_INTERVAL = 0.75f; /* in seconds */
+static constexpr float ENEMY_SPAWN_INTERVAL = 0.75f;    /* in seconds */
+static constexpr float PLAYER_FIRE_RATE = 0.15f;
 static constexpr float PLAYER_BOUNDS_PADDING = 0.2f;
 
 /* ================================================================================= */
@@ -35,6 +36,10 @@ static constexpr float PLAYER_BOUNDS_PADDING = 0.2f;
 struct Player {};
 struct Enemy {};
 struct Bullet {};
+
+struct FireCooldown {
+    float timer = 0.0f;
+};
 
 struct Velocity {
     r::Vec3f value;
@@ -86,7 +91,6 @@ static void startup_system(
 
     /* --- Spawn Player --- */
     ::Model player_model_data = r::Mesh3d::Glb("examples/r_type/assets/R-9.glb");
-
     if (player_model_data.meshCount > 0) {
         r::MeshHandle player_mesh_handle = meshes.ptr->add(player_model_data);
 
@@ -100,13 +104,14 @@ static void startup_system(
                 },
                 Velocity{{0.0f, 0.0f, 0.0f}},
                 Collider{0.5f},
+                FireCooldown{},
                 r::Mesh3d{
                     player_mesh_handle,
                     r::Color{255, 255, 255, 255} /* White tint to show original texture */
                 }
             );
         } else {
-             r::Logger::error("startup_system: Failed to register player model with mesh manager.");
+            r::Logger::error("startup_system: Failed to register player model with mesh manager.");
         }
     } else {
         r::Logger::error("startup_system: Failed to load player model 'assets/R-9.glb'.");
@@ -114,17 +119,23 @@ static void startup_system(
 }
 
 /**
- * @brief (UPDATE) Reads player input and updates their velocity.
- * @details Also handles firing bullets when the fire action is pressed.
- */
+* @brief (UPDATE) Reads player input and updates their velocity.
+* @details Also handles firing bullets when the fire action is pressed.
+*/
 static void player_input_system(
     r::ecs::Commands& commands,
     r::ecs::Res<r::UserInput> user_input,
     r::ecs::Res<r::InputMap> input_map,
     r::ecs::ResMut<r::Meshes> meshes,
-    r::ecs::Query<r::ecs::Mut<Velocity>, r::ecs::Ref<r::Transform3d>, r::ecs::With<Player>> query)
+    r::ecs::Res<r::core::FrameTime> time,
+    r::ecs::Query<r::ecs::Mut<Velocity>, r::ecs::Ref<r::Transform3d>, r::ecs::Mut<FireCooldown>, r::ecs::With<Player>> query)
 {
-    for (auto [velocity, transform, _] : query) {
+    for (auto [velocity, transform, cooldown, _] : query) {
+        /* --- Cooldown --- */
+        if (cooldown.ptr->timer > 0.0f) {
+            cooldown.ptr->timer -= time.ptr->delta_time;
+        }
+
         /* --- Movement --- */
         r::Vec3f direction = {0.0f, 0.0f, 0.0f};
         if (input_map.ptr->isActionPressed("MoveUp", *user_input.ptr))    direction.z += 1.0f;
@@ -137,7 +148,8 @@ static void player_input_system(
             : r::Vec3f{0.0f, 0.0f, 0.0f};
 
         /* --- Firing --- */
-        if (input_map.ptr->isActionPressed("Fire", *user_input.ptr)) {
+        if (input_map.ptr->isActionPressed("Fire", *user_input.ptr) && cooldown.ptr->timer <= 0.0f) {
+            cooldown.ptr->timer = PLAYER_FIRE_RATE;
             ::Mesh bullet_mesh_data = r::Mesh3d::Circle(0.5f, 16);
             if (bullet_mesh_data.vertexCount > 0 && bullet_mesh_data.vertices) {
                 r::MeshHandle bullet_mesh_handle = meshes.ptr->add(bullet_mesh_data);

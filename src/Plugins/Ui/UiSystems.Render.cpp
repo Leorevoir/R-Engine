@@ -675,7 +675,7 @@ void render_system(r::ecs::Res<UiPluginConfig> cfg, r::ecs::Res<r::Camera3d> cam
         r::ecs::Optional<r::UiScroll>, r::ecs::Optional<r::ecs::Children>>
         q) noexcept
 {
-    EndMode3D();
+    (void) cam;
 
     auto [items, data] = collect_draw_items(q);
     setup_entity_mappings(data);
@@ -684,8 +684,6 @@ void render_system(r::ecs::Res<UiPluginConfig> cfg, r::ecs::Res<r::Camera3d> cam
     render_debug_overlay(cfg, q, input);
     render_scrollbars(data, theme);
     render_foreground(q, data, textures, fonts, theme);
-
-    BeginMode3D(_to_raylib(*cam.ptr));
 }
 
 }// namespace r::ui

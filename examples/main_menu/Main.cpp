@@ -30,148 +30,102 @@ struct MenuButton {
 
 static void setup_theme(r::ecs::ResMut<r::UiTheme> theme, r::ecs::ResMut<r::UiPluginConfig> cfg)
 {
-    // Désactiver l'overlay de debug
     cfg.ptr->show_debug_overlay = false;
     
-    // Configuration du thème pour les boutons
-    theme.ptr->button.bg_normal = r::Color{0, 36, 48, 255};       // Fond #002430
-    theme.ptr->button.bg_hover = r::Color{98, 221, 255, 100};   // Fond semi-transparent au survol
-    theme.ptr->button.bg_pressed = r::Color{98, 221, 255, 150}; // Fond plus visible au clic
+    theme.ptr->button.bg_normal = r::Color{0, 36, 48, 255};
+    theme.ptr->button.bg_hover = r::Color{98, 221, 255, 100};
+    theme.ptr->button.bg_pressed = r::Color{98, 221, 255, 150};
     theme.ptr->button.bg_disabled = r::Color{50, 50, 50, 255};
     
-    theme.ptr->button.border_normal = r::Color{98, 221, 255, 255};  // Contour cyan
-    theme.ptr->button.border_hover = r::Color{98, 221, 255, 255};   // Contour cyan
-    theme.ptr->button.border_pressed = r::Color{98, 221, 255, 255}; // Contour cyan
+    theme.ptr->button.border_normal = r::Color{98, 221, 255, 255};
+    theme.ptr->button.border_hover = r::Color{98, 221, 255, 255};
+    theme.ptr->button.border_pressed = r::Color{98, 221, 255, 255};
     theme.ptr->button.border_disabled = r::Color{100, 100, 100, 255};
     
     theme.ptr->button.border_thickness = 2.f;
-    theme.ptr->button.text = r::Color{98, 221, 255, 255};  // Texte cyan
+    theme.ptr->button.text = r::Color{98, 221, 255, 255};
 }
 
-static void build_main_menu(r::ecs::Commands &cmds, r::ecs::Res<r::WindowPluginConfig> win)
+static void build_main_menu(r::ecs::Commands cmds, r::ecs::Res<r::AssetServer> assets)
 {
-    (void) win;
-
-    // Fond noir avec le logo au centre
-    cmds.spawn(r::UiNode{}, 
-            r::Style{
-                .width_pct = 100.f, 
-                .height_pct = 100.f, 
-                .background = r::Color{0, 0, 0, 255},  // Fond noir
-                .margin = 0.f,  // Pas de marge
-                .padding = 0.f,  // Pas de padding
-                .direction = r::LayoutDirection::Column,
-                .justify = r::JustifyContent::Center,
-                .align = r::AlignItems::Center,
-                .gap = 10.f  // Espacement réduit entre les éléments
+    auto root = cmds.spawn(r::UiNode{
+        .name = "MenuRoot",
+        .style = r::Style{
+            .width = 960.f,
+            .height = 540.f,
+            .bg_color = r::Color{0, 0, 0, 255},
+            .justify_content = r::ui::JustifyContent::Center,
+            .align_items = r::ui::AlignItems::Center,
+            .flex_direction = r::ui::FlexDirection::Column,
+            .gap = 30.f,
+        },
+    });
+    
+    root.add_child(cmds.spawn(r::UiImage{
+        .style = r::Style{
+            .height = 200.f,
+            .width_pct = 100.f,
+            .margin = 0.f,
+            .padding = 0.f,
+        },
+        .texture = assets.ptr->load_image("assets/r-type_title.png"),
+        .keep_aspect = false,
+    }));
+    
+    root.add_child(MenuButton{
+        cmds.spawn(r::UiButton{
+            .action = MenuAction::Play,
+            .style = r::Style{
+                .width = 280.f,
+                .height = 45.f,
             },
-            r::ComputedLayout{}, 
-            r::Visibility::Visible)
-        .with_children([&](r::ecs::ChildBuilder &parent) {
-            // Titre R-Type en pleine largeur
-            parent.spawn(r::UiNode{},
-                r::Style{
-                    .height = 200.f,     // Hauteur augmentée pour voir l'image complète
-                    .width_pct = 100.f,  // Toute la largeur disponible
-                    .background = r::Color{0, 0, 0, 1},  // Quasi-transparent
-                    .margin = 0.f,  // Pas de marge
-                    .padding = 0.f  // Pas de padding
-                },
-                r::UiImage{
-                    .path = "assets/r-type_title.png",
-                    .tint = r::Color{255, 255, 255, 255},
-                    .keep_aspect = true  // Garder le ratio
-                },
-                r::ComputedLayout{}, 
-                r::Visibility::Visible);
-
-            // Bouton Play
-            parent.spawn(r::UiNode{}, 
-                r::UiButton{}, 
-                MenuButton{MenuAction::Play},
-                r::Style{
-                    .width = 280.f,  // Largeur augmentée
-                    .height = 45.f,
-                    .direction = r::LayoutDirection::Column,
-                    .justify = r::JustifyContent::Center,
-                    .align = r::AlignItems::Center
-                },
-                r::UiText{
-                    .content = std::string("Play"),
-                    .font_size = 22
-                },
-                r::ComputedLayout{}, 
-                r::Visibility::Visible);
-
-            // Bouton Options
-            parent.spawn(r::UiNode{}, 
-                r::UiButton{}, 
-                MenuButton{MenuAction::Options},
-                r::Style{
-                    .width = 280.f,  // Largeur augmentée
-                    .height = 45.f,
-                    .direction = r::LayoutDirection::Column,
-                    .justify = r::JustifyContent::Center,
-                    .align = r::AlignItems::Center
-                },
-                r::UiText{
-                    .content = std::string("Options"),
-                    .font_size = 22
-                },
-                r::ComputedLayout{}, 
-                r::Visibility::Visible);
-
-            // Bouton Quit
-            parent.spawn(r::UiNode{}, 
-                r::UiButton{}, 
-                MenuButton{MenuAction::Quit},
-                r::Style{
-                    .width = 280.f,  // Largeur augmentée
-                    .height = 45.f,
-                    .direction = r::LayoutDirection::Column,
-                    .justify = r::JustifyContent::Center,
-                    .align = r::AlignItems::Center
-                },
-                r::UiText{
-                    .content = std::string("Quit"),
-                    .font_size = 22
-                },
-                r::ComputedLayout{}, 
-                r::Visibility::Visible);
-        });
+            .text = r::UiText{.text = "Play"},
+        })
+    });
+    
+    root.add_child(MenuButton{
+        cmds.spawn(r::UiButton{
+            .action = MenuAction::Options,
+            .style = r::Style{
+                .width = 280.f,
+                .height = 45.f,
+            },
+            .text = r::UiText{.text = "Options"},
+        })
+    });
+    
+    root.add_child(MenuButton{
+        cmds.spawn(r::UiButton{
+            .action = MenuAction::Quit,
+            .style = r::Style{
+                .width = 280.f,
+                .height = 45.f,
+            },
+            .text = r::UiText{.text = "Quit"},
+        })
+    });
 }
 
-static void menu_logic_system(r::ecs::Res<r::UiInputState> input_state, 
-    r::ecs::Query<r::ecs::Ref<MenuButton>> buttons)
+static void menu_logic_system(r::ecs::Query<MenuButton, const r::UiButton> buttons,
+                               r::ecs::ResMut<r::AppExit> app_exit)
 {
-    const auto clicked = input_state.ptr->last_clicked;
-    if (clicked == r::ecs::NULL_ENTITY) {
-        return;
-    }
-
-    MenuAction action = MenuAction::None;
-    for (auto it = buttons.begin(); it != buttons.end(); ++it) {
-        auto [btn] = *it;
-        if (static_cast<r::ecs::Entity>(it.entity()) == clicked && btn.ptr) {
-            action = btn.ptr->action;
-            break;
+    for (auto [button, ui_button] : buttons.iter()) {
+        if (ui_button.ptr->just_clicked()) {
+            switch (button.ptr->action) {
+            case MenuAction::Play:
+                std::cout << "Play button clicked" << std::endl;
+                break;
+            case MenuAction::Options:
+                std::cout << "Options button clicked" << std::endl;
+                break;
+            case MenuAction::Quit:
+                std::cout << "Quit button clicked" << std::endl;
+                app_exit.ptr->request_exit();
+                break;
+            default:
+                break;
+            }
         }
-    }
-
-    switch (action) {
-        case MenuAction::Play:
-            // TODO: Démarrer le jeu
-            r::Logger::info("Play button clicked!");
-            break;
-        case MenuAction::Options:
-            // TODO: Ouvrir les options
-            r::Logger::info("Options button clicked!");
-            break;
-        case MenuAction::Quit:
-            r::Application::quit.store(true, std::memory_order_relaxed);
-            break;
-        default:
-            break;
     }
 }
 

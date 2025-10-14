@@ -9,7 +9,7 @@ namespace path {
 /**
 * @brief check if a file exists at the given path
 */
-static constexpr inline bool exists(const std::string &path)
+static inline bool exists(const std::string &path)
 {
     return std::filesystem::exists(path);
 }
@@ -17,7 +17,7 @@ static constexpr inline bool exists(const std::string &path)
 /**
 * @brief get the absolute path from a relative path
 */
-static constexpr inline const std::string get(const std::string &path)
+static inline const std::string get(const std::string &path)
 {
     const auto absolute = std::filesystem::absolute(path);
 

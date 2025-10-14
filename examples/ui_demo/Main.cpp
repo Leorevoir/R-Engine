@@ -45,7 +45,7 @@ static void build_menu_ui(r::ecs::Commands &cmds, r::ecs::Res<r::WindowPluginCon
 {
     (void) win;
 
-    cmds.spawn(r::UiNode{}, r::Style{.width_pct = 100.f, .height_pct = 100.f, .background = r::Color{0, 0, 0, 0}, .padding = 8.f},
+    cmds.spawn(r::UiNode{}, r::Style{.width_pct = 100.f, .height_pct = 100.f, .background = r::Color{30, 30, 38, 255}},
             r::ComputedLayout{}, r::Visibility::Visible)
         .with_children([&](r::ecs::ChildBuilder &parent) {
             /* Center container */
@@ -62,8 +62,10 @@ static void build_menu_ui(r::ecs::Commands &cmds, r::ecs::Res<r::WindowPluginCon
                 .with_children([&](r::ecs::ChildBuilder &center) {
                     /* Title */
                     center.spawn(r::UiNode{},
-                        r::Style{.width = 480.f,
-                            .height = 64.f,
+                        r::Style{.height = 64.f,
+                            .width_pct = 80.f,
+                            .min_width = 200.f,
+                            .max_width = 480.f,
                             .background = r::Color{0, 0, 0, 0},
                             .order = 0,
                             .margin = 6.f,
@@ -79,8 +81,10 @@ static void build_menu_ui(r::ecs::Commands &cmds, r::ecs::Res<r::WindowPluginCon
                     /* Buttons Panel */
                     center
                         .spawn(r::UiNode{},
-                            r::Style{.width = 420.f,
-                                .height = 200.f,
+                            r::Style{.height = 200.f,
+                                .width_pct = 80.f,
+                                .min_width = 200.f,
+                                .max_width = 420.f,
                                 .background = r::Color{0, 0, 0, 0},
                                 .order = 1,
                                 .direction = r::LayoutDirection::Column,
@@ -90,8 +94,10 @@ static void build_menu_ui(r::ecs::Commands &cmds, r::ecs::Res<r::WindowPluginCon
                             r::ComputedLayout{}, r::Visibility::Visible)
                         .with_children([&](r::ecs::ChildBuilder &panel) {
                             panel.spawn(r::UiNode{}, r::UiButton{}, MenuButton{MenuAction::Play},
-                                r::Style{.width = 360.f,
-                                    .height = 44.f,
+                                r::Style{.height = 44.f,
+                                    .width_pct = 90.f,
+                                    .min_width = 180.f,
+                                    .max_width = 360.f,
                                     .order = 0,
                                     .margin = 6.f,
                                     .direction = r::LayoutDirection::Column,
@@ -100,8 +106,10 @@ static void build_menu_ui(r::ecs::Commands &cmds, r::ecs::Res<r::WindowPluginCon
                                 r::UiText{.content = std::string("Play"), .font_size = 22}, r::ComputedLayout{}, r::Visibility::Visible);
 
                             panel.spawn(r::UiNode{}, r::UiButton{}, MenuButton{MenuAction::Options},
-                                r::Style{.width = 360.f,
-                                    .height = 44.f,
+                                r::Style{.height = 44.f,
+                                    .width_pct = 90.f,
+                                    .min_width = 180.f,
+                                    .max_width = 360.f,
                                     .order = 1,
                                     .margin = 6.f,
                                     .direction = r::LayoutDirection::Column,
@@ -110,8 +118,10 @@ static void build_menu_ui(r::ecs::Commands &cmds, r::ecs::Res<r::WindowPluginCon
                                 r::UiText{.content = std::string("Options"), .font_size = 22}, r::ComputedLayout{}, r::Visibility::Visible);
 
                             panel.spawn(r::UiNode{}, r::UiButton{}, MenuButton{MenuAction::Quit},
-                                r::Style{.width = 360.f,
-                                    .height = 44.f,
+                                r::Style{.height = 44.f,
+                                    .width_pct = 90.f,
+                                    .min_width = 180.f,
+                                    .max_width = 360.f,
                                     .order = 2,
                                     .margin = 6.f,
                                     .direction = r::LayoutDirection::Column,
@@ -123,8 +133,10 @@ static void build_menu_ui(r::ecs::Commands &cmds, r::ecs::Res<r::WindowPluginCon
                     /* Scrollable Panel */
                     center
                         .spawn(r::UiNode{}, r::UiScroll{},
-                            r::Style{.width = 420.f,
-                                .height = 220.f,
+                            r::Style{.height = 220.f,
+                                .width_pct = 80.f,
+                                .min_width = 200.f,
+                                .max_width = 420.f,
                                 .background = r::Color{0, 0, 0, 0},
                                 .order = 2,
                                 .direction = r::LayoutDirection::Column,
@@ -138,8 +150,8 @@ static void build_menu_ui(r::ecs::Commands &cmds, r::ecs::Res<r::WindowPluginCon
                                 char buf[64];
                                 snprintf(buf, sizeof(buf), "List item %02d", i);
                                 scroll_panel.spawn(r::UiNode{},
-                                    r::Style{.width = 400.f,
-                                        .height = 28.f,
+                                    r::Style{.height = 28.f,
+                                        .width_pct = 95.f,
                                         .background = r::Color{20, (u8) (20 + i * 2), (u8) (28 + i), 180},
                                         .order = i,
                                         .margin = 4.f,

@@ -242,7 +242,7 @@ template<usize N, typename T>
     requires concepts::Vec<N, T>
 constexpr Vec<N, T> Vec<N, T>::cross(const Vec<N, T> &other) const noexcept
 {
-    if (N != 3) {
+    if constexpr (N != 3) {
         return Vec<N, T>{0};
     }
 

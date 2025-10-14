@@ -70,9 +70,9 @@ struct R_ENGINE_API IColumn {
 
         /**
          * @brief Creates a new, empty column of the same underlying type.
-         * @return A unique_ptr to the new IColumn.
+         * @return A shared_ptr to the new IColumn.
          */
-        virtual std::unique_ptr<IColumn> clone_empty() const = 0;
+        virtual std::shared_ptr<IColumn> clone_empty() const = 0;
 };
 
 /**
@@ -87,7 +87,7 @@ struct Column : IColumn {
         void remove_swap_back(usize index) override;
         void *get_ptr(usize index) override;
         void move_to(usize index, IColumn &dest) override;
-        std::unique_ptr<IColumn> clone_empty() const override;
+        std::shared_ptr<IColumn> clone_empty() const override;
 };
 
 /**
@@ -96,7 +96,7 @@ struct Column : IColumn {
  */
 struct R_ENGINE_API Table {
         std::vector<Entity> entities;
-        std::vector<std::unique_ptr<IColumn>> columns;
+        std::vector<std::shared_ptr<IColumn>> columns;
 
         /**
          * @brief Adds an entity to the table.

@@ -11,7 +11,7 @@
 * public
 */
 
-constexpr void r::Logger::debug([[maybe_unused]] const std::string_view message, [[maybe_unused]] const std::string_view file,
+inline void r::Logger::debug([[maybe_unused]] const std::string_view message, [[maybe_unused]] const std::string_view file,
     [[maybe_unused]] int line) noexcept
 {
 #if defined(ENGINE_DEBUG)
@@ -19,17 +19,17 @@ constexpr void r::Logger::debug([[maybe_unused]] const std::string_view message,
 #endif
 }
 
-constexpr void r::Logger::info(const std::string_view message, const std::string_view file, int line) noexcept
+inline void r::Logger::info(const std::string_view message, const std::string_view file, int line) noexcept
 {
     _emit(message, Level::Info, file, line);
 }
 
-constexpr void r::Logger::warn(const std::string_view message, const std::string_view file, int line) noexcept
+inline void r::Logger::warn(const std::string_view message, const std::string_view file, int line) noexcept
 {
     _emit(message, Level::Warn, file, line);
 }
 
-constexpr void r::Logger::error(const std::string_view message, const std::string_view file, int line) noexcept
+inline void r::Logger::error(const std::string_view message, const std::string_view file, int line) noexcept
 {
     _emit(message, Level::Error, file, line);
 }
@@ -38,7 +38,7 @@ constexpr void r::Logger::error(const std::string_view message, const std::strin
 * private
 */
 
-constexpr void r::Logger::_emit(const std::string_view message, Level level, const std::string_view file, int line) noexcept
+inline void r::Logger::_emit(const std::string_view message, Level level, const std::string_view file, int line) noexcept
 {
     const core::TimePoint now = core::SystemClock::now();
     const std::time_t t = std::chrono::system_clock::to_time_t(now);

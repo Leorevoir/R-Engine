@@ -35,7 +35,7 @@ void r::ecs::Column<T>::move_to(usize index, IColumn &dest)
 }
 
 template<typename T>
-std::unique_ptr<r::ecs::IColumn> r::ecs::Column<T>::clone_empty() const
+std::shared_ptr<r::ecs::IColumn> r::ecs::Column<T>::clone_empty() const
 {
-    return std::make_unique<Column<T>>();
+    return std::make_shared<Column<T>>();
 }

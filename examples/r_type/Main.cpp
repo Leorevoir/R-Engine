@@ -4,6 +4,7 @@
 #include <R-Engine/ECS/Command.hpp>
 #include <R-Engine/ECS/Event.hpp>
 #include <R-Engine/ECS/Query.hpp>
+#include <R-Engine/ECS/RunConditions.hpp>
 #include <R-Engine/Maths/Vec.hpp>
 #include <R-Engine/Plugins/DefaultPlugins.hpp>
 #include <R-Engine/Plugins/InputPlugin.hpp>
@@ -18,13 +19,22 @@
 /* clang-format off */
 
 /* ================================================================================= */
+/* Game State */
+/* ================================================================================= */
+
+enum class GameState {
+    Playing,
+    GameOver,
+};
+
+/* ================================================================================= */
 /* Constants & Configuration */
 /* ================================================================================= */
 
 static constexpr float PLAYER_SPEED = 3.5f;
 static constexpr float BULLET_SPEED = 8.0f;
 static constexpr float ENEMY_SPEED = 2.0f;
-static constexpr float ENEMY_SPAWN_INTERVAL = 0.75f;    /* in seconds */
+static constexpr float ENEMY_SPAWN_INTERVAL = 0.75f; /* in seconds */
 static constexpr float PLAYER_FIRE_RATE = 0.15f;
 static constexpr float PLAYER_BOUNDS_PADDING = 0.2f;
 
@@ -70,10 +80,8 @@ struct EnemySpawnTimer {
  * binds input actions, and spawns the initial player entity.
  */
 static void startup_system(
-    r::ecs::Commands& commands,
-    r::ecs::ResMut<r::Camera3d> camera,
-    r::ecs::ResMut<r::InputMap> input_map,
-    r::ecs::ResMut<r::Meshes> meshes)
+    r::ecs::Commands& commands, r::ecs::ResMut<r::Camera3d> camera,
+    r::ecs::ResMut<r::InputMap> input_map, r::ecs::ResMut<r::Meshes> meshes)
 {
     /* --- Configure Camera --- */
     /* Position the camera for a side-scrolling view on the XZ plane (Z is up). */
@@ -99,36 +107,37 @@ static void startup_system(
                 Player{},
                 r::Transform3d{
                     .position = {-5.0f, 0.0f, 0.0f},
-                    .rotation = {static_cast<float>(M_PI) / 2.0f, 0.0f, static_cast<float>(M_PI) / 2.0f},
-                    .scale = {3.0f, 3.0f, 3.0f}
-                },
-                Velocity{{0.0f, 0.0f, 0.0f}},
-                Collider{0.5f},
-                FireCooldown{},
+                    .rotation = {static_cast<float>(M_PI) / 2.0f, 0.0f,
+                                 static_cast<float>(M_PI) / 2.0f},
+                    .scale = {3.0f, 3.0f, 3.0f}},
+                Velocity{{0.0f, 0.0f, 0.0f}}, Collider{0.5f}, FireCooldown{},
                 r::Mesh3d{
                     player_mesh_handle,
-                    r::Color{255, 255, 255, 255} /* White tint to show original texture */
-                }
-            );
+                    r::Color{255, 255, 255,
+                             255} /* White tint to show original texture */
+                });
         } else {
-            r::Logger::error("startup_system: Failed to register player model with mesh manager.");
+            r::Logger::error(
+                "startup_system: Failed to register player model with mesh "
+                "manager.");
         }
     } else {
-        r::Logger::error("startup_system: Failed to load player model 'assets/R-9.glb'.");
+        r::Logger::error(
+            "startup_system: Failed to load player model 'assets/R-9.glb'.");
     }
 }
 
 /**
-* @brief (UPDATE) Reads player input and updates their velocity.
-* @details Also handles firing bullets when the fire action is pressed.
-*/
+ * @brief (UPDATE) Reads player input and updates their velocity.
+ * @details Also handles firing bullets when the fire action is pressed.
+ */
 static void player_input_system(
-    r::ecs::Commands& commands,
-    r::ecs::Res<r::UserInput> user_input,
-    r::ecs::Res<r::InputMap> input_map,
-    r::ecs::ResMut<r::Meshes> meshes,
+    r::ecs::Commands& commands, r::ecs::Res<r::UserInput> user_input,
+    r::ecs::Res<r::InputMap> input_map, r::ecs::ResMut<r::Meshes> meshes,
     r::ecs::Res<r::core::FrameTime> time,
-    r::ecs::Query<r::ecs::Mut<Velocity>, r::ecs::Ref<r::Transform3d>, r::ecs::Mut<FireCooldown>, r::ecs::With<Player>> query)
+    r::ecs::Query<r::ecs::Mut<Velocity>, r::ecs::Ref<r::Transform3d>,
+                  r::ecs::Mut<FireCooldown>, r::ecs::With<Player>>
+        query)
 {
     for (auto [velocity, transform, cooldown, _] : query) {
         /* --- Cooldown --- */
@@ -138,60 +147,67 @@ static void player_input_system(
 
         /* --- Movement --- */
         r::Vec3f direction = {0.0f, 0.0f, 0.0f};
-        if (input_map.ptr->isActionPressed("MoveUp", *user_input.ptr))    direction.z += 1.0f;
-        if (input_map.ptr->isActionPressed("MoveDown", *user_input.ptr))  direction.z -= 1.0f;
-        if (input_map.ptr->isActionPressed("MoveLeft", *user_input.ptr))  direction.x -= 1.0f;
-        if (input_map.ptr->isActionPressed("MoveRight", *user_input.ptr)) direction.x += 1.0f;
+        if (input_map.ptr->isActionPressed("MoveUp", *user_input.ptr))
+            direction.z += 1.0f;
+        if (input_map.ptr->isActionPressed("MoveDown", *user_input.ptr))
+            direction.z -= 1.0f;
+        if (input_map.ptr->isActionPressed("MoveLeft", *user_input.ptr))
+            direction.x -= 1.0f;
+        if (input_map.ptr->isActionPressed("MoveRight", *user_input.ptr))
+            direction.x += 1.0f;
 
         velocity.ptr->value = (direction.length() > 0.0f)
-            ? direction.normalize() * PLAYER_SPEED
-            : r::Vec3f{0.0f, 0.0f, 0.0f};
+                                  ? direction.normalize() * PLAYER_SPEED
+                                  : r::Vec3f{0.0f, 0.0f, 0.0f};
 
         /* --- Firing --- */
-        if (input_map.ptr->isActionPressed("Fire", *user_input.ptr) && cooldown.ptr->timer <= 0.0f) {
+        if (input_map.ptr->isActionPressed("Fire", *user_input.ptr) &&
+            cooldown.ptr->timer <= 0.0f) {
             cooldown.ptr->timer = PLAYER_FIRE_RATE;
             ::Mesh bullet_mesh_data = r::Mesh3d::Circle(0.5f, 16);
             if (bullet_mesh_data.vertexCount > 0 && bullet_mesh_data.vertices) {
-                r::MeshHandle bullet_mesh_handle = meshes.ptr->add(bullet_mesh_data);
+                r::MeshHandle bullet_mesh_handle =
+                    meshes.ptr->add(bullet_mesh_data);
                 if (bullet_mesh_handle != r::MeshInvalidHandle) {
                     commands.spawn(
                         Bullet{},
                         r::Transform3d{
-                            .position = transform.ptr->position + r::Vec3f{0.6f, 0.0f, 0.0f},
-                            .scale = {0.2f, 0.2f, 0.2f}
-                        },
-                        Velocity{{BULLET_SPEED, 0.0f, 0.0f}},
-                        Collider{0.2f},
-                        r::Mesh3d{
-                            bullet_mesh_handle,
-                            r::Color{255, 200, 80, 255} /* Yellow color for bullets */
-                        }
-                    );
+                            .position = transform.ptr->position +
+                                        r::Vec3f{0.6f, 0.0f, 0.0f},
+                            .scale = {0.2f, 0.2f, 0.2f}},
+                        Velocity{{BULLET_SPEED, 0.0f, 0.0f}}, Collider{0.2f},
+                        r::Mesh3d{bullet_mesh_handle,
+                                  r::Color{255, 200, 80,
+                                           255} /* Yellow color for bullets */
+                        });
                 } else {
-                    r::Logger::warn("player_input_system: Failed to register bullet mesh.");
+                    r::Logger::warn(
+                        "player_input_system: Failed to register bullet mesh.");
                 }
             } else {
-                r::Logger::warn("player_input_system: Failed to generate bullet circle mesh.");
+                r::Logger::warn(
+                    "player_input_system: Failed to generate bullet circle "
+                    "mesh.");
             }
         }
     }
 }
 
 /**
- * @brief (UPDATE) Spawns enemies periodically from the right side of the screen.
+ * @brief (UPDATE) Spawns enemies periodically from the right side of the
+ * screen.
  */
 static void enemy_spawner_system(
-    r::ecs::Commands& commands,
-    r::ecs::ResMut<EnemySpawnTimer> spawn_timer,
-    r::ecs::Res<r::core::FrameTime> time,
-    r::ecs::ResMut<r::Meshes> meshes)
+    r::ecs::Commands& commands, r::ecs::ResMut<EnemySpawnTimer> spawn_timer,
+    r::ecs::Res<r::core::FrameTime> time, r::ecs::ResMut<r::Meshes> meshes)
 {
     spawn_timer.ptr->time_left -= time.ptr->delta_time;
     if (spawn_timer.ptr->time_left <= 0.0f) {
         spawn_timer.ptr->time_left = ENEMY_SPAWN_INTERVAL;
 
         /* Spawn a new enemy off-screen to the right at a random height. */
-        float random_z = (static_cast<float>(rand()) / RAND_MAX) * 10.0f - 5.0f; /* Range [-5, 5] */
+        float random_z = (static_cast<float>(rand()) / RAND_MAX) * 10.0f -
+                         5.0f; /* Range [-5, 5] */
 
         ::Mesh enemy_mesh_data = r::Mesh3d::Circle(1.0f, 16);
         if (enemy_mesh_data.vertexCount > 0 && enemy_mesh_data.vertices) {
@@ -199,22 +215,21 @@ static void enemy_spawner_system(
             if (enemy_mesh_handle != r::MeshInvalidHandle) {
                 commands.spawn(
                     Enemy{},
-                    r::Transform3d{
-                        .position = {12.0f, 0.0f, random_z},
-                        .scale = {0.4f, 0.4f, 0.4f}
-                    },
-                    Velocity{{-ENEMY_SPEED, 0.0f, 0.0f}},
-                    Collider{0.4f},
+                    r::Transform3d{.position = {12.0f, 0.0f, random_z},
+                                   .scale = {0.4f, 0.4f, 0.4f}},
+                    Velocity{{-ENEMY_SPEED, 0.0f, 0.0f}}, Collider{0.4f},
                     r::Mesh3d{
                         enemy_mesh_handle,
-                        r::Color{255, 80, 100, 255} /* Red color for enemies */
-                    }
-                );
+                        r::Color{255, 80, 100,
+                                 255} /* Red color for enemies */
+                    });
             } else {
-                r::Logger::warn("enemy_spawner_system: Failed to register enemy mesh.");
+                r::Logger::warn(
+                    "enemy_spawner_system: Failed to register enemy mesh.");
             }
         } else {
-            r::Logger::warn("enemy_spawner_system: Failed to generate enemy circle mesh.");
+            r::Logger::warn(
+                "enemy_spawner_system: Failed to generate enemy circle mesh.");
         }
     }
 }
@@ -243,10 +258,14 @@ static void screen_bounds_system(
 
     for (auto [transform, _] : query) {
         auto& pos = transform.ptr->position;
-        if (pos.x > screen_width_half)  pos.x = screen_width_half;
-        if (pos.x < -screen_width_half) pos.x = -screen_width_half;
-        if (pos.z > screen_height_half)  pos.z = screen_height_half;
-        if (pos.z < -screen_height_half) pos.z = -screen_height_half;
+        if (pos.x > screen_width_half)
+            pos.x = screen_width_half;
+        if (pos.x < -screen_width_half)
+            pos.x = -screen_width_half;
+        if (pos.z > screen_height_half)
+            pos.z = screen_height_half;
+        if (pos.z < -screen_height_half)
+            pos.z = -screen_height_half;
     }
 }
 
@@ -256,19 +275,28 @@ static void screen_bounds_system(
  */
 static void collision_system(
     r::ecs::Commands& commands,
-    r::ecs::Query<r::ecs::Ref<r::Transform3d>, r::ecs::Ref<Collider>, r::ecs::With<Bullet>> bullet_query,
-    r::ecs::Query<r::ecs::Ref<r::Transform3d>, r::ecs::Ref<Collider>, r::ecs::With<Enemy>> enemy_query)
+    r::ecs::Query<r::ecs::Ref<r::Transform3d>, r::ecs::Ref<Collider>,
+                  r::ecs::With<Bullet>>
+        bullet_query,
+    r::ecs::Query<r::ecs::Ref<r::Transform3d>, r::ecs::Ref<Collider>,
+                  r::ecs::With<Enemy>>
+        enemy_query)
 {
     std::vector<r::ecs::Entity> despawn_queue;
 
-    for (auto bullet_it = bullet_query.begin(); bullet_it != bullet_query.end(); ++bullet_it) {
+    for (auto bullet_it = bullet_query.begin(); bullet_it != bullet_query.end();
+         ++bullet_it) {
         auto [bullet_transform, bullet_collider, _b] = *bullet_it;
 
-        for (auto enemy_it = enemy_query.begin(); enemy_it != enemy_query.end(); ++enemy_it) {
+        for (auto enemy_it = enemy_query.begin(); enemy_it != enemy_query.end();
+             ++enemy_it) {
             auto [enemy_transform, enemy_collider, _e] = *enemy_it;
 
-            float distance = (bullet_transform.ptr->position - enemy_transform.ptr->position).length();
-            float radii_sum = bullet_collider.ptr->radius + enemy_collider.ptr->radius;
+            float distance =
+                (bullet_transform.ptr->position - enemy_transform.ptr->position)
+                    .length();
+            float radii_sum =
+                bullet_collider.ptr->radius + enemy_collider.ptr->radius;
 
             if (distance < radii_sum) {
                 /* Defer despawning to avoid iterator invalidation. */
@@ -278,9 +306,44 @@ static void collision_system(
         }
     }
 
-
     for (r::ecs::Entity entity : despawn_queue) {
         commands.despawn(entity);
+    }
+}
+
+/**
+ * @brief (UPDATE) Checks for collisions between the player and enemies.
+ * @details If a collision is detected, transitions the game state to GameOver.
+ */
+static void player_collision_system(
+    r::ecs::ResMut<r::NextState<GameState>> next_state,
+    r::ecs::Query<r::ecs::Ref<r::Transform3d>, r::ecs::Ref<Collider>,
+                  r::ecs::With<Player>>
+        player_query,
+    r::ecs::Query<r::ecs::Ref<r::Transform3d>, r::ecs::Ref<Collider>,
+                  r::ecs::With<Enemy>>
+        enemy_query)
+{
+    if (player_query.size() == 0) {
+        return;
+    }
+    auto player_it = player_query.begin();
+    auto [player_transform, player_collider, _p] = *player_it;
+
+    for (auto enemy_it = enemy_query.begin(); enemy_it != enemy_query.end();
+         ++enemy_it) {
+        auto [enemy_transform, enemy_collider, _e] = *enemy_it;
+
+        float distance =
+            (player_transform.ptr->position - enemy_transform.ptr->position)
+                .length();
+        float radii_sum =
+            player_collider.ptr->radius + enemy_collider.ptr->radius;
+
+        if (distance < radii_sum) {
+            next_state.ptr->set(GameState::GameOver);
+            return;
+        }
     }
 }
 
@@ -291,7 +354,8 @@ static void despawn_offscreen_system(
     r::ecs::Commands& commands,
     r::ecs::Query<r::ecs::Ref<r::Transform3d>, r::ecs::Without<Player>> query)
 {
-    const float despawn_boundary_x = 13.0f; /* A bit wider than the spawn point */
+    const float despawn_boundary_x =
+        13.0f; /* A bit wider than the spawn point */
 
     for (auto it = query.begin(); it != query.end(); ++it) {
         auto [transform, _] = *it;
@@ -301,30 +365,79 @@ static void despawn_offscreen_system(
     }
 }
 
+/**
+ * @brief (OnEnter GameOver) Logs a game over message.
+ */
+static void game_over_message_system()
+{
+    r::Logger::info("================ GAME OVER ================");
+    r::Logger::info("Press [ENTER] to play again.");
+}
+
+/**
+ * @brief (UPDATE) In GameOver state, waits for input to restart the game.
+ */
+static void game_over_system(r::ecs::Res<r::UserInput> user_input,
+                             r::ecs::ResMut<r::NextState<GameState>> next_state)
+{
+    if (user_input.ptr->isKeyPressed(KEY_ENTER)) {
+        next_state.ptr->set(GameState::Playing);
+    }
+}
+
+/**
+ * @brief (OnEnter Playing) Cleans up entities from the previous game and
+ * resets the player.
+ */
+static void cleanup_system(
+    r::ecs::Commands& commands, r::ecs::ResMut<EnemySpawnTimer> spawn_timer,
+    r::ecs::Query<r::ecs::With<Enemy>> enemy_query,
+    r::ecs::Query<r::ecs::With<Bullet>> bullet_query,
+    r::ecs::Query<r::ecs::Mut<r::Transform3d>, r::ecs::With<Player>>
+        player_query)
+{
+    /* Despawn all enemies */
+    for (auto it = enemy_query.begin(); it != enemy_query.end(); ++it) {
+        commands.despawn(it.entity());
+    }
+
+    /* Despawn all bullets */
+    for (auto it = bullet_query.begin(); it != bullet_query.end(); ++it) {
+        commands.despawn(it.entity());
+    }
+
+    /* Reset player position */
+    for (auto [transform, _] : player_query) {
+        transform.ptr->position = {-5.0f, 0.0f, 0.0f};
+    }
+
+    /* Reset spawn timer */
+    spawn_timer.ptr->time_left = ENEMY_SPAWN_INTERVAL;
+}
+
 int main()
 {
     /* Seed random for enemy spawn positions */
     srand(static_cast<unsigned int>(time(nullptr)));
 
     r::Application{}
-        .add_plugins(
-            r::DefaultPlugins{}.set(r::WindowPlugin{
-                r::WindowPluginConfig {
-                    .size = {1280, 720},
-                    .title = "R-Type Minimal Prototype",
-                }
-            })
-        )
+        .add_plugins(r::DefaultPlugins{}.set(
+            r::WindowPlugin{r::WindowPluginConfig{
+                .size = {1280, 720},
+                .title = "R-Type Minimal Prototype",
+            }}))
+        .init_state(GameState::Playing)
         .insert_resource(EnemySpawnTimer{})
         .add_systems<startup_system>(r::Schedule::STARTUP)
-        .add_systems<
-            player_input_system,
-            enemy_spawner_system,
-            movement_system,
-            screen_bounds_system,
-            collision_system,
-            despawn_offscreen_system
-        >(r::Schedule::UPDATE)
+        .add_systems<cleanup_system>(r::OnEnter{GameState::Playing})
+        .add_systems<game_over_message_system>(r::OnEnter{GameState::GameOver})
+        .add_systems<game_over_system>(r::Schedule::UPDATE)
+        .run_if<r::run_conditions::in_state<GameState::GameOver>>()
+        .add_systems<player_input_system, enemy_spawner_system, movement_system,
+                     screen_bounds_system, collision_system,
+                     player_collision_system, despawn_offscreen_system>(
+            r::Schedule::UPDATE)
+        .run_if<r::run_conditions::in_state<GameState::Playing>>()
         .run();
 
     return 0;

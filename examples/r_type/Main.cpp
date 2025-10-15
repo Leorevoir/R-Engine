@@ -421,7 +421,7 @@ static void enemy_spawner_system(
                     r::Transform3d{
                         .position = {15.0f, 0.0f, random_z},
                         .rotation = {static_cast<float>(M_PI) / 2.0f, 0.0f,
-                                     static_cast<float>(M_PI) / 2.0f},
+                                     -static_cast<float>(M_PI) / 2.0f},
                         .scale = {1.0f, 1.0f, 1.0f}},
                     Velocity{{-ENEMY_SPEED, 0.0f, 0.0f}}, Collider{0.5f},
                     r::Mesh3d{enemy_mesh_handle, r::Color{255, 255, 255, 255}});

@@ -1,6 +1,8 @@
 #include <R-Engine/Application.hpp>
+#include <R-Engine/Core/Backend.hpp>
 #include <R-Engine/Core/FrameTime.hpp>
 #include <R-Engine/Core/Logger.hpp>
+#include <R-Engine/Core/States.hpp>
 #include <R-Engine/ECS/Command.hpp>
 #include <R-Engine/ECS/Event.hpp>
 #include <R-Engine/ECS/Query.hpp>
@@ -10,7 +12,16 @@
 #include <R-Engine/Plugins/InputPlugin.hpp>
 #include <R-Engine/Plugins/MeshPlugin.hpp>
 #include <R-Engine/Plugins/RenderPlugin.hpp>
+#include <R-Engine/Plugins/Ui/Systems.hpp>
+#include <R-Engine/Plugins/UiPlugin.hpp>
 #include <R-Engine/Plugins/WindowPlugin.hpp>
+#include <R-Engine/UI/Button.hpp>
+#include <R-Engine/UI/Components.hpp>
+#include <R-Engine/UI/Events.hpp>
+#include <R-Engine/UI/Image.hpp>
+#include <R-Engine/UI/InputState.hpp>
+#include <R-Engine/UI/Text.hpp>
+#include <R-Engine/UI/Theme.hpp>
 
 #include <cmath>
 #include <cstdlib>
@@ -23,7 +34,8 @@
 /* ================================================================================= */
 
 enum class GameState {
-    Playing,
+    MainMenu,
+    InGame,
     GameOver,
 };
 
@@ -39,7 +51,23 @@ static constexpr float PLAYER_FIRE_RATE = 0.15f;
 static constexpr float PLAYER_BOUNDS_PADDING = 0.2f;
 
 /* ================================================================================= */
-/* Components */
+/* Menu Components */
+/* ================================================================================= */
+
+struct MenuButton {
+    enum class Action {
+        None,
+        Play,
+        Options,
+        Quit
+    };
+    Action action = Action::None;
+};
+
+struct MenuRoot {};
+
+/* ================================================================================= */
+/* Game Components */
 /* Components are simple data structures that define the properties of an entity. */
 /* ================================================================================= */
 
@@ -69,7 +97,183 @@ struct EnemySpawnTimer {
 };
 
 /* ================================================================================= */
-/* Systems */
+/* Menu Systems */
+/* ================================================================================= */
+
+static void setup_ui_theme(r::ecs::ResMut<r::UiTheme> theme, r::ecs::ResMut<r::UiPluginConfig> cfg)
+{
+    cfg.ptr->show_debug_overlay = false;
+
+    /* R-Type cyan theme (#62DDFF) */
+    theme.ptr->button.bg_normal = r::Color{0, 36, 48, 255};
+    theme.ptr->button.bg_hover = r::Color{98, 221, 255, 100};
+    theme.ptr->button.bg_pressed = r::Color{98, 221, 255, 150};
+    theme.ptr->button.bg_disabled = r::Color{50, 50, 50, 255};
+
+    theme.ptr->button.border_normal = r::Color{98, 221, 255, 255};
+    theme.ptr->button.border_hover = r::Color{98, 221, 255, 255};
+    theme.ptr->button.border_pressed = r::Color{98, 221, 255, 255};
+    theme.ptr->button.border_disabled = r::Color{100, 100, 100, 255};
+
+    theme.ptr->button.border_thickness = 2.f;
+    theme.ptr->button.text = r::Color{98, 221, 255, 255};
+}
+
+static void build_main_menu(r::ecs::Commands &cmds)
+{
+    r::Logger::info("Building main menu");
+
+    /* Root menu container */
+    auto menu_root = cmds.spawn(
+        MenuRoot{},
+        r::UiNode{},
+        r::Style{
+            .width_pct = 100.f,
+            .height_pct = 100.f,
+            .background = r::Color{0, 0, 0, 255},
+            .margin = 0.f,
+            .padding = 0.f,
+            .direction = r::LayoutDirection::Column,
+            .justify = r::JustifyContent::Center,
+            .align = r::AlignItems::Center,
+            .gap = 10.f
+        },
+        r::ComputedLayout{},
+        r::Visibility::Visible
+    );
+
+    menu_root.with_children([&](r::ecs::ChildBuilder &parent) {
+        /* R-Type Title Logo */
+        parent.spawn(
+            r::UiNode{},
+            r::Style{
+                .height = 200.f,
+                .width_pct = 100.f,
+                .background = r::Color{0, 0, 0, 1},
+                .margin = 0.f,
+                .padding = 0.f
+            },
+            r::UiImage{
+                .path = "assets/r-type_title.png",
+                .tint = r::Color{255, 255, 255, 255},
+                .keep_aspect = true
+            },
+            r::ComputedLayout{},
+            r::Visibility::Visible
+        );
+
+        /* Play Button */
+        parent.spawn(
+            r::UiNode{},
+            r::UiButton{},
+            MenuButton{MenuButton::Action::Play},
+            r::Style{
+                .width = 280.f,
+                .height = 45.f,
+                .direction = r::LayoutDirection::Column,
+                .justify = r::JustifyContent::Center,
+                .align = r::AlignItems::Center
+            },
+            r::UiText{
+                .content = std::string("Play"),
+                .font_size = 22
+            },
+            r::ComputedLayout{},
+            r::Visibility::Visible
+        );
+
+        /* Options Button */
+        parent.spawn(
+            r::UiNode{},
+            r::UiButton{},
+            MenuButton{MenuButton::Action::Options},
+            r::Style{
+                .width = 280.f,
+                .height = 45.f,
+                .direction = r::LayoutDirection::Column,
+                .justify = r::JustifyContent::Center,
+                .align = r::AlignItems::Center
+            },
+            r::UiText{
+                .content = std::string("Options"),
+                .font_size = 22
+            },
+            r::ComputedLayout{},
+            r::Visibility::Visible
+        );
+
+        /* Quit Button */
+        parent.spawn(
+            r::UiNode{},
+            r::UiButton{},
+            MenuButton{MenuButton::Action::Quit},
+            r::Style{
+                .width = 280.f,
+                .height = 45.f,
+                .direction = r::LayoutDirection::Column,
+                .justify = r::JustifyContent::Center,
+                .align = r::AlignItems::Center
+            },
+            r::UiText{
+                .content = std::string("Quit"),
+                .font_size = 22
+            },
+            r::ComputedLayout{},
+            r::Visibility::Visible
+        );
+    });
+}
+
+static void menu_button_handler(
+    r::ecs::Res<r::UiInputState> input_state,
+    r::ecs::Query<r::ecs::Ref<MenuButton>> buttons,
+    r::ecs::ResMut<r::NextState<GameState>> next_state
+)
+{
+    const auto clicked = input_state.ptr->last_clicked;
+    if (clicked == r::ecs::NULL_ENTITY) {
+        return;
+    }
+
+    MenuButton::Action action = MenuButton::Action::None;
+    for (auto it = buttons.begin(); it != buttons.end(); ++it) {
+        auto [btn] = *it;
+        if (static_cast<r::ecs::Entity>(it.entity()) == clicked && btn.ptr) {
+            action = btn.ptr->action;
+            break;
+        }
+    }
+
+    switch (action) {
+        case MenuButton::Action::Play:
+            r::Logger::info("Starting game...");
+            next_state.ptr->set(GameState::InGame);
+            break;
+        case MenuButton::Action::Options:
+            r::Logger::info("Options clicked (not implemented)");
+            break;
+        case MenuButton::Action::Quit:
+            r::Logger::info("Quitting game...");
+            r::Application::quit.store(true, std::memory_order_relaxed);
+            break;
+        default:
+            break;
+    }
+}
+
+static void cleanup_menu(
+    r::ecs::Commands &cmds,
+    r::ecs::Query<r::ecs::Ref<MenuRoot>> menu_entities
+)
+{
+    r::Logger::info("Cleaning up menu");
+    for (auto it = menu_entities.begin(); it != menu_entities.end(); ++it) {
+        cmds.despawn(it.entity());
+    }
+}
+
+/* ================================================================================= */
+/* Game Systems */
 /* Systems contain the logic of the game. They query for entities with specific */
 /* components and operate on them. */
 /* ================================================================================= */
@@ -205,73 +409,74 @@ static void enemy_spawner_system(
     if (spawn_timer.ptr->time_left <= 0.0f) {
         spawn_timer.ptr->time_left = ENEMY_SPAWN_INTERVAL;
 
-        /* Spawn a new enemy off-screen to the right at a random height. */
-        float random_z = (static_cast<float>(rand()) / RAND_MAX) * 10.0f -
-                         5.0f; /* Range [-5, 5] */
+        /* Spawn enemy at random Z position */
+        float random_z = (static_cast<float>(rand()) / RAND_MAX) * 10.0f - 5.0f;
 
-        ::Mesh enemy_mesh_data = r::Mesh3d::Circle(1.0f, 16);
-        if (enemy_mesh_data.vertexCount > 0 && enemy_mesh_data.vertices) {
-            r::MeshHandle enemy_mesh_handle = meshes.ptr->add(enemy_mesh_data);
+        ::Model enemy_model_data = r::Mesh3d::Glb("examples/r_type/assets/enemy.glb");
+        if (enemy_model_data.meshCount > 0) {
+            r::MeshHandle enemy_mesh_handle = meshes.ptr->add(enemy_model_data);
             if (enemy_mesh_handle != r::MeshInvalidHandle) {
                 commands.spawn(
                     Enemy{},
-                    r::Transform3d{.position = {12.0f, 0.0f, random_z},
-                                   .scale = {0.4f, 0.4f, 0.4f}},
-                    Velocity{{-ENEMY_SPEED, 0.0f, 0.0f}}, Collider{0.4f},
-                    r::Mesh3d{
-                        enemy_mesh_handle,
-                        r::Color{255, 80, 100,
-                                 255} /* Red color for enemies */
-                    });
+                    r::Transform3d{
+                        .position = {15.0f, 0.0f, random_z},
+                        .rotation = {static_cast<float>(M_PI) / 2.0f, 0.0f,
+                                     static_cast<float>(M_PI) / 2.0f},
+                        .scale = {1.0f, 1.0f, 1.0f}},
+                    Velocity{{-ENEMY_SPEED, 0.0f, 0.0f}}, Collider{0.5f},
+                    r::Mesh3d{enemy_mesh_handle, r::Color{255, 255, 255, 255}});
             } else {
                 r::Logger::warn(
                     "enemy_spawner_system: Failed to register enemy mesh.");
             }
         } else {
             r::Logger::warn(
-                "enemy_spawner_system: Failed to generate enemy circle mesh.");
+                "enemy_spawner_system: Failed to load enemy model.");
         }
     }
 }
 
 /**
- * @brief (UPDATE) Updates the position of all entities with a Velocity.
+ * @brief (UPDATE) Applies velocity to position for all entities with both
+ * components.
  */
 static void movement_system(
-    r::ecs::Query<r::ecs::Mut<r::Transform3d>, r::ecs::Ref<Velocity>> query,
-    r::ecs::Res<r::core::FrameTime> time)
+    r::ecs::Res<r::core::FrameTime> time,
+    r::ecs::Query<r::ecs::Mut<r::Transform3d>, r::ecs::Ref<Velocity>> query)
 {
     for (auto [transform, velocity] : query) {
-        transform.ptr->position += velocity.ptr->value * time.ptr->delta_time;
+        transform.ptr->position =
+            transform.ptr->position + velocity.ptr->value * time.ptr->delta_time;
     }
 }
 
 /**
- * @brief (UPDATE) Prevents the player from moving off-screen.
+ * @brief (UPDATE) Keeps the player within screen bounds.
  */
 static void screen_bounds_system(
     r::ecs::Query<r::ecs::Mut<r::Transform3d>, r::ecs::With<Player>> query)
 {
-    /* Define screen boundaries based on a 16:9 aspect ratio camera at z=20. */
-    const float screen_width_half = 9.0f - PLAYER_BOUNDS_PADDING;
-    const float screen_height_half = 5.0f - PLAYER_BOUNDS_PADDING;
-
     for (auto [transform, _] : query) {
-        auto& pos = transform.ptr->position;
-        if (pos.x > screen_width_half)
-            pos.x = screen_width_half;
-        if (pos.x < -screen_width_half)
-            pos.x = -screen_width_half;
-        if (pos.z > screen_height_half)
-            pos.z = screen_height_half;
-        if (pos.z < -screen_height_half)
-            pos.z = -screen_height_half;
+        /* Clamp X position */
+        if (transform.ptr->position.x < -8.0f + PLAYER_BOUNDS_PADDING) {
+            transform.ptr->position.x = -8.0f + PLAYER_BOUNDS_PADDING;
+        }
+        if (transform.ptr->position.x > 8.0f - PLAYER_BOUNDS_PADDING) {
+            transform.ptr->position.x = 8.0f - PLAYER_BOUNDS_PADDING;
+        }
+
+        /* Clamp Z position */
+        if (transform.ptr->position.z < -4.5f + PLAYER_BOUNDS_PADDING) {
+            transform.ptr->position.z = -4.5f + PLAYER_BOUNDS_PADDING;
+        }
+        if (transform.ptr->position.z > 4.5f - PLAYER_BOUNDS_PADDING) {
+            transform.ptr->position.z = 4.5f - PLAYER_BOUNDS_PADDING;
+        }
     }
 }
 
 /**
- * @brief (UPDATE) Checks for collisions between bullets and enemies.
- * @details If a collision is detected, both entities are despawned.
+ * @brief (UPDATE) Checks for bullet-enemy collisions and despawns both.
  */
 static void collision_system(
     r::ecs::Commands& commands,
@@ -282,8 +487,6 @@ static void collision_system(
                   r::ecs::With<Enemy>>
         enemy_query)
 {
-    std::vector<r::ecs::Entity> despawn_queue;
-
     for (auto bullet_it = bullet_query.begin(); bullet_it != bullet_query.end();
          ++bullet_it) {
         auto [bullet_transform, bullet_collider, _b] = *bullet_it;
@@ -292,28 +495,25 @@ static void collision_system(
              ++enemy_it) {
             auto [enemy_transform, enemy_collider, _e] = *enemy_it;
 
-            float distance =
-                (bullet_transform.ptr->position - enemy_transform.ptr->position)
-                    .length();
-            float radii_sum =
-                bullet_collider.ptr->radius + enemy_collider.ptr->radius;
+            r::Vec3f delta = bullet_transform.ptr->position -
+                             enemy_transform.ptr->position;
+            float distance_squared = delta.x * delta.x + delta.z * delta.z;
 
-            if (distance < radii_sum) {
-                /* Defer despawning to avoid iterator invalidation. */
-                despawn_queue.push_back(bullet_it.entity());
-                despawn_queue.push_back(enemy_it.entity());
+            float sum_radii =
+                bullet_collider.ptr->radius + enemy_collider.ptr->radius;
+            if (distance_squared < sum_radii * sum_radii) {
+                /* Collision detected */
+                commands.despawn(bullet_it.entity());
+                commands.despawn(enemy_it.entity());
+                break;  /* Bullet can only hit one enemy */
             }
         }
-    }
-
-    for (r::ecs::Entity entity : despawn_queue) {
-        commands.despawn(entity);
     }
 }
 
 /**
- * @brief (UPDATE) Checks for collisions between the player and enemies.
- * @details If a collision is detected, transitions the game state to GameOver.
+ * @brief (UPDATE) Checks for player-enemy collisions and transitions to
+ * GameOver.
  */
 static void player_collision_system(
     r::ecs::ResMut<r::NextState<GameState>> next_state,
@@ -324,70 +524,69 @@ static void player_collision_system(
                   r::ecs::With<Enemy>>
         enemy_query)
 {
-    if (player_query.size() == 0) {
-        return;
-    }
-    auto player_it = player_query.begin();
-    auto [player_transform, player_collider, _p] = *player_it;
+    for (auto [player_transform, player_collider, _p] : player_query) {
+        for (auto [enemy_transform, enemy_collider, _e] : enemy_query) {
+            r::Vec3f delta = player_transform.ptr->position -
+                             enemy_transform.ptr->position;
+            float distance_squared = delta.x * delta.x + delta.z * delta.z;
 
-    for (auto enemy_it = enemy_query.begin(); enemy_it != enemy_query.end();
-         ++enemy_it) {
-        auto [enemy_transform, enemy_collider, _e] = *enemy_it;
-
-        float distance =
-            (player_transform.ptr->position - enemy_transform.ptr->position)
-                .length();
-        float radii_sum =
-            player_collider.ptr->radius + enemy_collider.ptr->radius;
-
-        if (distance < radii_sum) {
-            next_state.ptr->set(GameState::GameOver);
-            return;
+            float sum_radii =
+                player_collider.ptr->radius + enemy_collider.ptr->radius;
+            if (distance_squared < sum_radii * sum_radii) {
+                r::Logger::warn("Player collision! Game Over.");
+                next_state.ptr->set(GameState::GameOver);
+                return;
+            }
         }
     }
 }
 
 /**
- * @brief (UPDATE) Despawns entities that have moved off-screen.
+ * @brief (UPDATE) Despawns entities (bullets, enemies) that go off-screen.
  */
 static void despawn_offscreen_system(
     r::ecs::Commands& commands,
     r::ecs::Query<r::ecs::Ref<r::Transform3d>, r::ecs::Without<Player>> query)
 {
-    const float despawn_boundary_x =
-        13.0f; /* A bit wider than the spawn point */
-
     for (auto it = query.begin(); it != query.end(); ++it) {
         auto [transform, _] = *it;
-        if (std::abs(transform.ptr->position.x) > despawn_boundary_x) {
+
+        /* Despawn if too far left or right */
+        if (transform.ptr->position.x < -20.0f ||
+            transform.ptr->position.x > 20.0f) {
             commands.despawn(it.entity());
         }
     }
 }
 
 /**
- * @brief (OnEnter GameOver) Logs a game over message.
+ * @brief (OnEnter: GameOver) Displays a game over message.
  */
 static void game_over_message_system()
 {
-    r::Logger::info("================ GAME OVER ================");
-    r::Logger::info("Press [ENTER] to play again.");
+    r::Logger::info("=== GAME OVER ===");
+    r::Logger::info("Press ESC to quit.");
 }
 
 /**
- * @brief (UPDATE) In GameOver state, waits for input to restart the game.
+ * @brief (UPDATE in GameOver) Allows quitting with ESC.
  */
 static void game_over_system(r::ecs::Res<r::UserInput> user_input,
-                             r::ecs::ResMut<r::NextState<GameState>> next_state)
+                              r::ecs::ResMut<r::NextState<GameState>> next_state)
 {
+    if (user_input.ptr->isKeyPressed(KEY_ESCAPE)) {
+        r::Application::quit.store(true, std::memory_order_relaxed);
+    }
+
     if (user_input.ptr->isKeyPressed(KEY_ENTER)) {
-        next_state.ptr->set(GameState::Playing);
+        r::Logger::info("Restarting game...");
+        next_state.ptr->set(GameState::InGame);
     }
 }
 
 /**
- * @brief (OnEnter Playing) Cleans up entities from the previous game and
- * resets the player.
+ * @brief (OnEnter: InGame) Cleans up entities from the previous game and resets
+ * the player.
  */
 static void cleanup_system(
     r::ecs::Commands& commands, r::ecs::ResMut<EnemySpawnTimer> spawn_timer,
@@ -415,29 +614,62 @@ static void cleanup_system(
     spawn_timer.ptr->time_left = ENEMY_SPAWN_INTERVAL;
 }
 
+/* ================================================================================= */
+/* Main */
+/* ================================================================================= */
+
 int main()
 {
     /* Seed random for enemy spawn positions */
     srand(static_cast<unsigned int>(time(nullptr)));
 
     r::Application{}
+        /* Setup plugins */
         .add_plugins(r::DefaultPlugins{}.set(
             r::WindowPlugin{r::WindowPluginConfig{
                 .size = {1280, 720},
-                .title = "R-Type Minimal Prototype",
-            }}))
-        .init_state(GameState::Playing)
+                .title = "R-Type",
+                .cursor = r::WindowCursorState::Visible,
+            }}
+        ))
+
+        /* Initialize state system */
+        .init_state(GameState::MainMenu)
+
+        /* Global resources */
         .insert_resource(EnemySpawnTimer{})
-        .add_systems<startup_system>(r::Schedule::STARTUP)
-        .add_systems<cleanup_system>(r::OnEnter{GameState::Playing})
+
+        /* Global startup */
+        .add_systems<setup_ui_theme>(r::Schedule::STARTUP)
+
+        /* Main Menu State */
+        .add_systems<build_main_menu>(r::OnEnter{GameState::MainMenu})
+        .add_systems<menu_button_handler>(r::Schedule::UPDATE)
+            .run_if<r::run_conditions::in_state<GameState::MainMenu>>()
+            .after<r::ui::pointer_system>()
+            .before<r::ui::clear_click_state_system>()
+        .add_systems<cleanup_menu>(r::OnExit{GameState::MainMenu})
+
+        /* InGame State - Setup */
+        .add_systems<startup_system, cleanup_system>(r::OnEnter{GameState::InGame})
+
+        /* InGame State - Update Systems */
+        .add_systems<
+            player_input_system,
+            enemy_spawner_system,
+            movement_system,
+            screen_bounds_system,
+            collision_system,
+            player_collision_system,
+            despawn_offscreen_system
+        >(r::Schedule::UPDATE)
+            .run_if<r::run_conditions::in_state<GameState::InGame>>()
+
+        /* GameOver State */
         .add_systems<game_over_message_system>(r::OnEnter{GameState::GameOver})
         .add_systems<game_over_system>(r::Schedule::UPDATE)
-        .run_if<r::run_conditions::in_state<GameState::GameOver>>()
-        .add_systems<player_input_system, enemy_spawner_system, movement_system,
-                     screen_bounds_system, collision_system,
-                     player_collision_system, despawn_offscreen_system>(
-            r::Schedule::UPDATE)
-        .run_if<r::run_conditions::in_state<GameState::Playing>>()
+            .run_if<r::run_conditions::in_state<GameState::GameOver>>()
+
         .run();
 
     return 0;

@@ -755,7 +755,7 @@ static void despawn_offscreen_system(
  */
 static void show_game_over_ui(r::ecs::Commands &cmds)
 {
-r::Logger::info("Showing Game Over UI");
+    r::Logger::info("Showing Game Over UI");
 
     cmds.spawn(
         GameOverRoot{},
@@ -826,6 +826,7 @@ static void game_over_system(r::ecs::Res<r::UserInput> user_input,
  */
 static void cleanup_system(
     r::ecs::Commands& commands, r::ecs::ResMut<EnemySpawnTimer> spawn_timer,
+    r::ecs::ResMut<BossSpawnTimer> boss_spawn_timer,
     r::ecs::Query<r::ecs::With<Enemy>> enemy_query,
     r::ecs::Query<r::ecs::With<PlayerBullet>> player_bullet_query,
     r::ecs::Query<r::ecs::With<EnemyBullet>> enemy_bullet_query,
@@ -848,6 +849,8 @@ static void cleanup_system(
         transform.ptr->position = {-5.0f, 0.0f, 0.0f};
     }
     spawn_timer.ptr->time_left = ENEMY_SPAWN_INTERVAL;
+    boss_spawn_timer.ptr->time_left = BOSS_SPAWN_TIME;
+    boss_spawn_timer.ptr->spawned = false;
 }
 
 /* ================================================================================= */

@@ -73,6 +73,7 @@ struct MenuButton {
 };
 
 struct MenuRoot {};
+struct GameOverRoot {};
 
 /* ================================================================================= */
 /* Game Components */
@@ -122,6 +123,18 @@ struct BossShootTimer {
 };
 
 /* ================================================================================= */
+/* Run Conditions */
+/* ================================================================================= */
+
+static bool is_in_gameplay_state(r::ecs::Res<r::State<GameState>> state)
+{
+    if (!state.ptr)
+        return false;
+    auto current_state = state.ptr->current();
+    return current_state == GameState::EnemiesBattle || current_state == GameState::BossBattle;
+}
+
+/* ================================================================================= */
 /* Menu Systems */
 /* ================================================================================= */
 
@@ -161,11 +174,9 @@ static void build_main_menu(r::ecs::Commands &cmds)
             .direction = r::LayoutDirection::Column,
             .justify = r::JustifyContent::Center,
             .align = r::AlignItems::Center,
-            .gap = 10.f
-        },
+            .gap = 10.f},
         r::ComputedLayout{},
-        r::Visibility::Visible
-    );
+        r::Visibility::Visible);
 
     menu_root.with_children([&](r::ecs::ChildBuilder &parent) {
         /* R-Type Title Logo */
@@ -176,16 +187,13 @@ static void build_main_menu(r::ecs::Commands &cmds)
                 .width_pct = 100.f,
                 .background = r::Color{0, 0, 0, 1},
                 .margin = 0.f,
-                .padding = 0.f
-            },
+                .padding = 0.f},
             r::UiImage{
-                .path = "assets/r-type_title.png",
+                .path = "examples/r_type/assets/r-type_title.png",
                 .tint = r::Color{255, 255, 255, 255},
-                .keep_aspect = true
-            },
+                .keep_aspect = true},
             r::ComputedLayout{},
-            r::Visibility::Visible
-        );
+            r::Visibility::Visible);
 
         /* Play Button */
         parent.spawn(
@@ -197,15 +205,12 @@ static void build_main_menu(r::ecs::Commands &cmds)
                 .height = 45.f,
                 .direction = r::LayoutDirection::Column,
                 .justify = r::JustifyContent::Center,
-                .align = r::AlignItems::Center
-            },
+                .align = r::AlignItems::Center},
             r::UiText{
                 .content = std::string("Play"),
-                .font_size = 22
-            },
+                .font_size = 22},
             r::ComputedLayout{},
-            r::Visibility::Visible
-        );
+            r::Visibility::Visible);
 
         /* Options Button */
         parent.spawn(
@@ -217,15 +222,12 @@ static void build_main_menu(r::ecs::Commands &cmds)
                 .height = 45.f,
                 .direction = r::LayoutDirection::Column,
                 .justify = r::JustifyContent::Center,
-                .align = r::AlignItems::Center
-            },
+                .align = r::AlignItems::Center},
             r::UiText{
                 .content = std::string("Options"),
-                .font_size = 22
-            },
+                .font_size = 22},
             r::ComputedLayout{},
-            r::Visibility::Visible
-        );
+            r::Visibility::Visible);
 
         /* Quit Button */
         parent.spawn(
@@ -237,23 +239,19 @@ static void build_main_menu(r::ecs::Commands &cmds)
                 .height = 45.f,
                 .direction = r::LayoutDirection::Column,
                 .justify = r::JustifyContent::Center,
-                .align = r::AlignItems::Center
-            },
+                .align = r::AlignItems::Center},
             r::UiText{
                 .content = std::string("Quit"),
-                .font_size = 22
-            },
+                .font_size = 22},
             r::ComputedLayout{},
-            r::Visibility::Visible
-        );
+            r::Visibility::Visible);
     });
 }
 
 static void menu_button_handler(
     r::ecs::Res<r::UiInputState> input_state,
     r::ecs::Query<r::ecs::Ref<MenuButton>> buttons,
-    r::ecs::ResMut<r::NextState<GameState>> next_state
-)
+    r::ecs::ResMut<r::NextState<GameState>> next_state)
 {
     const auto clicked = input_state.ptr->last_clicked;
     if (clicked == r::ecs::NULL_ENTITY) {
@@ -270,26 +268,24 @@ static void menu_button_handler(
     }
 
     switch (action) {
-        case MenuButton::Action::Play:
-            r::Logger::info("Starting game...");
-            next_state.ptr->set(GameState::EnemiesBattle);
-            break;
-        case MenuButton::Action::Options:
-            r::Logger::info("Options clicked (not implemented)");
-            break;
-        case MenuButton::Action::Quit:
-            r::Logger::info("Quitting game...");
-            r::Application::quit.store(true, std::memory_order_relaxed);
-            break;
-        default:
-            break;
+    case MenuButton::Action::Play:
+        r::Logger::info("Starting game...");
+        next_state.ptr->set(GameState::EnemiesBattle);
+        break;
+    case MenuButton::Action::Options:
+        r::Logger::info("Options clicked (not implemented)");
+        break;
+    case MenuButton::Action::Quit:
+        r::Logger::info("Quitting game...");
+        r::Application::quit.store(true, std::memory_order_relaxed);
+        break;
+    default:
+        break;
     }
 }
 
-static void cleanup_menu(
-    r::ecs::Commands &cmds,
-    r::ecs::Query<r::ecs::Ref<MenuRoot>> menu_entities
-)
+static void cleanup_menu(r::ecs::Commands &cmds,
+                         r::ecs::Query<r::ecs::Ref<MenuRoot>> menu_entities)
 {
     r::Logger::info("Cleaning up menu");
     for (auto it = menu_entities.begin(); it != menu_entities.end(); ++it) {
@@ -359,11 +355,10 @@ static void startup_system(
 /**
  * @brief Makes the boss spawn
  */
-static void boss_spawn_system(
-    r::ecs::Commands& commands,
-    r::ecs::Res<r::core::FrameTime> time,
-    r::ecs::ResMut<BossSpawnTimer> spawn_timer,
-    r::ecs::ResMut<r::Meshes> meshes)
+static void boss_spawn_system(r::ecs::Commands& commands,
+                              r::ecs::Res<r::core::FrameTime> time,
+                              r::ecs::ResMut<BossSpawnTimer> spawn_timer,
+                              r::ecs::ResMut<r::Meshes> meshes)
 {
     ::Model boss_model_data = r::Mesh3d::Glb("examples/r_type/assets/Boss.glb");
 
@@ -376,33 +371,35 @@ static void boss_spawn_system(
                 Health{400, 400},
                 r::Transform3d{
                     .position = {24.0f, 35.0f, -10.0f},
-                    .rotation = {static_cast<float>(M_PI) / 2.0f, 0.0f, -static_cast<float>(M_PI) / 2.0f},
-                    .scale = {1.0f, 1.0f, 1.0f}
-                },
+                    .rotation = {static_cast<float>(M_PI) / 2.0f, 0.0f,
+                                 -static_cast<float>(M_PI) / 2.0f},
+                    .scale = {1.0f, 1.0f, 1.0f}},
                 Velocity{{0.0f, 0.0f, BOSS_VERTICAL_SPEED}},
                 Collider{35.0f},
                 r::Mesh3d{
                     boss_mesh_handle,
-                    r::Color{255, 255, 255, 255} /* White tint to show original texture */
-                }
-            );
+                    r::Color{255, 255, 255,
+                             255} /* White tint to show original texture */
+                });
         } else {
-             r::Logger::error("startup_system: Failed to register boss model with mesh manager.");
+            r::Logger::error(
+                "startup_system: Failed to register boss model with mesh manager.");
         }
     } else {
         r::Logger::error("startup_system: Failed to load boss model 'assets/Boss.glb'.");
     }
 }
 
-
 /**
  * @brief Boss **ai** system and movements.
  */
 static void boss_ai_system(
-    r::ecs::Commands& commands,
-    r::ecs::Res<r::core::FrameTime> time,
+    r::ecs::Commands& commands, r::ecs::Res<r::core::FrameTime> time,
     r::ecs::ResMut<r::Meshes> meshes,
-    r::ecs::Query<r::ecs::Ref<r::Transform3d>, r::ecs::Mut<Velocity>, r::ecs::Mut<BossShootTimer>, r::ecs::Ref<Health>, r::ecs::With<Boss>> query)
+    r::ecs::Query<r::ecs::Ref<r::Transform3d>, r::ecs::Mut<Velocity>,
+                  r::ecs::Mut<BossShootTimer>, r::ecs::Ref<Health>,
+                  r::ecs::With<Boss>>
+        query)
 {
     for (auto [transform, velocity, timer, health, _] : query) {
         if (transform.ptr->position.z > BOSS_UPPER_BOUND && velocity.ptr->value.z > 0) {
@@ -424,29 +421,19 @@ static void boss_ai_system(
                         EnemyBullet{},
                         r::Transform3d{
                             .position = transform.ptr->position - r::Vec3f{1.6f, 0.0f, 0.0f},
-                            .scale = {0.3f, 0.3f, 0.3f}
-                        },
+                            .scale = {0.3f, 0.3f, 0.3f}},
                         Velocity{{-BULLET_SPEED, 0.0f, 0.0f}},
                         Collider{0.3f},
-                        r::Mesh3d{
-                            bullet_mesh_handle,
-                            r::Color{255, 80, 220, 255}
-                        }
-                    );
+                        r::Mesh3d{bullet_mesh_handle, r::Color{255, 80, 220, 255}});
                     if (health.ptr->current <= health.ptr->max / 2) {
                         commands.spawn(
                             EnemyBullet{},
                             r::Transform3d{
                                 .position = transform.ptr->position + r::Vec3f{0.0f, 0.0f, 5.5f},
-                                .scale = {0.6f, 0.6f, 0.6f}
-                            },
+                                .scale = {0.6f, 0.6f, 0.6f}},
                             Velocity{{-BULLET_SPEED, 0.0f, 0.0f}},
                             Collider{0.3f},
-                            r::Mesh3d{
-                                bullet_mesh_handle,
-                                r::Color{255, 150, 50, 255}
-                            }
-                        );
+                            r::Mesh3d{bullet_mesh_handle, r::Color{255, 150, 50, 255}});
                     }
                 }
             }
@@ -455,8 +442,8 @@ static void boss_ai_system(
 }
 
 static void setup_boss_fight_system(r::ecs::ResMut<r::NextState<GameState>> next_state,
-    r::ecs::Res<r::core::FrameTime> time,
-    r::ecs::ResMut<BossSpawnTimer> spawn_timer)
+                                    r::ecs::Res<r::core::FrameTime> time,
+                                    r::ecs::ResMut<BossSpawnTimer> spawn_timer)
 {
     if (spawn_timer.ptr->spawned) {
         return;
@@ -517,9 +504,10 @@ static void player_input_system(
                                         r::Vec3f{0.6f, 0.0f, 0.0f},
                             .scale = {0.2f, 0.2f, 0.2f}},
                         Velocity{{BULLET_SPEED, 0.0f, 0.0f}}, Collider{0.2f},
-                        r::Mesh3d{bullet_mesh_handle,
-                                  r::Color{255, 200, 80,
-                                           255} /* Yellow color for bullets */
+                        r::Mesh3d{
+                            bullet_mesh_handle,
+                            r::Color{255, 200, 80,
+                                     255} /* Yellow color for bullets */
                         });
                 } else {
                     r::Logger::warn(
@@ -617,21 +605,32 @@ static void screen_bounds_system(
  */
 static void collision_system(
     r::ecs::Commands& commands,
-    r::ecs::Query<r::ecs::Ref<r::Transform3d>, r::ecs::Ref<Collider>, r::ecs::With<PlayerBullet>> bullet_query,
-    r::ecs::Query<r::ecs::Ref<r::Transform3d>, r::ecs::Ref<Collider>, r::ecs::With<Enemy>> enemy_query,
-    r::ecs::Query<r::ecs::Ref<r::Transform3d>, r::ecs::Ref<Collider>, r::ecs::Mut<Health>, r::ecs::With<Boss>> boss_query)
+    r::ecs::Query<r::ecs::Ref<r::Transform3d>, r::ecs::Ref<Collider>,
+                  r::ecs::With<PlayerBullet>>
+        bullet_query,
+    r::ecs::Query<r::ecs::Ref<r::Transform3d>, r::ecs::Ref<Collider>,
+                  r::ecs::With<Enemy>>
+        enemy_query,
+    r::ecs::Query<r::ecs::Ref<r::Transform3d>, r::ecs::Ref<Collider>,
+                  r::ecs::Mut<Health>, r::ecs::With<Boss>>
+        boss_query)
 {
     std::vector<r::ecs::Entity> despawn_queue;
 
-    for (auto bullet_it = bullet_query.begin(); bullet_it != bullet_query.end(); ++bullet_it) {
+    for (auto bullet_it = bullet_query.begin(); bullet_it != bullet_query.end();
+         ++bullet_it) {
         auto [bullet_transform, bullet_collider, _b] = *bullet_it;
         bool bullet_collided = false;
 
         // Collision avec les ennemis
-        for (auto enemy_it = enemy_query.begin(); enemy_it != enemy_query.end(); ++enemy_it) {
+        for (auto enemy_it = enemy_query.begin(); enemy_it != enemy_query.end();
+             ++enemy_it) {
             auto [enemy_transform, enemy_collider, _e] = *enemy_it;
-            float distance = (bullet_transform.ptr->position - enemy_transform.ptr->position).length();
-            float radii_sum = bullet_collider.ptr->radius + enemy_collider.ptr->radius;
+            float distance =
+                (bullet_transform.ptr->position - enemy_transform.ptr->position)
+                    .length();
+            float radii_sum =
+                bullet_collider.ptr->radius + enemy_collider.ptr->radius;
 
             if (distance < radii_sum) {
                 despawn_queue.push_back(enemy_it.entity());
@@ -646,15 +645,20 @@ static void collision_system(
         }
 
         // Collision avec le boss
-        for (auto boss_it = boss_query.begin(); boss_it != boss_query.end(); ++boss_it) {
+        for (auto boss_it = boss_query.begin(); boss_it != boss_query.end();
+             ++boss_it) {
             auto [boss_transform, boss_collider, health, _boss] = *boss_it;
-            float distance = (bullet_transform.ptr->position - boss_transform.ptr->position).length();
-            float radii_sum = bullet_collider.ptr->radius + boss_collider.ptr->radius;
+            float distance =
+                (bullet_transform.ptr->position - boss_transform.ptr->position)
+                    .length();
+            float radii_sum =
+                bullet_collider.ptr->radius + boss_collider.ptr->radius;
 
             if (distance < radii_sum) {
                 despawn_queue.push_back(bullet_it.entity());
                 health.ptr->current -= 10;
-                std::cout << "Boss hit! HP: " << health.ptr->current << health.ptr->max << std::endl;
+                std::cout << "Boss hit! HP: " << health.ptr->current
+                          << health.ptr->max << std::endl;
 
                 if (health.ptr->current <= 0) {
                     despawn_queue.push_back(boss_it.entity());
@@ -684,8 +688,8 @@ static void player_collision_system(
 {
     for (auto [player_transform, player_collider, _p] : player_query) {
         for (auto [enemy_transform, enemy_collider, _e] : enemy_query) {
-            r::Vec3f delta = player_transform.ptr->position -
-                             enemy_transform.ptr->position;
+            r::Vec3f delta =
+                player_transform.ptr->position - enemy_transform.ptr->position;
             float distance_squared = delta.x * delta.x + delta.z * delta.z;
 
             float sum_radii =
@@ -704,15 +708,21 @@ static void player_collision_system(
  */
 static void player_bullet_collision_system(
     r::ecs::ResMut<r::NextState<GameState>> next_state,
-    r::ecs::Query<r::ecs::Ref<r::Transform3d>, r::ecs::Ref<Collider>, r::ecs::With<Player>> player_query,
-    r::ecs::Query<r::ecs::Ref<r::Transform3d>, r::ecs::Ref<Collider>, r::ecs::With<EnemyBullet>> bullet_query)
+    r::ecs::Query<r::ecs::Ref<r::Transform3d>, r::ecs::Ref<Collider>,
+                  r::ecs::With<Player>>
+        player_query,
+    r::ecs::Query<r::ecs::Ref<r::Transform3d>, r::ecs::Ref<Collider>,
+                  r::ecs::With<EnemyBullet>>
+        bullet_query)
 {
     for (auto [player_transform, player_collider, _p] : player_query) {
         for (auto [bullet_transform, bullet_collider, _b] : bullet_query) {
-            r::Vec3f delta = player_transform.ptr->position - bullet_transform.ptr->position;
+            r::Vec3f delta =
+                player_transform.ptr->position - bullet_transform.ptr->position;
             float distance_squared = delta.x * delta.x + delta.z * delta.z;
 
-            float sum_radii = player_collider.ptr->radius + bullet_collider.ptr->radius;
+            float sum_radii =
+                player_collider.ptr->radius + bullet_collider.ptr->radius;
             if (distance_squared < sum_radii * sum_radii) {
                 r::Logger::warn("Player hit by bullet! Game Over.");
                 next_state.ptr->set(GameState::GameOver);
@@ -727,7 +737,9 @@ static void player_bullet_collision_system(
  */
 static void despawn_offscreen_system(
     r::ecs::Commands& commands,
-    r::ecs::Query<r::ecs::Ref<r::Transform3d>, r::ecs::Without<Player>, r::ecs::Without<Boss>> query)
+    r::ecs::Query<r::ecs::Ref<r::Transform3d>, r::ecs::Without<Player>,
+                  r::ecs::Without<Boss>>
+        query)
 {
     const float despawn_boundary_x = 100.0f;
     for (auto it = query.begin(); it != query.end(); ++it) {
@@ -739,19 +751,64 @@ static void despawn_offscreen_system(
 }
 
 /**
- * @brief (OnEnter: GameOver) Displays a game over message.
+ * @brief (OnEnter: GameOver) Displays a game over UI.
  */
-static void game_over_message_system()
+static void show_game_over_ui(r::ecs::Commands &cmds)
 {
-    r::Logger::info("=== GAME OVER ===");
-    r::Logger::info("Press ESC to quit.");
+r::Logger::info("Showing Game Over UI");
+
+    cmds.spawn(
+        GameOverRoot{},
+        r::UiNode{},
+        r::Style{
+            .width_pct = 100.f,
+            .height_pct = 100.f,
+            .background = r::Color{0, 0, 0, 150}, /* Semi-transparent black background */
+            .direction = r::LayoutDirection::Column,
+            .justify = r::JustifyContent::Center,
+            .align = r::AlignItems::Center,
+            .gap = 20.f},
+        r::ComputedLayout{},
+        r::Visibility::Visible)
+        .with_children([&](r::ecs::ChildBuilder &parent) {
+            parent.spawn(
+                r::UiNode{},
+                r::UiText{
+                    .content = "GAME OVER",
+                    .font_size = 80,
+                    .color = {255, 50, 50, 255}},
+                r::Style{.height = 90.f},
+                r::ComputedLayout{},
+                r::Visibility::Visible);
+            parent.spawn(
+                r::UiNode{},
+                r::UiText{
+                    .content = "Press ENTER to Restart",
+                    .font_size = 30,
+                    .color = {200, 200, 200, 255}},
+                r::Style{.height = 40.f},
+                r::ComputedLayout{},
+                r::Visibility::Visible);
+        });
 }
 
 /**
- * @brief (UPDATE in GameOver) Allows quitting with ESC.
+ * @brief (OnExit: GameOver) Cleans up the game over UI.
+ */
+static void cleanup_game_over_ui(r::ecs::Commands &cmds,
+                                 r::ecs::Query<r::ecs::With<GameOverRoot>> query)
+{
+    r::Logger::info("Cleaning up Game Over UI");
+    for (auto it = query.begin(); it != query.end(); ++it) {
+        cmds.despawn(it.entity());
+    }
+}
+
+/**
+ * @brief (UPDATE in GameOver) Allows quitting with ESC or restarting with ENTER.
  */
 static void game_over_system(r::ecs::Res<r::UserInput> user_input,
-                              r::ecs::ResMut<r::NextState<GameState>> next_state)
+                             r::ecs::ResMut<r::NextState<GameState>> next_state)
 {
     if (user_input.ptr->isKeyPressed(KEY_ESCAPE)) {
         r::Application::quit.store(true, std::memory_order_relaxed);
@@ -772,15 +829,18 @@ static void cleanup_system(
     r::ecs::Query<r::ecs::With<Enemy>> enemy_query,
     r::ecs::Query<r::ecs::With<PlayerBullet>> player_bullet_query,
     r::ecs::Query<r::ecs::With<EnemyBullet>> enemy_bullet_query,
-    r::ecs::Query<r::ecs::Mut<r::Transform3d>, r::ecs::With<Player>> player_query)
+    r::ecs::Query<r::ecs::Mut<r::Transform3d>, r::ecs::With<Player>>
+        player_query)
 {
     for (auto it = enemy_query.begin(); it != enemy_query.end(); ++it) {
         commands.despawn(it.entity());
     }
-    for (auto it = player_bullet_query.begin(); it != player_bullet_query.end(); ++it) {
+    for (auto it = player_bullet_query.begin(); it != player_bullet_query.end();
+         ++it) {
         commands.despawn(it.entity());
     }
-    for (auto it = enemy_bullet_query.begin(); it != enemy_bullet_query.end(); ++it) {
+    for (auto it = enemy_bullet_query.begin(); it != enemy_bullet_query.end();
+         ++it) {
         commands.despawn(it.entity());
     }
 
@@ -806,8 +866,7 @@ int main()
                 .size = {1280, 720},
                 .title = "R-Type",
                 .cursor = r::WindowCursorState::Visible,
-            }}
-        ))
+            }}))
 
         /* Initialize state system */
         .init_state(GameState::MainMenu)
@@ -828,25 +887,27 @@ int main()
         .add_systems<cleanup_menu>(r::OnExit{GameState::MainMenu})
 
         /* InGame State - Setup */
-        .add_systems<startup_system, cleanup_system>(r::OnEnter{GameState::EnemiesBattle})
+        .add_systems<startup_system, cleanup_system>(
+            r::OnEnter{GameState::EnemiesBattle})
 
         /* InGame State - Update Systems */
-        .add_systems<
-            player_input_system,
-            movement_system,
-            screen_bounds_system,
-            collision_system,
-            player_collision_system,
-            player_bullet_collision_system,
-            despawn_offscreen_system,
-            setup_boss_fight_system
-        >(r::Schedule::UPDATE)
-        .add_systems<enemy_spawner_system>(r::Schedule::UPDATE).run_if<r::run_conditions::in_state<GameState::EnemiesBattle>>()
+        .add_systems<movement_system, screen_bounds_system,
+                     despawn_offscreen_system>(r::Schedule::UPDATE)
+
+        .add_systems<player_input_system, collision_system,
+                     player_collision_system, player_bullet_collision_system,
+                     setup_boss_fight_system>(r::Schedule::UPDATE)
+        .run_if<is_in_gameplay_state>()
+
+        .add_systems<enemy_spawner_system>(r::Schedule::UPDATE)
+            .run_if<r::run_conditions::in_state<GameState::EnemiesBattle>>()
         .add_systems<boss_spawn_system>(r::OnEnter(GameState::BossBattle))
-        .add_systems<boss_ai_system>(r::Schedule::UPDATE).run_if<r::run_conditions::in_state<GameState::BossBattle>>()
+        .add_systems<boss_ai_system>(r::Schedule::UPDATE)
+            .run_if<r::run_conditions::in_state<GameState::BossBattle>>()
 
         /* GameOver State */
-        .add_systems<game_over_message_system>(r::OnEnter{GameState::GameOver})
+        .add_systems<show_game_over_ui>(r::OnEnter{GameState::GameOver})
+        .add_systems<cleanup_game_over_ui>(r::OnExit{GameState::GameOver})
         .add_systems<game_over_system>(r::Schedule::UPDATE)
             .run_if<r::run_conditions::in_state<GameState::GameOver>>()
 

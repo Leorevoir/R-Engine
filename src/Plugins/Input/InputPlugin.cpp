@@ -1,20 +1,28 @@
-#include "R-Engine/ECS/Query.hpp"
 #include <R-Engine/Application.hpp>
 #include <R-Engine/Core/Backend.hpp>
 #include <R-Engine/Core/Logger.hpp>
+#include <R-Engine/ECS/Query.hpp>
 #include <R-Engine/Plugins/InputPlugin.hpp>
+
+#ifndef to_vec2f
+    #define to_vec2f(v)                                                                                                                    \
+        r::Vec2f                                                                                                                           \
+        {                                                                                                                                  \
+            v.x, v.y                                                                                                                       \
+        }
+#endif
 
 static constexpr u16 FIRST_KEY = 32;
 static constexpr u16 MAX_KEY = 348;
 
-bool r::UserInput::isKeyPressed(int key_code) const
+bool r::UserInput::isKeyPressed(i32 key_code) const
 {
     const auto it = keys_pressed.find(key_code);
 
     return it != keys_pressed.end();
 }
 
-bool r::UserInput::isMouseButtonPressed(int button_code) const
+bool r::UserInput::isMouseButtonPressed(i32 button_code) const
 {
     const auto it = mouse_buttons_pressed.find(button_code);
 
@@ -67,6 +75,9 @@ static void input_system(r::ecs::ResMut<r::UserInput> userInput)
             userInput.ptr->mouse_buttons_pressed.insert(button);
         }
     }
+
+    userInput.ptr->mouse_position = to_vec2f(GetMousePosition());
+    userInput.ptr->mouse_delta = to_vec2f(GetMouseDelta());
 }
 
 void r::InputPlugin::build(Application &app)
@@ -75,3 +86,5 @@ void r::InputPlugin::build(Application &app)
 
     Logger::info("InputPlugin built");
 }
+
+#undef to_vec2f

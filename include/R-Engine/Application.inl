@@ -338,14 +338,12 @@ template<typename T>
 r::Application &r::Application::init_state(T initial_state) noexcept
 {
     insert_resource(State<T>(initial_state));
-    insert_resource(NextState<T>());
+    insert_resource(NextState<T>{.next = initial_state});
 
     _state_transition_runner = [this]() {
         auto *state_res = _scene.get_resource_ptr<State<T>>();
         auto *next_state_res = _scene.get_resource_ptr<NextState<T>>();
 
-        /* If no transition is queued, clear the previous state. This ensures `state_changed` is a one-shot condition
-        that is only true for the single frame where the transition occurs. */
         if (!next_state_res || !next_state_res->next.has_value()) {
             if (state_res) {
                 state_res->_previous.reset();
@@ -356,28 +354,34 @@ r::Application &r::Application::init_state(T initial_state) noexcept
         T next = next_state_res->next.value();
         T current = state_res->current();
 
-        if (current == next) {
+        const bool is_initial_transition = !state_res->previous().has_value();
+
+        if (current == next && !is_initial_transition) {
             next_state_res->next.reset();
             return;
         }
 
         auto &schedules = _states[typeid(T)];
 
-        /* 1. Execute OnExit for the `current` state */
-        if (auto it = schedules.on_exit.find(static_cast<usize>(current)); it != schedules.on_exit.end()) {
-            _run_transition_schedule(it->second);
-        }
+        if (current != next) {
+            /* 1. Execute OnExit for the `current` state */
+            if (auto it = schedules.on_exit.find(static_cast<usize>(current)); it != schedules.on_exit.end()) {
+                _run_transition_schedule(it->second);
+            }
 
-        /* 2. Execute OnTransition */
-        typename States::Transition transition{static_cast<usize>(current), static_cast<usize>(next)};
-        if (auto it = schedules.on_transition.find(transition); it != schedules.on_transition.end()) {
-            _run_transition_schedule(it->second);
-        }
+            /* 2. Execute OnTransition */
+            typename States::Transition transition{static_cast<usize>(current), static_cast<usize>(next)};
+            if (auto it = schedules.on_transition.find(transition); it != schedules.on_transition.end()) {
+                _run_transition_schedule(it->second);
+            }
 
-        _apply_commands();
+            _apply_commands();
+        }
 
         /* 3. Update the state */
-        state_res->_previous = current;
+        if (current != next) {
+            state_res->_previous = current;
+        }
         state_res->_current = next;
 
         /* 4. Execute OnEnter for the `next` state */

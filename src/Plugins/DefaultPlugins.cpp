@@ -1,6 +1,7 @@
 #include <R-Engine/Plugins/AudioPlugin.hpp>
 #include <R-Engine/Plugins/DefaultPlugins.hpp>
 #include <R-Engine/Plugins/InputPlugin.hpp>
+#include <R-Engine/Plugins/LuaScriptingPlugin.hpp>
 #include <R-Engine/Plugins/MeshPlugin.hpp>
 #include <R-Engine/Plugins/RenderPlugin.hpp>
 #include <R-Engine/Plugins/TransformPlugin.hpp>
@@ -18,6 +19,7 @@ r::DefaultPlugins::DefaultPlugins()
     add<MeshPlugin>();
     add<TransformPlugin>();
     add<AudioPlugin>();
+    add<LuaScriptingPlugin>();
 }
 
 void r::DefaultPlugins::build(r::Application &app)

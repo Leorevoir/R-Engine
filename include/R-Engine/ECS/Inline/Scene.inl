@@ -2,6 +2,7 @@
 
 #include "R-Engine/ECS/Scene.hpp"
 #include <algorithm>
+#include <memory>
 
 template<typename T>
 void r::ecs::Scene::add_component(Entity e, T comp)
@@ -116,9 +117,10 @@ bool r::ecs::Scene::has_component(Entity e) const
 }
 
 template<typename T>
-void r::ecs::Scene::insert_resource(T r) noexcept
+void r::ecs::Scene::insert_resource(T &&r) noexcept
 {
-    _resources[std::type_index(typeid(T))] = std::move(r);
+    using DecayedT = std::decay_t<T>;
+    _resources.insert_or_assign(std::type_index(typeid(DecayedT)), std::make_shared<DecayedT>(std::forward<T>(r)));
 }
 
 template<typename T>
@@ -135,5 +137,10 @@ T *r::ecs::Scene::get_resource_ptr() noexcept
     if (it == _resources.end()) {
         return nullptr;
     }
-    return std::any_cast<T>(&it->second);
+
+    if (auto *ptr_to_shared_ptr = std::any_cast<std::shared_ptr<T>>(&it->second)) {
+        return ptr_to_shared_ptr->get();
+    }
+
+    return nullptr;
 }

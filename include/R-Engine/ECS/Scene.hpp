@@ -96,7 +96,7 @@ class R_ENGINE_API Scene : public NonCopyable
          * @param r The resource to insert.
          */
         template<typename T>
-        void insert_resource(T r) noexcept;
+        void insert_resource(T &&r) noexcept;
 
         /**
          * @brief Removes a resource from the scene.

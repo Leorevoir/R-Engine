@@ -5,15 +5,12 @@
  * static helpers
  */
 
-static void mesh_render_system(r::ecs::Query<r::ecs::Ref<r::Mesh3d>, r::ecs::Ref<r::Transform3d>> query,
+static void mesh_render_system(r::ecs::Query<r::ecs::Ref<r::Mesh3d>, r::ecs::Ref<r::GlobalTransform3d>> query,
     r::ecs::Res<r::Meshes> meshes) noexcept
 {
     for (const auto &[mesh_comp, transform] : query) {
         const auto *t3d = transform.ptr;
-        const auto pos = t3d->position;
-        const auto scale = t3d->scale.x;
-
-        meshes.ptr->draw(mesh_comp.ptr->id, pos, scale, mesh_comp.ptr->color);
+        meshes.ptr->draw(mesh_comp.ptr->id, t3d->position, t3d->rotation, t3d->scale, mesh_comp.ptr->color);
     }
 }
 

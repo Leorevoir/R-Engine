@@ -21,7 +21,13 @@ static constexpr inline const MeshHandle MeshInvalidHandle = static_cast<MeshHan
  */
 struct R_ENGINE_API TextureManager final {
     public:
+        TextureManager() = default;
         ~TextureManager();
+
+        TextureManager(const TextureManager &) = delete;
+        TextureManager &operator=(const TextureManager &) = delete;
+        TextureManager(TextureManager &&) noexcept = default;
+        TextureManager &operator=(TextureManager &&) noexcept = default;
 
         /**
         * @brief load a texture from a file path or get the cached texture if it was already loaded
@@ -48,7 +54,13 @@ struct R_ENGINE_API TextureManager final {
 */
 struct R_ENGINE_API MeshEntry {
     public:
+        MeshEntry() = default;
         ~MeshEntry();
+
+        MeshEntry(const MeshEntry &) = delete;
+        MeshEntry &operator=(const MeshEntry &) = delete;
+        MeshEntry(MeshEntry &&other) noexcept;
+        MeshEntry &operator=(MeshEntry &&other) noexcept;
 
         ::Mesh cpu_mesh{};
         ::Model model{};
@@ -64,7 +76,13 @@ struct R_ENGINE_API MeshEntry {
 */
 struct R_ENGINE_API Meshes final {
     public:
+        Meshes() = default;
         ~Meshes();
+
+        Meshes(const Meshes &) = delete;
+        Meshes &operator=(const Meshes &) = delete;
+        Meshes(Meshes &&) noexcept = default;
+        Meshes &operator=(Meshes &&) noexcept = default;
 
         /**
         * @brief add a new mesh to the manager with a facultative texture path
@@ -84,7 +102,7 @@ struct R_ENGINE_API Meshes final {
         /**
         * @brief draw a mesh at a given position, scale, and tint color
         */
-        void draw(const MeshHandle handle, const Vec3f &position, const f32 scale, const Color tint) const;
+        void draw(const MeshHandle handle, const Vec3f &position, const Vec3f &rotation, const Vec3f &scale, const Color tint) const;
 
         /**
         * @brief remove a mesh from the manager and free its resources

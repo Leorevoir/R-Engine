@@ -31,7 +31,7 @@ inline Vec3f Quaternion::to_euler() const noexcept
     /* Pitch (y-axis rotation) */
     const f32 sinp = 2.f * (w * y - z * x);
     if (std::abs(sinp) >= 1.f) {
-        euler.y = std::copysign(PI / 2.0f, sinp); /* use 90 degrees if out of range */
+        euler.y = std::copysign(R_PI / 2.0f, sinp); /* use 90 degrees if out of range */
     } else {
         euler.y = std::asin(sinp);
     }

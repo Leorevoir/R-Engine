@@ -1,5 +1,6 @@
 #include <R-Engine/ECS/Command.hpp>
 #include <R-Engine/ECS/Scene.hpp>
+#include <deque>
 
 r::ecs::Scene::Scene()
 {
@@ -33,19 +34,39 @@ r::ecs::Entity r::ecs::Scene::create_entity()
 
 void r::ecs::Scene::destroy_entity(r::ecs::Entity e) noexcept
 {
-    const auto it = _entity_locations.find(e);
-    if (it == _entity_locations.end()) {
-        return;
+    std::deque<r::ecs::Entity> queue;
+    if (_entity_locations.count(e)) {
+        queue.push_back(e);
     }
 
-    const EntityLocation loc = it->second;
-    Archetype &archetype = _archetypes[loc.archetype_index];
+    while (!queue.empty()) {
+        Entity current_entity = queue.front();
+        queue.pop_front();
 
-    Entity swapped_entity = archetype.table.remove_entity_swap_back(loc.table_row);
+        /* If the entity has children, add them to the queue for destruction. */
+        if (auto *children_comp = get_component_ptr<Children>(current_entity)) {
+            for (Entity child : children_comp->entities) {
+                if (_entity_locations.count(child)) {
+                    queue.push_back(child);
+                }
+            }
+        }
 
-    _entity_locations.erase(e);
-    if (swapped_entity != 0) {
-        _entity_locations[swapped_entity].table_row = loc.table_row;
+        /* Proceed with destroying the current entity. */
+        const auto it = _entity_locations.find(current_entity);
+        if (it == _entity_locations.end()) {
+            continue;
+        }
+
+        const EntityLocation loc = it->second;
+        Archetype &archetype = _archetypes[loc.archetype_index];
+
+        Entity swapped_entity = archetype.table.remove_entity_swap_back(loc.table_row);
+
+        _entity_locations.erase(current_entity);
+        if (swapped_entity != 0) {
+            _entity_locations[swapped_entity].table_row = loc.table_row;
+        }
     }
 }
 
@@ -84,6 +105,7 @@ usize r::ecs::Scene::_find_or_create_archetype(const std::vector<std::type_index
 void r::ecs::Scene::_move_entity_between_archetypes(Entity e, EntityLocation &loc, usize new_archetype_idx)
 {
     const usize old_archetype_idx = loc.archetype_index;
+    const usize old_row = loc.table_row;
     Archetype &old_archetype = _archetypes[old_archetype_idx];
     Archetype &new_archetype = _archetypes[new_archetype_idx];
     Table &old_table = old_archetype.table;
@@ -95,7 +117,7 @@ void r::ecs::Scene::_move_entity_between_archetypes(Entity e, EntityLocation &lo
         new_table.columns.resize(new_archetype.component_types.size());
     }
 
-    // Iterate over the destination archetype's components and pull them from the source.
+    /* Iterate over the destination archetype's components and pull them from the source. */
     for (const auto &[type_idx, new_col_idx] : new_archetype.component_map) {
         auto old_it = old_archetype.component_map.find(type_idx);
         if (old_it != old_archetype.component_map.end()) {
@@ -108,12 +130,12 @@ void r::ecs::Scene::_move_entity_between_archetypes(Entity e, EntityLocation &lo
     }
 
     /** Clean up the old table */
-    Entity swapped_entity = old_table.remove_entity_swap_back(loc.table_row);
+    Entity swapped_entity = old_table.remove_entity_swap_back(old_row);
 
     /** Update entity locations */
     loc.archetype_index = new_archetype_idx;
     loc.table_row = new_row;
     if (swapped_entity != 0) {
-        _entity_locations.at(swapped_entity).table_row = loc.table_row;
+        _entity_locations.at(swapped_entity).table_row = old_row;
     }
 }

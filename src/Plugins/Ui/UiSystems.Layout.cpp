@@ -259,8 +259,8 @@ void compute_layout_system(r::ecs::Query<r::ecs::Mut<r::ComputedLayout>, r::ecs:
             children_map[n.parent].push_back(n.id);
     }
 
-    const float ww = static_cast<float>(GetRenderWidth());
-    const float wh = static_cast<float>(GetRenderHeight());
+    const float ww = static_cast<float>(GetScreenWidth());
+    const float wh = static_cast<float>(GetScreenHeight());
     for (auto root : roots) {
         const r::Style rs = styles[root];
         float rw = (rs.width_pct >= 0.f) ? (ww * (rs.width_pct / 100.f)) : ((rs.width > 0.f) ? rs.width : ww);

@@ -6,7 +6,7 @@
 namespace r {
 
 /* A small PI constant for math operations */
-static constexpr f32 PI = 3.14159265358979323846f;
+static constexpr f32 R_PI = 3.14159265358979323846f;
 
 /**
  * @brief Represents a rotation in 3D space.

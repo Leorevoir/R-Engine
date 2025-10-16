@@ -1,9 +1,47 @@
 #include <R-Engine/Core/Logger.hpp>
+#include <R-Engine/Maths/Quaternion.hpp>
 #include <R-Engine/Plugins/MeshPlugin.hpp>
+#include <cmath>
+#include <utility>
 
 /**
  * public MeshEntry
  */
+
+r::MeshEntry::MeshEntry(MeshEntry &&other) noexcept
+    : cpu_mesh(other.cpu_mesh), model(other.model), texture(other.texture), texture_path(std::move(other.texture_path)),
+      owns_texture(other.owns_texture), valid(other.valid)
+{
+    other.valid = false;
+    other.cpu_mesh = {};
+    other.model = {};
+}
+
+r::MeshEntry &r::MeshEntry::operator=(MeshEntry &&other) noexcept
+{
+    if (this != &other) {
+        if (valid) {
+            UnloadModel(model);
+            if (cpu_mesh.vertexCount > 0) {
+                UnloadMesh(cpu_mesh);
+            }
+        }
+
+        /* Steal resources from the other object */
+        cpu_mesh = other.cpu_mesh;
+        model = other.model;
+        texture = other.texture;
+        texture_path = std::move(other.texture_path);
+        owns_texture = other.owns_texture;
+        valid = other.valid;
+
+        /* Neuter the moved-from object */
+        other.valid = false;
+        other.cpu_mesh = {};
+        other.model = {};
+    }
+    return *this;
+}
 
 r::MeshEntry::~MeshEntry()
 {
@@ -99,14 +137,36 @@ const std::vector<r::MeshEntry> *r::Meshes::data() const
     return &_data;
 }
 
-void r::Meshes::draw(const r::MeshHandle handle, const Vec3f &position, const f32 scale, const Color tint) const
+void r::Meshes::draw(const r::MeshHandle handle, const Vec3f &position, const Vec3f &rotation, const Vec3f &scale, const Color tint) const
 {
-    const ::Model *m = get(handle);
-
-    if (!m) {
+    const ::Model *model_ptr = get(handle);
+    if (!model_ptr) {
         return;
     }
-    DrawModel(*m, {position.x, position.y, position.z}, scale, {tint.r, tint.g, tint.b, tint.a});
+
+    /* Convert Euler angles to our engine's Quaternion */
+    const r::Quaternion q = r::Quaternion::from_euler(rotation);
+
+    /* Convert Quaternion to Axis-Angle for Raylib's DrawModelEx */
+    float angle_rad = 2.0f * acosf(q.w);
+    float angle_deg = angle_rad * (180.0f / r::R_PI);
+    r::Vec3f axis = {1.0f, 0.0f, 0.0f};/* Default axis if no rotation */
+
+    float s = sqrtf(1.0f - q.w * q.w);
+    if (s >= 0.001f) {
+        axis.x = q.x / s;
+        axis.y = q.y / s;
+        axis.z = q.z / s;
+    }
+
+    /* Prepare Raylib-compatible structs */
+    ::Vector3 rl_position = {position.x, position.y, position.z};
+    ::Vector3 rl_rotation_axis = {axis.x, axis.y, axis.z};
+    ::Vector3 rl_scale = {scale.x, scale.y, scale.z};
+    ::Color rl_tint = {tint.r, tint.g, tint.b, tint.a};
+
+    /* Draw the model using extended parameters, avoiding direct matrix manipulation */
+    DrawModelEx(*model_ptr, rl_position, rl_rotation_axis, angle_deg, rl_scale, rl_tint);
 }
 
 void r::Meshes::remove(const r::MeshHandle handle)

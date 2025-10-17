@@ -4,7 +4,7 @@
 
 namespace r {
 
-class Logger
+class Logger final
 {
     public:
         enum class Level { Debug, Info, Warn, Error };

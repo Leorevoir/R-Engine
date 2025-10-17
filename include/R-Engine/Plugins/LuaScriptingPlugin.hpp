@@ -35,12 +35,8 @@ class R_ENGINE_API LuaScriptInstance final : public MoveOnly
         LuaScriptInstance(LuaScriptInstance &&other) noexcept;
         LuaScriptInstance &operator=(LuaScriptInstance &&other) noexcept;
 
-        // LuaScriptInstance(LuaScriptInstance &&other) noexcept;
-        // LuaScriptInstance &operator=(LuaScriptInstance &&other) noexcept;
-        // LuaScriptInstance(const LuaScriptInstance &) = delete;
-        // LuaScriptInstance &operator=(const LuaScriptInstance &) = delete;
-
         lua::State *get_state() const;
+        std::filesystem::file_time_type get_last_write_time() const;
 
     private:
         friend class LuaScripts;
@@ -58,14 +54,9 @@ class R_ENGINE_API LuaScripts final : public MoveOnly
     public:
         explicit LuaScripts(Application *app);
 
-        // LuaScripts(const LuaScripts &) = delete;
-        // LuaScripts &operator=(const LuaScripts &) = delete;
-        //
-        // LuaScripts(LuaScripts &&) noexcept = default;
-        // LuaScripts &operator=(LuaScripts &&) noexcept = default;
-
         bool load_script(const std::string &path);
         lua::State *get_state(const std::string &path);
+        LuaScriptInstance *get_script_instance(const std::string &path);
 
     private:
         void _register_engine_api(lua::State *L);

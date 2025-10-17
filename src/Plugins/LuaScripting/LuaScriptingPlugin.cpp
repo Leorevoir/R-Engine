@@ -1,6 +1,7 @@
 #include <R-Engine/Plugins/LuaScriptingPlugin.hpp>
 
 #include <R-Engine/Application.hpp>
+#include <R-Engine/Core/Filepath.hpp>
 #include <R-Engine/Core/Logger.hpp>
 #include <R-Engine/ECS/Query.hpp>
 #include <R-Engine/Scripts/LuaApiRegistry.hpp>
@@ -17,6 +18,26 @@ extern "C" {
 }
 
 /**
+ * static helper
+ */
+
+static inline void lua_scripting_plugin_register_api(r::LuaApiRegistry &registry) noexcept
+{
+    registry.add_api(std::make_shared<r::lua::LoggerApi>());
+}
+
+static inline bool lua_scripting_plugin_is_script_instance_ready(const r::LuaScriptInstance *instance, const std::string &file) noexcept
+{
+    if (!r::path::exists(file)) {
+        return false;
+    }
+
+    const auto last_write_time = r::path::last_write_time(file);
+
+    return !instance || instance->get_last_write_time() != last_write_time;
+}
+
+/**
 * systems
 */
 
@@ -28,26 +49,30 @@ using LuaScriptsRes = r::ecs::ResMut<r::LuaScripts>;
 static void lua_scripting_plugin_script_loader(ScriptQuery query, LuaScriptsRes scripts_manager) noexcept
 {
     for (auto [script_component] : query) {
+        const std::string &file_path = script_component.ptr->file_path;
 
-        if (!script_component.ptr->ready) {
-
-            if (scripts_manager.ptr->load_script(script_component.ptr->file_path)) {
-                script_component.ptr->ready = true;
-            }
+        if (file_path.empty() || !r::path::exists(file_path)) {
+            continue;
         }
+
+        const auto *script_instance = scripts_manager.ptr->get_script_instance(file_path);
+
+        if (!lua_scripting_plugin_is_script_instance_ready(script_instance, file_path)) {
+            continue;
+        }
+
+        r::Logger::info("Hot-reloading Lua script: " + file_path);
+        if (scripts_manager.ptr->load_script(file_path)) {
+            script_component.ptr->ready = true;
+            continue;
+        }
+
+        r::Logger::error("Failed to hot-reload script: " + file_path);
+        script_component.ptr->ready = false;
     }
 }
 
 }// namespace
-
-/**
- * static helper
- */
-
-static inline void lua_scripting_plugin_register_api(r::LuaApiRegistry &registry) noexcept
-{
-    registry.add_api(std::make_shared<r::lua::LoggerApi>());
-}
 
 /**
 * public

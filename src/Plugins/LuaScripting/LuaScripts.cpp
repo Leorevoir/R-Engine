@@ -67,15 +67,24 @@ bool r::LuaScripts::load_script(const std::string &file)
 
     if (!lua_script_dofile(L, file)) {
         Logger::error("Failed to load or execute script: " + file);
-        Logger::error(lua_tostring(L, -1));
+        Logger::error("Lua error: " + lua_script_to_string(L, -1));
         return false;
     }
 
     instance._last_write_time = std::filesystem::last_write_time(file);
     _scripts.insert_or_assign(file, std::move(instance));
 
-    Logger::info("Successfully loaded Lua script: " + file);
+    Logger::info("Successfully loaded/reloaded Lua script: " + file);
     return true;
+}
+
+r::LuaScriptInstance *r::LuaScripts::get_script_instance(const std::string &file)
+{
+    auto it = _scripts.find(file);
+    if (it != _scripts.end()) {
+        return &it->second;
+    }
+    return nullptr;
 }
 
 r::lua::State *r::LuaScripts::get_state(const std::string &file)

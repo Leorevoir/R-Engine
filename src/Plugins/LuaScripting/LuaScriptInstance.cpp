@@ -30,6 +30,11 @@ r::LuaScriptInstance &r::LuaScriptInstance::operator=(LuaScriptInstance &&other)
     return *this;
 }
 
+std::filesystem::file_time_type r::LuaScriptInstance::get_last_write_time() const
+{
+    return _last_write_time;
+}
+
 r::lua::State *r::LuaScriptInstance::get_state() const
 {
     return _state.get();

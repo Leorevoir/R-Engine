@@ -1,4 +1,3 @@
-#include "R-Engine/Scripts/Api/EcsApi.hpp"
 #include <R-Engine/Plugins/LuaScriptingPlugin.hpp>
 
 #include <R-Engine/Application.hpp>
@@ -22,10 +21,9 @@ extern "C" {
  * static helper
  */
 
-static inline void lua_scripting_plugin_register_api(r::Application &app, r::LuaApiRegistry &registry) noexcept
+static inline void lua_scripting_plugin_register_api(r::LuaApiRegistry &registry) noexcept
 {
     registry.add_api(std::make_shared<r::lua::LoggerApi>());
-    registry.add_api(std::make_shared<r::lua::EcsApi>(&app));
 }
 
 static inline bool lua_scripting_plugin_is_script_instance_ready(const r::LuaScriptInstance *instance, const std::string &file) noexcept
@@ -89,7 +87,7 @@ void r::LuaScriptingPlugin::build(Application &app) noexcept
 {
     auto registry = r::LuaApiRegistry{};
 
-    lua_scripting_plugin_register_api(app, registry);
+    lua_scripting_plugin_register_api(registry);
 
     app.insert_resource(std::move(registry));
     app.insert_resource(LuaScripts(&app));

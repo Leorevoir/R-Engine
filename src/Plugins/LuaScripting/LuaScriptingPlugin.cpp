@@ -1,3 +1,4 @@
+#include "R-Engine/Scripts/Api/EcsApi.hpp"
 #include <R-Engine/Plugins/LuaScriptingPlugin.hpp>
 
 #include <R-Engine/Application.hpp>
@@ -21,9 +22,10 @@ extern "C" {
  * static helper
  */
 
-static inline void lua_scripting_plugin_register_api(r::LuaApiRegistry &registry) noexcept
+static inline void lua_scripting_plugin_register_api(r::Application &app, r::LuaApiRegistry &registry) noexcept
 {
     registry.add_api(std::make_shared<r::lua::LoggerApi>());
+    registry.add_api(std::make_shared<r::lua::EcsApi>(&app));
 }
 
 static inline bool lua_scripting_plugin_is_script_instance_ready(const r::LuaScriptInstance *instance, const std::string &file) noexcept
@@ -61,7 +63,7 @@ static void lua_scripting_plugin_script_loader(ScriptQuery query, LuaScriptsRes 
             continue;
         }
 
-        r::Logger::info("Hot-reloading Lua script: " + file_path);
+        r::Logger::debug("Hot-reloading Lua script: " + file_path);
         if (scripts_manager.ptr->load_script(file_path)) {
             script_component.ptr->ready = true;
             continue;
@@ -87,12 +89,11 @@ void r::LuaScriptingPlugin::build(Application &app) noexcept
 {
     auto registry = r::LuaApiRegistry{};
 
-    lua_scripting_plugin_register_api(registry);
+    lua_scripting_plugin_register_api(app, registry);
 
     app.insert_resource(std::move(registry));
     app.insert_resource(LuaScripts(&app));
-
     app.add_systems<lua_scripting_plugin_script_loader>(Schedule::UPDATE);
 
-    Logger::info("LuaScriptingPlugin built with dynamic API registry.");
+    Logger::debug("LuaScriptingPlugin built");
 }

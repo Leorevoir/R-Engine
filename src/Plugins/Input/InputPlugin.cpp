@@ -1,8 +1,9 @@
+#include <R-Engine/Plugins/InputPlugin.hpp>
+
 #include <R-Engine/Application.hpp>
 #include <R-Engine/Core/Backend.hpp>
 #include <R-Engine/Core/Logger.hpp>
 #include <R-Engine/ECS/Query.hpp>
-#include <R-Engine/Plugins/InputPlugin.hpp>
 
 #ifndef to_vec2f
     #define to_vec2f(v)                                                                                                                    \
@@ -84,7 +85,7 @@ void r::InputPlugin::build(Application &app)
 {
     app.insert_resource(UserInput{}).insert_resource(InputMap{}).add_systems<input_system>(Schedule::UPDATE);
 
-    Logger::info("InputPlugin built");
+    Logger::debug("InputPlugin built");
 }
 
 #undef to_vec2f

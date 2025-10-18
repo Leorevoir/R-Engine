@@ -10,7 +10,7 @@
 
 void startup_system(r::ecs::Commands cmds, r::ecs::ResMut<r::Meshes> meshes)
 {
-    const std::string script_path = r::path::get("examples/lua_game/Scripts/player.lua");
+    const std::string script_path = r::path::get("examples/lua_game/Scripts/script.lua");
     const r::MeshHandle cube_handle = meshes.ptr->add(
         r::Mesh3d::Cube(1.0f)
     );

@@ -74,7 +74,7 @@ bool r::LuaScripts::load_script(const std::string &file)
     instance._last_write_time = std::filesystem::last_write_time(file);
     _scripts.insert_or_assign(file, std::move(instance));
 
-    Logger::info("Successfully loaded/reloaded Lua script: " + file);
+    Logger::debug("Successfully loaded/reloaded Lua script: " + file);
     return true;
 }
 

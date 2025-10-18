@@ -1,5 +1,7 @@
-#include <R-Engine/Application.hpp>
 #include <R-Engine/Plugins/MeshPlugin.hpp>
+
+#include <R-Engine/Application.hpp>
+#include <R-Engine/Core/Logger.hpp>
 
 /**
  * static helpers
@@ -31,4 +33,5 @@ r::MeshPlugin::~MeshPlugin()
 void r::MeshPlugin::build(r::Application &app)
 {
     app.insert_resource(Meshes{}).add_systems<mesh_render_system>(Schedule::RENDER_3D);
+    Logger::debug("MeshPlugin built");
 }

@@ -43,7 +43,7 @@ void UiPlugin::build(Application &app)
             fonts.ptr->cache.clear();
         }>(Schedule::SHUTDOWN);
 
-    Logger::info("UiPlugin built");
+    Logger::debug("UiPlugin built");
 }
 
 }// namespace r

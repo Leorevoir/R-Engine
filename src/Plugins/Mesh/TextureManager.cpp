@@ -10,7 +10,7 @@ r::TextureManager::~TextureManager()
 {
     for (auto &[path, texture] : _textures) {
         UnloadTexture(texture);
-        Logger::info("Unloaded texture: " + path);
+        Logger::debug("Unloaded texture: " + path);
     }
 }
 
@@ -35,7 +35,7 @@ void r::TextureManager::unload(const std::string &path)
     }
     UnloadTexture(it->second);
     _textures.erase(it);
-    Logger::info("Unloaded texture: " + path);
+    Logger::debug("Unloaded texture: " + path);
 }
 
 /**
@@ -57,6 +57,6 @@ const ::Texture2D *r::TextureManager::_load(const std::string &path)
     }
 
     _textures[path] = texture;
-    Logger::info("Loaded texture: " + path);
+    Logger::debug("Loaded texture: " + path);
     return &_textures[path];
 }

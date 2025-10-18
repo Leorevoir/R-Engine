@@ -108,5 +108,5 @@ void r::WindowPlugin::build(r::Application &app) noexcept
         .add_systems<_update_window_system, _update_cursor_system>(Schedule::UPDATE)
         .add_systems<_destroy_window_system>(Schedule::SHUTDOWN);
 
-    Logger::info("WindowPlugin built");
+    Logger::debug("WindowPlugin built");
 }

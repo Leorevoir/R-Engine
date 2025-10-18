@@ -31,7 +31,7 @@ r::Application::SystemSet::SystemSet(const std::string &pname, SystemSetId pid) 
 
 r::Application::Application()
 {
-    Logger::info("Application created");
+    Logger::debug("Application created");
     std::signal(SIGINT, [](i32) {
         r::Application::quit.store(true, std::memory_order_relaxed);
         std::cout << "\r";
@@ -101,7 +101,7 @@ void r::Application::_shutdown()
     _run_schedule(Schedule::SHUTDOWN);
     _apply_commands();
     Logger::debug("Shutdown schedule complete. Application exiting.");
-    Logger::info("Quiting the application...");
+    Logger::debug("Quiting the application...");
 }
 
 /**

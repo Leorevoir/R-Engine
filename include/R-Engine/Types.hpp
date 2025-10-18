@@ -20,6 +20,17 @@ using f64 = double;
 using usize = u64;
 using isize = i64;
 
+class R_ENGINE_API MoveOnly
+{
+    protected:
+        constexpr MoveOnly() = default;
+        constexpr ~MoveOnly() = default;
+        constexpr MoveOnly(const MoveOnly &) = delete;
+        constexpr MoveOnly &operator=(const MoveOnly &) = delete;
+        constexpr MoveOnly(MoveOnly &&) noexcept = default;
+        constexpr MoveOnly &operator=(MoveOnly &&) noexcept = default;
+};
+
 class R_ENGINE_API NonCopyable
 {
     protected:

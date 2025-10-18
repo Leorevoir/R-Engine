@@ -2,6 +2,7 @@
 
 #include <R-Engine/Application.hpp>
 #include <R-Engine/Core/Backend.hpp>
+#include <R-Engine/Core/Logger.hpp>
 
 /**
  * static helpers
@@ -55,4 +56,5 @@ void r::RenderPlugin::build(r::Application &app)
         .add_systems<render_plugin_3D_before_render_system>(Schedule::BEFORE_RENDER_3D)
         .add_systems<render_plugin_3D_after_render_system>(Schedule::AFTER_RENDER_3D)
         .add_systems<render_plugin_2D_after_render_system>(Schedule::AFTER_RENDER_2D);
+    Logger::debug("RenderPlugin built");
 }

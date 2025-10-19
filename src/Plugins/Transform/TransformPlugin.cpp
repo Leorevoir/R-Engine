@@ -21,7 +21,7 @@ using OrphelinsQuery = r::ecs::Query<
 using TransformComponentsQuery = r::ecs::Query<
     r::ecs::Ref<r::Transform3d>,
     r::ecs::Mut<r::GlobalTransform3d>,
-    r::ecs::Optional<r::ecs::Ref<r::ecs::Children>>>;
+    r::ecs::Optional<r::ecs::Children>>;
 
 struct TransformPluginCache {
     public:
@@ -57,8 +57,8 @@ TransformPluginCache transform_build_cache(TransformComponentsQuery &all_transfo
         cache.local[entity] = local.ptr;
         cache.global[entity] = global.ptr;
 
-        if (children_opt.ptr && children_opt.ptr->ptr) {
-            cache.children[entity] = &children_opt.ptr->ptr->entities;
+        if (children_opt.ptr) {
+            cache.children[entity] = &children_opt.ptr->entities;
         }
     }
 

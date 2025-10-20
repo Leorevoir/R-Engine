@@ -127,8 +127,6 @@ struct R_ENGINE_API Meshes final {
 
 struct R_ENGINE_API Mesh3d final {
     public:
-        Mesh3d(const MeshHandle mesh_handle, const r::Color &mesh_color = {}) noexcept;
-
         /**
         * @brief generate a cube mesh centered at the given position with the given size
         */
@@ -146,6 +144,15 @@ struct R_ENGINE_API Mesh3d final {
 
         MeshHandle id = static_cast<MeshHandle>(-1);
         r::Color color;
+
+        /**
+         * @brief Visual offsets applied only during rendering.
+         * @details These do NOT affect the logical Transform3d of the entity.
+         * Useful for fixing models that are imported with incorrect orientation or origin.
+         */
+        r::Vec3f position_offset = {0.f, 0.f, 0.f};
+        r::Vec3f rotation_offset = {0.f, 0.f, 0.f}; /* Euler angles in radians */
+        r::Vec3f scale_offset = {1.f, 1.f, 1.f};
 };
 
 /**

@@ -9,11 +9,6 @@
 * public
 */
 
-r::Mesh3d::Mesh3d(const u32 mesh_handle, const r::Color &mesh_color) noexcept : id(mesh_handle), color(mesh_color)
-{
-    /* __ctor__ */
-}
-
 ::Mesh r::Mesh3d::Cube(const f32 size, const Vec3f &center) noexcept
 {
     const ::Mesh mesh = GenMeshCube(size, size, size);

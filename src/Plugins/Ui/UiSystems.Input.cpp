@@ -17,7 +17,7 @@ struct InputItem {
         int z;                          ///< Z-index for depth sorting
         size_t ord;                     ///< Creation order for stable sorting
         r::ecs::Entity handle;          ///< Entity handle
-        const r::ComputedLayout *layout;///< Computed layout information
+        const r::ComputedLayout *layout;///< Computed layout debugrmation
         r::Style style;                 ///< Visual style properties
         r::ecs::Entity parent;          ///< Parent entity for hierarchy
         bool disabled;                  ///< Whether input is disabled
@@ -314,7 +314,7 @@ void keyboard_nav_system(r::ecs::Res<r::UserInput> input, r::ecs::ResMut<r::UiIn
         if (prev != r::ecs::NULL_ENTITY && prev != state.ptr->focused)
             events.ptr->blurred.push_back(prev);
         events.ptr->focus_changed.push_back(state.ptr->focused);
-        r::Logger::info(std::string{"UI focus -> handle "} + std::to_string(state.ptr->focused));
+        r::Logger::debug(std::string{"UI focus -> handle "} + std::to_string(state.ptr->focused));
     }
 
     const bool activate = input.ptr->isKeyPressed(KEY_ENTER) || input.ptr->isKeyPressed(KEY_SPACE);

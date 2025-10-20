@@ -1,6 +1,7 @@
+#include <R-Engine/Plugins/AudioPlugin.hpp>
+
 #include <R-Engine/Core/Filepath.hpp>
 #include <R-Engine/Core/Logger.hpp>
-#include <R-Engine/Plugins/AudioPlugin.hpp>
 
 /**
 * public
@@ -58,7 +59,7 @@ r::AudioHandle r::AudioManager::load(const std::string &path)
     const AudioHandle handle = static_cast<AudioHandle>(_sounds.size() - 1);
     _audios[path] = handle;
 
-    Logger::info("Loaded sound: " + path + " (" + std::to_string(handle) + ")");
+    Logger::debug("Loaded sound: " + path + " (" + std::to_string(handle) + ")");
     return handle;
 }
 

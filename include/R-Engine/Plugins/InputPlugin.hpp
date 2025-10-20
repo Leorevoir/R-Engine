@@ -1,7 +1,8 @@
 #pragma once
 
-#include "R-Engine/Types.hpp"
+#include <R-Engine/Maths/Vec.hpp>
 #include <R-Engine/Plugins/Plugin.hpp>
+
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -18,11 +19,14 @@ struct R_ENGINE_API Binding {
 
 struct R_ENGINE_API UserInput {
 
-        std::unordered_set<int> keys_pressed;
-        std::unordered_set<int> mouse_buttons_pressed;
+        std::unordered_set<i32> keys_pressed;
+        std::unordered_set<i32> mouse_buttons_pressed;
 
-        bool isKeyPressed(int key_code) const;
-        bool isMouseButtonPressed(int button_code) const;
+        Vec2f mouse_position = {.0f, .0f};
+        Vec2f mouse_delta = {.0f, .0f};
+
+        bool isKeyPressed(i32 key_code) const;
+        bool isMouseButtonPressed(i32 button_code) const;
 };
 
 struct R_ENGINE_API InputMap {

@@ -62,7 +62,7 @@ static void audio_plugin_init_audio_device()
         InitAudioDevice();
 
         if (IsAudioDeviceReady()) {
-            r::Logger::info("Audio device initialized");
+            r::Logger::debug("Audio device initialized");
         } else {
             r::Logger::error("Failed to initialize audio device");
         }
@@ -111,7 +111,7 @@ static void audio_plugin_close_audio_device()
 {
     if (IsAudioDeviceReady()) {
         CloseAudioDevice();
-        r::Logger::info("Audio device closed");
+        r::Logger::debug("Audio device closed");
     }
 }
 

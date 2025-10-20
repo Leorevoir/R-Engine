@@ -1,5 +1,7 @@
 #pragma once
 
+#include <R-Engine/Maths/Maths.hpp>
+
 namespace r {
 
 inline constexpr Quaternion::Quaternion() noexcept : x(0.f), y(0.f), z(0.f), w(1.f)

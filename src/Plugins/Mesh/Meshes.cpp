@@ -78,7 +78,7 @@ r::MeshHandle r::Meshes::add(const ::Mesh &mesh, const std::string &texture_path
     entry.cpu_mesh = mesh;
     entry.model = LoadModelFromMesh(entry.cpu_mesh);
 
-    /** @info initialize cpu_mesh to avoid double free on destruction */
+    /** @debug initialize cpu_mesh to avoid double free on destruction */
     entry.cpu_mesh.vertexCount = 0;
     entry.cpu_mesh.triangleCount = 0;
     entry.cpu_mesh.vertices = nullptr;
@@ -86,13 +86,13 @@ r::MeshHandle r::Meshes::add(const ::Mesh &mesh, const std::string &texture_path
     entry.cpu_mesh.texcoords = nullptr;
     entry.cpu_mesh.indices = nullptr;
 
-    /** @info load texture if a path is provided using the Texture Manager */
+    /** @debug load texture if a path is provided using the Texture Manager */
     if (!texture_path.empty()) {
         _add_texture(entry, (texture_path));
     }
 
     entry.valid = true;
-    Logger::info("bind mesh with handle: " + std::to_string(handle));
+    Logger::debug("bind mesh with handle: " + std::to_string(handle));
     return handle;
 }
 
@@ -108,13 +108,13 @@ r::MeshHandle r::Meshes::add(const ::Model &model, const std::string &texture_pa
 
     entry.model = model;
 
-    /** @info load texture if a path is provided using the Texture Manager */
+    /** @debug load texture if a path is provided using the Texture Manager */
     if (!texture_path.empty()) {
         _add_texture(entry, (texture_path));
     }
 
     entry.valid = true;
-    Logger::info("bind model with handle: " + std::to_string(handle));
+    Logger::debug("bind model with handle: " + std::to_string(handle));
     return handle;
 }
 
@@ -150,7 +150,7 @@ void r::Meshes::draw(const r::MeshHandle handle, const Vec3f &position, const Ve
     /* Convert Quaternion to Axis-Angle for Raylib's DrawModelEx */
     float angle_rad = 2.0f * acosf(q.w);
     float angle_deg = angle_rad * (180.0f / r::R_PI);
-    r::Vec3f axis = {1.0f, 0.0f, 0.0f};/* Default axis if no rotation */
+    r::Vec3f axis = {1.0f, 0.0f, 0.0f}; /* Default axis if no rotation */
 
     float s = sqrtf(1.0f - q.w * q.w);
     if (s >= 0.001f) {

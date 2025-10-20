@@ -1,8 +1,10 @@
-#include "R-Engine/Plugins/TransformPlugin.hpp"
+#include <R-Engine/Plugins/TransformPlugin.hpp>
 
 #include <R-Engine/Application.hpp>
 #include <R-Engine/Components/Transform3d.hpp>
+#include <R-Engine/Core/Logger.hpp>
 #include <R-Engine/ECS/Resolver.hpp>
+
 #include <deque>
 #include <unordered_map>
 #include <vector>
@@ -163,4 +165,5 @@ void r::TransformPlugin::build(Application &app)
 {
     app.add_systems<transform_add_missing_global_system>(r::Schedule::UPDATE)
         .add_systems<transform_propagate_system>(r::Schedule::BEFORE_RENDER_3D);
+    Logger::debug("TransformPlugin built");
 }

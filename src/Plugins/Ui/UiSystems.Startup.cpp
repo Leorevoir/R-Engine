@@ -13,7 +13,7 @@ void startup_system(r::ecs::Res<UiPluginConfig> cfg, r::ecs::Res<UiTheme> theme,
 {
     (void) theme;
     (void) fonts;
-    r::Logger::info(std::string{"UiPlugin startup. DebugOverlay="} + (cfg.ptr->show_debug_overlay ? "on" : "off"));
+    r::Logger::debug(std::string{"UiPlugin startup. DebugOverlay="} + (cfg.ptr->show_debug_overlay ? "on" : "off"));
 
     r::Application::quit.store(false, std::memory_order_relaxed);
 }

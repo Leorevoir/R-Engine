@@ -1,4 +1,95 @@
 // ========================================
+// Language Management
+// ========================================
+
+let currentLanguage = 'en'; // Default language
+
+// Initialize language on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Load saved language preference or default to English
+    const savedLang = localStorage.getItem('preferredLanguage') || 'en';
+    setLanguage(savedLang);
+    
+    // Setup language buttons
+    const langButtons = document.querySelectorAll('.lang-btn');
+    langButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const lang = this.getAttribute('data-lang');
+            setLanguage(lang);
+        });
+    });
+    
+    // Update active button
+    updateActiveButton(savedLang);
+});
+
+/**
+ * Set the active language and update all translatable elements
+ */
+function setLanguage(lang) {
+    if (!translations[lang]) {
+        console.error(`Language ${lang} not found`);
+        return;
+    }
+    
+    currentLanguage = lang;
+    localStorage.setItem('preferredLanguage', lang);
+    
+    // Update HTML lang attribute
+    document.documentElement.lang = lang;
+    document.body.setAttribute('data-lang', lang);
+    
+    // Update all elements with data-i18n attribute
+    document.querySelectorAll('[data-i18n]').forEach(element => {
+        const key = element.getAttribute('data-i18n');
+        const translation = getNestedTranslation(translations[lang], key);
+        
+        if (translation) {
+            // Check if the element should use innerHTML (for HTML content)
+            if (element.hasAttribute('data-i18n-html') || translation.includes('<')) {
+                element.innerHTML = translation;
+            } else {
+                element.textContent = translation;
+            }
+        }
+    });
+    
+    // Show/hide language-specific content
+    document.querySelectorAll('.lang-en, .lang-fr').forEach(element => {
+        element.style.display = 'none';
+    });
+    document.querySelectorAll(`.lang-${lang}`).forEach(element => {
+        element.style.display = '';
+    });
+    
+    // Update active button
+    updateActiveButton(lang);
+    
+    console.log(`Language changed to: ${lang}`);
+}
+
+/**
+ * Update the active state of language buttons
+ */
+function updateActiveButton(lang) {
+    document.querySelectorAll('.lang-btn').forEach(button => {
+        if (button.getAttribute('data-lang') === lang) {
+            button.classList.add('active');
+        } else {
+            button.classList.remove('active');
+        }
+    });
+}
+
+/**
+ * Get nested translation value from object using dot notation
+ * e.g., "nav.introduction" -> translations.en.nav.introduction
+ */
+function getNestedTranslation(obj, path) {
+    return path.split('.').reduce((current, key) => current && current[key], obj);
+}
+
+// ========================================
 // Smooth Scrolling & Active Link Highlighting
 // ========================================
 
@@ -235,6 +326,10 @@ function createSearchBox() {
         font-size: 14px;
     `;
     
+    // Set placeholder based on current language
+    searchInput.setAttribute('data-i18n-placeholder', 'search.placeholder');
+    updateSearchPlaceholder();
+    
     searchContainer.appendChild(searchInput);
     
     const logo = document.querySelector('.logo');
@@ -260,6 +355,21 @@ function createSearchBox() {
 
 // Add search box to sidebar
 createSearchBox();
+
+// Update search placeholder when language changes
+function updateSearchPlaceholder() {
+    const searchInput = document.querySelector('.search-input');
+    if (searchInput && translations[currentLanguage]) {
+        searchInput.placeholder = translations[currentLanguage].search.placeholder;
+    }
+}
+
+// Override setLanguage to also update search placeholder
+const originalSetLanguage = setLanguage;
+setLanguage = function(lang) {
+    originalSetLanguage(lang);
+    updateSearchPlaceholder();
+};
 
 // ========================================
 // Back to Top Button

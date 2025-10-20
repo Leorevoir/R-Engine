@@ -7,16 +7,28 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Language Buttons -->
-    <div class="language-buttons">
-        <button class="lang-btn" data-lang="en">English</button>
-        <button class="lang-btn" data-lang="fr">Français</button>
-    </div>
-    
     <nav class="sidebar">
         <div class="logo">
             <h1 data-i18n="logo.title">R-Engine</h1>
             <p data-i18n="logo.subtitle">ECS Documentation</p>
+        </div>
+        
+        <!-- Language Selector -->
+        <div class="language-selector">
+            <label data-i18n="langSelector.label">Language:</label>
+            <select id="languageSelect">
+                <option value="en" data-i18n="langSelector.en">English</option>
+                <option value="fr" data-i18n="langSelector.fr">Français</option>
+            </select>
+        </div>
+        
+        <!-- Language Selector -->
+        <div class="language-selector">
+            <label data-i18n="langSelector.label">Language:</label>
+            <select id="languageSelect">
+                <option value="en" data-i18n="langSelector.en">English</option>
+                <option value="fr" data-i18n="langSelector.fr">Français</option>
+            </select>
         </div>
         
         <ul class="nav-menu">
@@ -47,36 +59,8 @@
     </nav>
 
     <main class="content">
-        <!-- Introduction EN -->
-        <section id="introduction" class="section lang-en">
-            <h1>Introduction to R-Engine ECS</h1>
-            <p class="lead">
-                R-Engine uses an <strong>Entity Component System (ECS)</strong> architecture inspired by Bevy, 
-                designed to provide performance, flexibility and ease of use.
-            </p>
-            
-            <div class="info-box">
-                <h3>What is an ECS?</h3>
-                <p>
-                    An ECS is an architectural design pattern that separates data (Components) from logic (Systems), 
-                    connecting them through entities (Entities). This approach favors composition over inheritance 
-                    and enables more modular and performant code.
-                </p>
-            </div>
-
-            <h2>Key Features</h2>
-            <ul class="feature-list">
-                <li><strong>Archetype-based Storage</strong>: Archetype-optimized storage for maximum performance</li>
-                <li><strong>Type Safety</strong>: Compile-time type system to avoid errors</li>
-                <li><strong>Dependency Injection</strong>: Automatic system dependency resolution</li>
-                <li><strong>Command Buffer</strong>: Deferred modifications to avoid iterator invalidation</li>
-                <li><strong>Events System</strong>: Asynchronous communication between systems</li>
-                <li><strong>Hierarchy Support</strong>: Native parent-child relationships</li>
-            </ul>
-        </section>
-
-        <!-- Introduction FR -->
-        <section id="introduction" class="section lang-fr">
+        <!-- Introduction -->
+        <section id="introduction" class="section">
             <h1>Introduction à l'ECS R-Engine</h1>
             <p class="lead">
                 R-Engine utilise une architecture <strong>Entity Component System (ECS)</strong> inspirée de Bevy, 
@@ -105,8 +89,7 @@
 
         <!-- Architecture -->
         <section id="architecture" class="section">
-            <h1 class="lang-en">System Architecture</h1>
-            <h1 class="lang-fr">Architecture du Système</h1>
+            <h1>Architecture du Système</h1>
             
             <div class="architecture-diagram">
                 <pre class="diagram">
@@ -133,29 +116,15 @@
 │  │                                                │  │
 │  │  ┌──────────────────────────────────────────┐ │  │
 │  │  │          Command Buffer                   │ │  │
-│  │  │  Deferred modifications queue            │ │  │
+│  │  │  Queue de modifications différées         │ │  │
 │  │  └──────────────────────────────────────────┘ │  │
 │  └───────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────┘
                 </pre>
             </div>
 
-            <h2 class="lang-en">Execution Flow</h2>
-            <h2 class="lang-fr">Flux d'Exécution</h2>
-            
-            <ol class="execution-flow lang-en">
-                <li><strong>Initialization</strong>: Scene creation and STARTUP systems execution</li>
-                <li><strong>Main Loop</strong>:
-                    <ol>
-                        <li>Execute UPDATE systems (game logic)</li>
-                        <li>Apply Command Buffer (structural modifications)</li>
-                        <li>Execute RENDER systems (display)</li>
-                        <li>Update Events (double buffering)</li>
-                    </ol>
-                </li>
-            </ol>
-            
-            <ol class="execution-flow lang-fr">
+            <h2>Flux d'Exécution</h2>
+            <ol class="execution-flow">
                 <li><strong>Initialisation</strong> : Création de la Scene et exécution des systèmes STARTUP</li>
                 <li><strong>Boucle Principale</strong> :
                     <ol>
@@ -170,19 +139,12 @@
 
         <!-- Core Concepts -->
         <section id="core-concepts" class="section">
-            <h1 class="lang-en">Core Concepts</h1>
-            <h1 class="lang-fr">Concepts Clés</h1>
+            <h1>Concepts Clés</h1>
 
             <!-- Entities -->
             <div id="entities" class="subsection">
-                <h2 class="lang-en">Entities</h2>
-                <h2 class="lang-fr">Entities (Entités)</h2>
-                
-                <p class="lang-en">
-                    An entity is simply a unique identifier (<code>u32</code>) that groups components together.
-                    It has no data or behavior of its own.
-                </p>
-                <p class="lang-fr">
+                <h2>Entities (Entités)</h2>
+                <p>
                     Une entité est simplement un identifiant unique (<code>u32</code>) qui regroupe des composants.
                     Elle n'a pas de données ou de comportement propre.
                 </p>
@@ -195,16 +157,14 @@
 }</code></pre>
                 </div>
 
-                <h3 class="lang-en">Creating Entities</h3>
-                <h3 class="lang-fr">Création d'Entités</h3>
+                <h3>Création d'Entités</h3>
                 <div class="code-block">
-                    <div class="code-header lang-en">Example</div>
-                    <div class="code-header lang-fr">Exemple</div>
+                    <div class="code-header">Exemple</div>
                     <pre><code class="cpp">void spawn_system(Commands &commands) {
-    // Create an empty entity / Créer une entité vide
+    // Créer une entité vide
     Entity entity = commands.spawn().id();
     
-    // Create an entity with components / Créer une entité avec des composants
+    // Créer une entité avec des composants
     commands.spawn(
         Position{0.0f, 0.0f},
         Velocity{1.0f, 0.0f},
@@ -216,28 +176,15 @@
 
             <!-- Components -->
             <div id="components" class="subsection">
-                <h2 class="lang-en">Components</h2>
-                <h2 class="lang-fr">Components (Composants)</h2>
-                
-                <p class="lang-en">
-                    Components are pure data structures that define an entity's properties.
-                    They contain no logic, only data.
-                </p>
-                <p class="lang-fr">
+                <h2>Components (Composants)</h2>
+                <p>
                     Les composants sont des structures de données pures qui définissent les propriétés d'une entité.
                     Ils ne contiennent pas de logique, seulement des données.
                 </p>
 
                 <div class="best-practices">
-                    <h3 class="lang-en">Best Practices</h3>
-                    <h3 class="lang-fr">Bonnes Pratiques</h3>
-                    <ul class="lang-en">
-                        <li>Keep components simple and focused</li>
-                        <li>Use POD (Plain Old Data) structs as much as possible</li>
-                        <li>Prefer multiple small components to one monolithic component</li>
-                        <li>Use marker components (without data) to tag entities</li>
-                    </ul>
-                    <ul class="lang-fr">
+                    <h3>Bonnes Pratiques</h3>
+                    <ul>
                         <li>Garder les composants simples et focused</li>
                         <li>Utiliser des structs POD (Plain Old Data) autant que possible</li>
                         <li>Préférer plusieurs petits composants à un gros composant monolithique</li>
@@ -246,19 +193,18 @@
                 </div>
 
                 <div class="code-block">
-                    <div class="code-header lang-en">Component Examples</div>
-                    <div class="code-header lang-fr">Exemples de Composants</div>
-                    <pre><code class="cpp">// Data component / Composant de données
+                    <div class="code-header">Exemples de Composants</div>
+                    <pre><code class="cpp">// Composant de données
 struct Position {
     Vec2f value;
 };
 
-// Data component / Composant de données
+// Composant de données
 struct Velocity {
     Vec2f value;
 };
 
-// Graphical component / Composant graphique
+// Composant graphique
 struct Circle {
     float radius;
     Color color;
@@ -280,24 +226,16 @@ struct Health {
 
             <!-- Systems -->
             <div id="systems" class="subsection">
-                <h2 class="lang-en">Systems</h2>
-                <h2 class="lang-fr">Systems (Systèmes)</h2>
-                
-                <p class="lang-en">
-                    Systems are functions that implement your application's logic.
-                    They operate on entities via queries and can access global resources.
-                </p>
-                <p class="lang-fr">
+                <h2>Systems (Systèmes)</h2>
+                <p>
                     Les systèmes sont des fonctions qui implémentent la logique de votre application.
                     Ils opèrent sur des entités via des queries et peuvent accéder aux ressources globales.
                 </p>
 
-                <h3 class="lang-en">System Anatomy</h3>
-                <h3 class="lang-fr">Anatomie d'un Système</h3>
+                <h3>Anatomie d'un Système</h3>
                 <div class="code-block">
-                    <div class="code-header lang-en">Basic Structure</div>
-                    <div class="code-header lang-fr">Structure de Base</div>
-                    <pre><code class="cpp">// Simple system / Système simple
+                    <div class="code-header">Structure de Base</div>
+                    <pre><code class="cpp">// Système simple
 void movement_system(
     Query&lt;Mut&lt;Position&gt;, Ref&lt;Velocity&gt;&gt; query,
     Res&lt;FrameTime&gt; time
@@ -308,50 +246,8 @@ void movement_system(
 }</code></pre>
                 </div>
 
-                <h3 class="lang-en">System Parameters</h3>
-                <h3 class="lang-fr">Paramètres de Système</h3>
-                <table class="api-table lang-en">
-                    <thead>
-                        <tr>
-                            <th>Type</th>
-                            <th>Description</th>
-                            <th>Use Case</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><code>Query&lt;...&gt;</code></td>
-                            <td>Iterate over entities with specific components</td>
-                            <td>Logic on multiple entities</td>
-                        </tr>
-                        <tr>
-                            <td><code>Res&lt;T&gt;</code></td>
-                            <td>Read-only access to a resource</td>
-                            <td>Read configuration, time, etc.</td>
-                        </tr>
-                        <tr>
-                            <td><code>ResMut&lt;T&gt;</code></td>
-                            <td>Mutable access to a resource</td>
-                            <td>Modify global state</td>
-                        </tr>
-                        <tr>
-                            <td><code>Commands</code></td>
-                            <td>Deferred command buffer</td>
-                            <td>Spawn, despawn, add/remove components</td>
-                        </tr>
-                        <tr>
-                            <td><code>EventWriter&lt;T&gt;</code></td>
-                            <td>Send events</td>
-                            <td>Asynchronous communication</td>
-                        </tr>
-                        <tr>
-                            <td><code>EventReader&lt;T&gt;</code></td>
-                            <td>Read events</td>
-                            <td>React to events</td>
-                        </tr>
-                    </tbody>
-                </table>
-                <table class="api-table lang-fr">
+                <h3>Paramètres de Système</h3>
+                <table class="api-table">
                     <thead>
                         <tr>
                             <th>Type</th>
@@ -394,8 +290,7 @@ void movement_system(
                 </table>
 
                 <div class="code-block">
-                    <div class="code-header lang-en">Complete Example</div>
-                    <div class="code-header lang-fr">Exemple Complet</div>
+                    <div class="code-header">Exemple Complet</div>
                     <pre><code class="cpp">void complex_system(
     Query&lt;Mut&lt;Position&gt;, Ref&lt;Velocity&gt;, With&lt;Player&gt;&gt; query,
     Res&lt;FrameTime&gt; time,
@@ -404,37 +299,36 @@ void movement_system(
     EventWriter&lt;CollisionEvent&gt; collision_events
 ) {
     for (auto [pos, vel, _] : query) {
-        // System logic... / Logique du système...
+        // Logique du système...
         pos.ptr->value += vel.ptr->value * time.ptr->delta_time;
         
-        // Send an event / Envoyer un événement
+        // Envoyer un événement
         collision_events.send(CollisionEvent{/* ... */});
         
-        // Spawn a new entity / Spawn une nouvelle entité
+        // Spawn une nouvelle entité
         commands.spawn(Particle{/* ... */});
     }
 }</code></pre>
                 </div>
 
-                <h3 class="lang-en">System Registration</h3>
-                <h3 class="lang-fr">Enregistrement des Systèmes</h3>
+                <h3>Enregistrement des Systèmes</h3>
                 <div class="code-block">
                     <div class="code-header">Application.cpp</div>
                     <pre><code class="cpp">Application{}
-    // STARTUP systems (run once at startup) / Systèmes STARTUP (exécutés une fois au démarrage)
+    // Systèmes STARTUP (exécutés une fois au démarrage)
     .add_systems&lt;setup_system, spawn_entities&gt;(Schedule::STARTUP)
     
-    // UPDATE systems (run each frame) / Systèmes UPDATE (exécutés chaque frame)
+    // Systèmes UPDATE (exécutés chaque frame)
     .add_systems&lt;
         input_system,
         movement_system,
         collision_system
     &gt;(Schedule::UPDATE)
     
-    // Define execution order / Définir l'ordre d'exécution
+    // Définir l'ordre d'exécution
     .after&lt;input_system&gt;()
     
-    // RENDER systems / Systèmes RENDER
+    // Systèmes RENDER
     .add_systems&lt;render_system&gt;(Schedule::RENDER_2D)
     .run();</code></pre>
                 </div>
@@ -442,43 +336,36 @@ void movement_system(
 
             <!-- Resources -->
             <div id="resources" class="subsection">
-                <h2 class="lang-en">Resources</h2>
-                <h2 class="lang-fr">Resources (Ressources)</h2>
-                
-                <p class="lang-en">
-                    Resources are unique, global data accessible by all systems.
-                    They are perfect for storing configuration, global state, or services.
-                </p>
-                <p class="lang-fr">
+                <h2>Resources (Ressources)</h2>
+                <p>
                     Les ressources sont des données globales, uniques, accessibles par tous les systèmes.
                     Elles sont parfaites pour stocker la configuration, l'état global, ou des services.
                 </p>
 
                 <div class="code-block">
-                    <div class="code-header lang-en">Definition and Usage</div>
-                    <div class="code-header lang-fr">Définition et Utilisation</div>
-                    <pre><code class="cpp">// Define a resource / Définir une ressource
+                    <div class="code-header">Définition et Utilisation</div>
+                    <pre><code class="cpp">// Définir une ressource
 struct GameConfig {
     float gravity = 9.81f;
     int max_enemies = 100;
 };
 
-// Insert into application / Insérer dans l'application
+// Insérer dans l'application
 Application{}
     .insert_resource(GameConfig{})
     .run();
 
-// Read-only access / Accéder en lecture seule
+// Accéder en lecture seule
 void physics_system(Res&lt;GameConfig&gt; config) {
     float g = config.ptr->gravity;
 }
 
-// Mutable access / Accéder en écriture
+// Accéder en écriture
 void difficulty_system(ResMut&lt;GameConfig&gt; config) {
     config.ptr->max_enemies = 150;
 }
 
-// Add/remove dynamically / Ajouter/retirer dynamiquement
+// Ajouter/retirer dynamiquement
 void management_system(Commands &commands) {
     commands.insert_resource(NewResource{});
     commands.remove_resource&lt;OldResource&gt;();
@@ -488,57 +375,14 @@ void management_system(Commands &commands) {
 
             <!-- Queries -->
             <div id="queries" class="subsection">
-                <h2 class="lang-en">Queries</h2>
-                <h2 class="lang-fr">Queries (Requêtes)</h2>
-                
-                <p class="lang-en">
-                    Queries allow iteration over entities that match certain criteria.
-                    They support multiple types of filters and access modes.
-                </p>
-                <p class="lang-fr">
+                <h2>Queries (Requêtes)</h2>
+                <p>
                     Les queries permettent d'itérer sur des entités qui correspondent à certains critères.
                     Elles supportent plusieurs types de filtres et d'accès.
                 </p>
 
-                <h3 class="lang-en">Access Types</h3>
-                <h3 class="lang-fr">Types d'Accès</h3>
-                <table class="api-table lang-en">
-                    <thead>
-                        <tr>
-                            <th>Wrapper</th>
-                            <th>Description</th>
-                            <th>Example</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><code>Mut&lt;T&gt;</code></td>
-                            <td>Mutable access to component T</td>
-                            <td><code>Mut&lt;Position&gt;</code></td>
-                        </tr>
-                        <tr>
-                            <td><code>Ref&lt;T&gt;</code></td>
-                            <td>Read-only access to component T</td>
-                            <td><code>Ref&lt;Velocity&gt;</code></td>
-                        </tr>
-                        <tr>
-                            <td><code>With&lt;T&gt;</code></td>
-                            <td>Filter: requires component T (no access)</td>
-                            <td><code>With&lt;Player&gt;</code></td>
-                        </tr>
-                        <tr>
-                            <td><code>Without&lt;T&gt;</code></td>
-                            <td>Filter: excludes entities with T</td>
-                            <td><code>Without&lt;Dead&gt;</code></td>
-                        </tr>
-                        <tr>
-                            <td><code>Optional&lt;T&gt;</code></td>
-                            <td>Optional access (nullptr if absent)</td>
-                            <td><code>Optional&lt;Armor&gt;</code></td>
-                        </tr>
-                    </tbody>
-                </table>
-                <table class="api-table lang-fr">
+                <h3>Types d'Accès</h3>
+                <table class="api-table">
                     <thead>
                         <tr>
                             <th>Wrapper</th>
@@ -576,50 +420,49 @@ void management_system(Commands &commands) {
                 </table>
 
                 <div class="code-block">
-                    <div class="code-header lang-en">Query Examples</div>
-                    <div class="code-header lang-fr">Exemples de Queries</div>
-                    <pre><code class="cpp">// Simple query: all entities with Position / Query simple: toutes les entités avec Position
+                    <div class="code-header">Exemples de Queries</div>
+                    <pre><code class="cpp">// Query simple: toutes les entités avec Position
 void simple(Query&lt;Ref&lt;Position&gt;&gt; query) {
     for (auto [pos] : query) {
-        // pos.ptr is const Position* / pos.ptr est const Position*
+        // pos.ptr est const Position*
     }
 }
 
-// Query with modification / Query avec modification
+// Query avec modification
 void movement(Query&lt;Mut&lt;Position&gt;, Ref&lt;Velocity&gt;&gt; query) {
     for (auto [pos, vel] : query) {
         pos.ptr->value += vel.ptr->value;
     }
 }
 
-// Query with filters / Query avec filtres
+// Query avec filtres
 void player_only(Query&lt;Mut&lt;Health&gt;, With&lt;Player&gt;&gt; query) {
     for (auto [health, _] : query) {
-        // Only Player entities / Seulement les entités Player
+        // Seulement les entités Player
     }
 }
 
-// Exclude certain entities / Exclure certaines entités
+// Exclure certaines entités
 void alive_enemies(
     Query&lt;Ref&lt;Position&gt;, With&lt;Enemy&gt;, Without&lt;Dead&gt;&gt; query
 ) {
     for (auto [pos, _, __] : query) {
-        // Living enemies only / Ennemis vivants uniquement
+        // Ennemis vivants uniquement
     }
 }
 
-// Optional components / Composants optionnels
+// Composants optionnels
 void render(Query&lt;Ref&lt;Position&gt;, Optional&lt;Sprite&gt;&gt; query) {
     for (auto [pos, sprite_opt] : query) {
         if (sprite_opt.ptr != nullptr) {
-            // Entity has a sprite / Entité a un sprite
+            // Entité a un sprite
         } else {
-            // No sprite / Pas de sprite
+            // Pas de sprite
         }
     }
 }
 
-// Get entity ID / Récupérer l'ID de l'entité
+// Récupérer l'ID de l'entité
 void id_access(Query&lt;Ref&lt;Health&gt;&gt; query) {
     for (auto iter = query.begin(); iter != query.end(); ++iter) {
         Entity e = iter.entity();
@@ -629,14 +472,8 @@ void id_access(Query&lt;Ref&lt;Health&gt;&gt; query) {
                 </div>
 
                 <div class="warning-box">
-                    <h4 class="lang-en">⚠️ Important</h4>
-                    <h4 class="lang-fr">⚠️ Important</h4>
-                    <p class="lang-en">
-                        Never modify the ECS structure (spawn, despawn, add/remove components)
-                        during query iteration. Use <code>Commands</code> instead to
-                        defer these operations.
-                    </p>
-                    <p class="lang-fr">
+                    <h4>⚠️ Important</h4>
+                    <p>
                         Ne modifiez jamais la structure de l'ECS (spawn, despawn, add/remove components)
                         pendant l'itération d'une query. Utilisez plutôt <code>Commands</code> pour
                         différer ces opérations.
@@ -646,79 +483,68 @@ void id_access(Query&lt;Ref&lt;Health&gt;&gt; query) {
 
             <!-- Commands -->
             <div id="commands" class="subsection">
-                <h2 class="lang-en">Commands</h2>
-                <h2 class="lang-fr">Commands (Commandes)</h2>
-                
-                <p class="lang-en">
-                    The command system allows deferring structural modifications to the ECS
-                    (entity creation/destruction, component addition/removal) to avoid
-                    iterator invalidation during system execution.
-                </p>
-                <p class="lang-fr">
+                <h2>Commands (Commandes)</h2>
+                <p>
                     Le système de commandes permet de différer les modifications structurelles de l'ECS
                     (création/destruction d'entités, ajout/suppression de composants) pour éviter
                     l'invalidation des itérateurs pendant l'exécution des systèmes.
                 </p>
 
-                <h3 class="lang-en">Commands API</h3>
-                <h3 class="lang-fr">API des Commandes</h3>
+                <h3>API des Commandes</h3>
                 <div class="code-block">
-                    <div class="code-header lang-en">Available Operations</div>
-                    <div class="code-header lang-fr">Opérations Disponibles</div>
+                    <div class="code-header">Opérations Disponibles</div>
                     <pre><code class="cpp">void example_system(Commands &commands) {
-    // ===== Entity Management / Gestion des Entités =====
+    // ===== Gestion des Entités =====
     
-    // Spawn an empty entity / Spawn une entité vide
+    // Spawn une entité vide
     Entity e1 = commands.spawn().id();
     
-    // Spawn with components / Spawn avec composants
+    // Spawn avec composants
     EntityCommands entity = commands.spawn(
         Position{0, 0},
         Velocity{1, 1}
     );
     
-    // Command chaining / Chaînage de commandes
+    // Chaînage de commandes
     commands.spawn()
         .insert(Position{10, 10})
         .insert(Velocity{0, 1})
         .insert(Health{100});
     
-    // Despawn an entity / Despawn une entité
+    // Despawn une entité
     commands.despawn(entity_id);
     
-    // ===== Component Management / Gestion des Composants =====
+    // ===== Gestion des Composants =====
     
-    // Add a component / Ajouter un composant
+    // Ajouter un composant
     commands.entity(entity_id).insert(NewComponent{});
     commands.add_component(entity_id, Armor{50});
     
-    // Remove a component / Retirer un composant
+    // Retirer un composant
     commands.entity(entity_id).remove&lt;OldComponent&gt;();
     
-    // ===== Resource Management / Gestion des Ressources =====
+    // ===== Gestion des Ressources =====
     
-    // Insert a resource / Insérer une ressource
+    // Insérer une ressource
     commands.insert_resource(GameState{});
     
-    // Remove a resource / Retirer une ressource
+    // Retirer une ressource
     commands.remove_resource&lt;GameState&gt;();
 }</code></pre>
                 </div>
 
-                <h3 class="lang-en">Parent-Child Hierarchies</h3>
-                <h3 class="lang-fr">Hiérarchies Parent-Enfant</h3>
+                <h3>Hiérarchies Parent-Enfant</h3>
                 <div class="code-block">
-                    <div class="code-header lang-en">Hierarchical Relations</div>
-                    <div class="code-header lang-fr">Relations Hiérarchiques</div>
+                    <div class="code-header">Relations Hiérarchiques</div>
                     <pre><code class="cpp">void spawn_hierarchy(Commands &commands) {
-    // Method 1: with_children / Méthode 1: with_children
+    // Méthode 1: with_children
     commands.spawn(Transform{})
         .with_children([](ChildBuilder &builder) {
             builder.spawn(ChildTransform{});
             builder.spawn(ChildTransform{});
         });
     
-    // Method 2: Manual / Méthode 2: Manuelle
+    // Méthode 2: Manuelle
     Entity parent = commands.spawn(Transform{}).id();
     Entity child1 = commands.spawn(ChildTransform{}).id();
     Entity child2 = commands.spawn(ChildTransform{}).id();
@@ -729,18 +555,11 @@ void id_access(Query&lt;Ref&lt;Health&gt;&gt; query) {
                 </div>
 
                 <div class="info-box">
-                    <h4 class="lang-en">💡 Application Timing</h4>
-                    <h4 class="lang-fr">💡 Moment d'Application</h4>
-                    <p class="lang-en">
-                        All commands are automatically applied at the end of the current schedule,
-                        just before the next system application. You don't need to manually
-                        call <code>apply()</code>.
-                    </p>
-                    <p class="lang-fr">
+                    <h4>💡 Moment d'Application</h4>
+                    <p>
                         Toutes les commandes sont appliquées automatiquement à la fin du schedule courant,
                         juste avant l'application suivante des systèmes. Vous n'avez pas besoin d'appeler
                         manuellement <code>apply()</code>.
-                    </p>
                     </p>
                 </div>
             </div>
@@ -748,43 +567,34 @@ void id_access(Query&lt;Ref&lt;Health&gt;&gt; query) {
 
         <!-- Advanced Features -->
         <section id="advanced" class="section">
-            <h1 class="lang-en">Advanced Features</h1>
-            <h1 class="lang-fr">Fonctionnalités Avancées</h1>
+            <h1>Fonctionnalités Avancées</h1>
 
             <!-- Events -->
             <div id="events" class="subsection">
-                <h2 class="lang-en">Events</h2>
-                <h2 class="lang-fr">Events (Événements)</h2>
-                
-                <p class="lang-en">
-                    The event system enables asynchronous communication between systems.
-                    Events use double buffering: events sent at frame N
-                    are readable at frame N+1.
-                </p>
-                <p class="lang-fr">
+                <h2>Events (Événements)</h2>
+                <p>
                     Le système d'événements permet une communication asynchrone entre systèmes.
                     Les événements utilisent un double buffering: les événements envoyés à la frame N
                     sont lisibles à la frame N+1.
                 </p>
 
                 <div class="code-block">
-                    <div class="code-header lang-en">Definition and Usage</div>
-                    <div class="code-header lang-fr">Définition et Utilisation</div>
-                    <pre><code class="cpp">// 1. Define an event type / Définir un type d'événement
+                    <div class="code-header">Définition et Utilisation</div>
+                    <pre><code class="cpp">// 1. Définir un type d'événement
 struct CollisionEvent {
     Entity entity_a;
     Entity entity_b;
     Vec2f point;
 };
 
-// 2. Add Events plugin to application / Ajouter le plugin Events à l'application
+// 2. Ajouter le plugin Events à l'application
 Application{}
     .add_event&lt;CollisionEvent&gt;()
     .run();
 
-// 3. Send events / Envoyer des événements
+// 3. Envoyer des événements
 void collision_detection(EventWriter&lt;CollisionEvent&gt; writer) {
-    // Collision detection... / Détection de collision...
+    // Détection de collision...
     writer.send(CollisionEvent{
         .entity_a = entity1,
         .entity_b = entity2,
@@ -792,14 +602,14 @@ void collision_detection(EventWriter&lt;CollisionEvent&gt; writer) {
     });
 }
 
-// 4. Read events / Lire des événements
+// 4. Lire des événements
 void collision_response(EventReader&lt;CollisionEvent&gt; reader) {
-    // Check if there are events / Vérifier s'il y a des événements
+    // Vérifier s'il y a des événements
     if (!reader.has_events()) {
         return;
     }
     
-    // Iterate over events / Itérer sur les événements
+    // Itérer sur les événements
     for (const CollisionEvent &event : reader) {
         std::cout << "Collision at: " 
                   << event.point.x << ", " 
@@ -809,13 +619,8 @@ void collision_response(EventReader&lt;CollisionEvent&gt; reader) {
                 </div>
 
                 <div class="warning-box">
-                    <h4 class="lang-en">⚠️ Lifetime</h4>
-                    <h4 class="lang-fr">⚠️ Durée de Vie</h4>
-                    <p class="lang-en">
-                        Events persist for only one frame. They are automatically
-                        cleaned at the beginning of each new frame cycle.
-                    </p>
-                    <p class="lang-fr">
+                    <h4>⚠️ Durée de Vie</h4>
+                    <p>
                         Les événements ne persistent qu'une seule frame. Ils sont automatiquement
                         nettoyés au début de chaque nouveau cycle de frame.
                     </p>
@@ -824,53 +629,46 @@ void collision_response(EventReader&lt;CollisionEvent&gt; reader) {
 
             <!-- Hierarchies -->
             <div id="hierarchies" class="subsection">
-                <h2 class="lang-en">Hierarchies</h2>
-                <h2 class="lang-fr">Hierarchies (Hiérarchies)</h2>
-                
-                <p class="lang-en">
-                    R-Engine natively supports parent-child relationships via the
-                    <code>Parent</code> and <code>Children</code> components.
-                </p>
-                <p class="lang-fr">
+                <h2>Hierarchies (Hiérarchies)</h2>
+                <p>
                     R-Engine supporte nativement les relations parent-enfant via les composants
                     <code>Parent</code> et <code>Children</code>.
                 </p>
 
                 <div class="code-block">
-                    <div class="code-header lang-en">Hierarchy Components</div>
-                    <div class="code-header lang-fr">Composants de Hiérarchie</div>
-                    <pre><code class="cpp">// Automatic components / Composants automatiques
+                    <div class="code-header">Composants de Hiérarchie</div>
+                    <pre><code class="cpp">// Composants automatiques
 struct Parent {
-    Entity entity;  // The parent entity / L'entité parente
+    Entity entity;  // L'entité parente
 };
 
 struct Children {
-    std::vector&lt;Entity&gt; entities;  // Child entities / Les enfants
+    std::vector&lt;Entity&gt; entities;  // Les enfants
 };
 
-// Creating a hierarchy / Création d'une hiérarchie
+// Création d'une hiérarchie
 void spawn_player(Commands &commands) {
     commands.spawn(PlayerController{})
         .with_children([](ChildBuilder &builder) {
-            // Weapon / Arme
+            // Arme
             builder.spawn(Weapon{});
             
-            // 3D Model / Modèle 3D
+            // Modèle 3D
             builder.spawn(Model{});
             
-            // Particles / Particules
+            // Particules
             builder.spawn(ParticleEmitter{});
         });
 }
 
-// Traverse a hierarchy / Parcourir une hiérarchie
+// Parcourir une hiérarchie
 void traverse_hierarchy(
     Query&lt;Ref&lt;Children&gt;&gt; parents_query,
     Query&lt;Ref&lt;Transform&gt;&gt; transforms_query
 ) {
     for (auto [children] : parents_query) {
         for (Entity child : children.ptr->entities) {
-            // Process each child / Traiter chaque enfant
+            // Traiter chaque enfant
         }
     }
 }</code></pre>
@@ -879,22 +677,15 @@ void traverse_hierarchy(
 
             <!-- Run Conditions -->
             <div id="run-conditions" class="subsection">
-                <h2 class="lang-en">Run Conditions</h2>
-                <h2 class="lang-fr">Run Conditions (Conditions d'Exécution)</h2>
-                
-                <p class="lang-en">
-                    Run conditions allow systems to execute conditionally,
-                    based on application state or presence of events.
-                </p>
-                <p class="lang-fr">
+                <h2>Run Conditions (Conditions d'Exécution)</h2>
+                <p>
                     Les run conditions permettent d'exécuter des systèmes conditionnellement,
                     en fonction de l'état de l'application ou de la présence d'événements.
                 </p>
 
                 <div class="code-block">
-                    <div class="code-header lang-en">Available Conditions</div>
-                    <div class="code-header lang-fr">Conditions Disponibles</div>
-                    <pre><code class="cpp">// Define a state / Définir un état
+                    <div class="code-header">Conditions Disponibles</div>
+                    <pre><code class="cpp">// Définir un état
 enum class AppState {
     MainMenu,
     Playing,
@@ -904,31 +695,29 @@ enum class AppState {
 Application{}
     .insert_resource(State&lt;AppState&gt;{AppState::MainMenu})
     
-    // Run only in a specific state / Exécuter seulement dans un état spécifique
+    // Exécuter seulement dans un état spécifique
     .add_systems&lt;game_logic&gt;(Schedule::UPDATE)
         .run_if&lt;in_state&lt;AppState::Playing&gt;&gt;()
     
-    // Run when state changes / Exécuter quand l'état change
+    // Exécuter quand l'état change
     .add_systems&lt;on_state_enter&gt;(Schedule::UPDATE)
         .run_if&lt;state_changed&lt;AppState&gt;&gt;()
     
-    // Run when an event is present / Exécuter quand un événement est présent
+    // Exécuter quand un événement est présent
     .add_systems&lt;handle_collision&gt;(Schedule::UPDATE)
         .run_if&lt;on_event&lt;CollisionEvent&gt;&gt;()
     
-    // Run if a resource exists / Exécuter si une ressource existe
+    // Exécuter si une ressource existe
     .add_systems&lt;use_resource&gt;(Schedule::UPDATE)
         .run_if&lt;resource_exists&lt;MyResource&gt;&gt;()
     
     .run();</code></pre>
                 </div>
 
-                <h3 class="lang-en">Custom Conditions</h3>
-                <h3 class="lang-fr">Conditions Personnalisées</h3>
+                <h3>Conditions Personnalisées</h3>
                 <div class="code-block">
-                    <div class="code-header lang-en">Create a Condition</div>
-                    <div class="code-header lang-fr">Créer une Condition</div>
-                    <pre><code class="cpp">// Any function returning bool can be a condition / Toute fonction retournant bool peut être une condition
+                    <div class="code-header">Créer une Condition</div>
+                    <pre><code class="cpp">// Toute fonction retournant bool peut être une condition
 bool is_debug_mode(Res&lt;Settings&gt; settings) {
     return settings.ptr->debug_enabled;
 }
@@ -949,60 +738,13 @@ Application{}
 
             <!-- Schedules -->
             <div id="schedules" class="subsection">
-                <h2 class="lang-en">Schedules</h2>
-                <h2 class="lang-fr">Schedules (Planificateurs)</h2>
-                
-                <p class="lang-en">
-                    Schedules organize system execution into different phases.
-                    R-Engine provides several predefined schedules.
-                </p>
-                <p class="lang-fr">
+                <h2>Schedules (Planificateurs)</h2>
+                <p>
                     Les schedules organisent l'exécution des systèmes en différentes phases.
                     R-Engine fournit plusieurs schedules prédéfinis.
                 </p>
 
-                <table class="api-table lang-en">
-                    <thead>
-                        <tr>
-                            <th>Schedule</th>
-                            <th>When</th>
-                            <th>Usage</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><code>STARTUP</code></td>
-                            <td>Once at startup</td>
-                            <td>Initialization, spawn initial entities</td>
-                        </tr>
-                        <tr>
-                            <td><code>PRE_UPDATE</code></td>
-                            <td>Before UPDATE</td>
-                            <td>Preparation, frame cleanup</td>
-                        </tr>
-                        <tr>
-                            <td><code>UPDATE</code></td>
-                            <td>Every frame</td>
-                            <td>Game logic, physics, AI</td>
-                        </tr>
-                        <tr>
-                            <td><code>POST_UPDATE</code></td>
-                            <td>After UPDATE</td>
-                            <td>Post-processing, finalization</td>
-                        </tr>
-                        <tr>
-                            <td><code>RENDER_2D</code></td>
-                            <td>2D rendering phase</td>
-                            <td>2D drawing (sprites, UI)</td>
-                        </tr>
-                        <tr>
-                            <td><code>RENDER_3D</code></td>
-                            <td>3D rendering phase</td>
-                            <td>3D drawing (models, lights)</td>
-                        </tr>
-                    </tbody>
-                </table>
-                <table class="api-table lang-fr">
+                <table class="api-table">
                     <thead>
                         <tr>
                             <th>Schedule</th>
@@ -1044,16 +786,14 @@ Application{}
                     </tbody>
                 </table>
 
-                <h3 class="lang-en">Execution Order</h3>
-                <h3 class="lang-fr">Ordre d'Exécution</h3>
+                <h3>Ordre d'Exécution</h3>
                 <div class="code-block">
-                    <div class="code-header lang-en">Define Order</div>
-                    <div class="code-header lang-fr">Définir l'Ordre</div>
+                    <div class="code-header">Définir l'Ordre</div>
                     <pre><code class="cpp">Application{}
-    // Systems execute in order of addition by default / Les systèmes s'exécutent dans l'ordre d'ajout par défaut
+    // Les systèmes s'exécutent dans l'ordre d'ajout par défaut
     .add_systems&lt;input, physics, render&gt;(Schedule::UPDATE)
     
-    // Force order explicitly / Forcer l'ordre explicitement
+    // Forcer l'ordre explicitement
     .add_systems&lt;system_a&gt;(Schedule::UPDATE)
     .add_systems&lt;system_b&gt;(Schedule::UPDATE)
         .after&lt;system_a&gt;()  // system_b après system_a
@@ -1068,34 +808,23 @@ Application{}
 
         <!-- Storage System -->
         <section id="storage" class="section">
-            <h1 class="lang-en">Storage System</h1>
-            <h1 class="lang-fr">Système de Stockage</h1>
+            <h1>Système de Stockage</h1>
             
-            <p class="lang-en">
-                R-Engine uses <strong>archetype</strong>-based storage to optimize
-                performance. This approach organizes entities by unique component combination.
-            </p>
-            <p class="lang-fr">
+            <p>
                 R-Engine utilise un stockage basé sur les <strong>archétypes</strong> pour optimiser
                 les performances. Cette approche organise les entités par combinaison unique de composants.
             </p>
 
-            <h2 class="lang-en">Archetypes</h2>
-            <h2 class="lang-fr">Archétypes</h2>
+            <h2>Archétypes</h2>
             <div class="info-box">
-                <p class="lang-en">
-                    An <strong>archetype</strong> represents a unique combination of component types.
-                    All entities with exactly the same components are stored in the same archetype.
-                </p>
-                <p class="lang-fr">
+                <p>
                     Un <strong>archetype</strong> représente une combinaison unique de types de composants.
                     Toutes les entités avec exactement les mêmes composants sont stockées dans le même archetype.
                 </p>
             </div>
 
             <div class="code-block">
-                <div class="code-header lang-en">Organization Example</div>
-                <div class="code-header lang-fr">Exemple d'Organisation</div>
+                <div class="code-header">Exemple d'Organisation</div>
                 <pre><code class="cpp">// Archetype 1: [Position, Velocity]
 Entity 1: Position, Velocity
 Entity 4: Position, Velocity
@@ -1110,13 +839,8 @@ Entity 3: Position, Sprite
 Entity 6: Position, Sprite</code></pre>
             </div>
 
-            <h2 class="lang-en">Columnar Tables</h2>
-            <h2 class="lang-fr">Tables Columnar</h2>
-            <p class="lang-en">
-                Each archetype stores its components in columns (Structure of Arrays - SoA),
-                which optimizes memory locality and enables efficient vectorization.
-            </p>
-            <p class="lang-fr">
+            <h2>Tables Columnar</h2>
+            <p>
                 Chaque archetype stocke ses composants dans des colonnes (Structure of Arrays - SoA),
                 ce qui optimise la localité mémoire et permet une vectorisation efficace.
             </p>
@@ -1134,42 +858,28 @@ Archetype [Position, Velocity, Health]
                 </pre>
             </div>
 
-            <h2 class="lang-en">Archetype Transitions</h2>
-            <h2 class="lang-fr">Transitions d'Archétypes</h2>
-            <p class="lang-en">
-                When a component is added or removed from an entity, it changes archetype.
-                R-Engine uses a cache (edges) to optimize these frequent transitions.
-            </p>
-            <p class="lang-fr">
+            <h2>Transitions d'Archétypes</h2>
+            <p>
                 Lorsqu'un composant est ajouté ou retiré d'une entité, celle-ci change d'archetype.
                 R-Engine utilise un cache (edges) pour optimiser ces transitions fréquentes.
             </p>
 
             <div class="code-block">
-                <div class="code-header lang-en">Transition Example</div>
-                <div class="code-header lang-fr">Exemple de Transition</div>
-                <pre><code class="cpp">// Entity in Archetype [Position, Velocity] / Entity dans Archetype [Position, Velocity]
+                <div class="code-header">Exemple de Transition</div>
+                <pre><code class="cpp">// Entity dans Archetype [Position, Velocity]
 Entity e = ...;
 
-// Add Health / Ajout de Health
+// Ajout de Health
 commands.entity(e).insert(Health{100});
-// → Entity moved to Archetype [Position, Velocity, Health] / Entity déplacée vers Archetype [Position, Velocity, Health]
+// → Entity déplacée vers Archetype [Position, Velocity, Health]
 
-// Remove Velocity / Retrait de Velocity
+// Retrait de Velocity
 commands.entity(e).remove&lt;Velocity&gt;();
-// → Entity moved to Archetype [Position, Health] / Entity déplacée vers Archetype [Position, Health]</code></pre>
+// → Entity déplacée vers Archetype [Position, Health]</code></pre>
             </div>
 
-            <h2 class="lang-en">System Advantages</h2>
-            <h2 class="lang-fr">Avantages du Système</h2>
-            <ul class="feature-list lang-en">
-                <li><strong>Cache Locality</strong>: Data is contiguous in memory</li>
-                <li><strong>Fast Iteration</strong>: Queries only iterate over relevant archetypes</li>
-                <li><strong>No Fragmentation</strong>: Swap-and-pop for deletions</li>
-                <li><strong>Type Safety</strong>: Compile-time checks</li>
-                <li><strong>Scalability</strong>: Constant performance with many entities</li>
-            </ul>
-            <ul class="feature-list lang-fr">
+            <h2>Avantages du Système</h2>
+            <ul class="feature-list">
                 <li><strong>Cache Locality</strong> : Les données sont contiguës en mémoire</li>
                 <li><strong>Itération Rapide</strong> : Les queries n'itèrent que sur les archétypes pertinents</li>
                 <li><strong>Pas de Fragmentation</strong> : Swap-and-pop pour les suppressions</li>
@@ -1177,8 +887,7 @@ commands.entity(e).remove&lt;Velocity&gt;();
                 <li><strong>Scalabilité</strong> : Performance constante avec beaucoup d'entités</li>
             </ul>
 
-            <h2 class="lang-en">Internal API</h2>
-            <h2 class="lang-fr">API Interne</h2>
+            <h2>API Interne</h2>
             <div class="code-block">
                 <div class="code-header">Structure Archetype</div>
                 <pre><code class="cpp">struct Archetype {
@@ -1200,32 +909,29 @@ commands.entity(e).remove&lt;Velocity&gt;();
 
         <!-- Examples -->
         <section id="examples" class="section">
-            <h1 class="lang-en">Complete Examples</h1>
-            <h1 class="lang-fr">Exemples Complets</h1>
+            <h1>Exemples Complets</h1>
 
             <div class="subsection">
-                <h2 class="lang-en">Example 1: Bouncing Balls</h2>
-                <h2 class="lang-fr">Exemple 1: Bouncing Balls</h2>
-                <p class="lang-en">Complete demo of a bouncing balls system with physics and rendering.</p>
-                <p class="lang-fr">Démo complète d'un système de balles rebondissantes avec physique et rendu.</p>
+                <h2>Exemple 1: Bouncing Balls</h2>
+                <p>Démo complète d'un système de balles rebondissantes avec physique et rendu.</p>
                 
                 <div class="code-block">
                     <div class="code-header">Main.cpp</div>
                     <pre><code class="cpp">#include &lt;R-Engine/Application.hpp&gt;
 #include &lt;R-Engine/Plugins/DefaultPlugins.hpp&gt;
 
-// Components / Composants
+// Composants
 struct Position { Vec2f value; };
 struct Velocity { Vec2f value; };
 struct Circle { float radius; Color color; };
 struct Controllable {};
 
-// Resources / Ressources
+// Ressources
 struct Gravity { Vec2f value = {0.0f, 980.0f}; };
 
-// Initial spawn system / Système de spawn initial
+// Système de spawn initial
 void spawn_entities(Commands &commands, Res&lt;WindowPluginConfig&gt; win) {
-    // Player / Joueur
+    // Joueur
     commands.spawn(
         Controllable{},
         Circle{20.0f, BLUE},
@@ -1233,7 +939,7 @@ void spawn_entities(Commands &commands, Res&lt;WindowPluginConfig&gt; win) {
         Velocity{{0.0f, 0.0f}}
     );
     
-    // Random balls / Balles aléatoires
+    // Balles aléatoires
     for (int i = 0; i &lt; 10; ++i) {
         commands.spawn(
             Position{{rand() % 800, rand() % 300}},
@@ -1243,7 +949,7 @@ void spawn_entities(Commands &commands, Res&lt;WindowPluginConfig&gt; win) {
     }
 }
 
-// Physics / Physique
+// Physique
 void apply_gravity(
     Query&lt;Mut&lt;Velocity&gt;, Without&lt;Controllable&gt;&gt; query,
     Res&lt;Gravity&gt; gravity,
@@ -1268,16 +974,16 @@ void bounce_system(
     Res&lt;WindowPluginConfig&gt; win
 ) {
     for (auto [pos, vel, circle] : query) {
-        // Bounce on edges / Rebond sur les bords
+        // Rebond sur les bords
         if (pos.ptr->value.x - circle.ptr->radius &lt; 0) {
             pos.ptr->value.x = circle.ptr->radius;
             vel.ptr->value.x = -vel.ptr->value.x * 0.8f;
         }
-        // ... other edges / autres bords
+        // ... autres bords
     }
 }
 
-// Rendering / Rendu
+// Rendu
 void render_system(Query&lt;Ref&lt;Position&gt;, Ref&lt;Circle&gt;&gt; query) {
     for (auto [pos, circle] : query) {
         DrawCircleV({pos.ptr->value.x, pos.ptr->value.y}, 
@@ -1298,15 +1004,12 @@ int main() {
             </div>
 
             <div class="subsection">
-                <h2 class="lang-en">Example 2: Event System</h2>
-                <h2 class="lang-fr">Exemple 2: Event System</h2>
-                <p class="lang-en">Demonstration of the event system for inter-system communication.</p>
-                <p class="lang-fr">Démonstration du système d'événements pour la communication entre systèmes.</p>
+                <h2>Exemple 2: Event System</h2>
+                <p>Démonstration du système d'événements pour la communication entre systèmes.</p>
                 
                 <div class="code-block">
-                    <div class="code-header lang-en">Events Example</div>
-                    <div class="code-header lang-fr">Events Example</div>
-                    <pre><code class="cpp">// Define events / Définir des événements
+                    <div class="code-header">Events Example</div>
+                    <pre><code class="cpp">// Définir des événements
 struct DamageEvent {
     Entity target;
     float amount;
@@ -1317,7 +1020,7 @@ struct DeathEvent {
     Entity entity;
 };
 
-// System that generates events / Système qui génère des événements
+// Système qui génère des événements
 void damage_system(
     Query&lt;Ref&lt;Position&gt;, Ref&lt;Attack&gt;&gt; attackers,
     Query&lt;Entity, Ref&lt;Position&gt;, Ref&lt;Health&gt;&gt; targets,
@@ -1341,14 +1044,14 @@ void damage_system(
     }
 }
 
-// System that reacts to events / Système qui réagit aux événements
+// Système qui réagit aux événements
 void health_system(
     EventReader&lt;DamageEvent&gt; damage_events,
     EventWriter&lt;DeathEvent&gt; death_events,
     Query&lt;Mut&lt;Health&gt;&gt; query
 ) {
     for (const DamageEvent &event : damage_events) {
-        // Find target entity / Trouver l'entité cible
+        // Trouver l'entité cible
         for (auto iter = query.begin(); iter != query.end(); ++iter) {
             if (iter.entity() == event.target) {
                 auto [health] = *iter;
@@ -1384,10 +1087,8 @@ int main() {
             </div>
 
             <div class="subsection">
-                <h2 class="lang-en">Example 3: States & Menus</h2>
-                <h2 class="lang-fr">Exemple 3: States & Menus</h2>
-                <p class="lang-en">Using states to manage different game phases.</p>
-                <p class="lang-fr">Utilisation des états pour gérer différentes phases du jeu.</p>
+                <h2>Exemple 3: States & Menus</h2>
+                <p>Utilisation des états pour gérer différentes phases du jeu.</p>
                 
                 <div class="code-block">
                     <div class="code-header">States Example</div>
@@ -1398,7 +1099,7 @@ int main() {
     GameOver
 };
 
-// Main menu system / Système du menu principal
+// Système du menu principal
 void main_menu_system(
     Res&lt;UserInput&gt; input,
     ResMut&lt;State&lt;GameState&gt;&gt; state
@@ -1411,12 +1112,12 @@ void main_menu_system(
     }
 }
 
-// Game logic (only in Playing) / Logique du jeu (seulement en Playing)
+// Logique du jeu (seulement en Playing)
 void game_logic(Query&lt;Mut&lt;Position&gt;, Ref&lt;Velocity&gt;&gt; query) {
-    // Normal game logic / Logique normale du jeu
+    // Logique normale du jeu
 }
 
-// Pause handler / Gestion de la pause
+// Gestion de la pause
 void pause_handler(
     Res&lt;UserInput&gt; input,
     ResMut&lt;State&lt;GameState&gt;&gt; state,
@@ -1433,7 +1134,7 @@ void pause_handler(
     }
 }
 
-// Pause menu / Menu pause
+// Menu pause
 void pause_menu(Res&lt;UserInput&gt; input, ResMut&lt;State&lt;GameState&gt;&gt; state) {
     DrawRectangle(0, 0, 800, 600, Fade(BLACK, 0.7f));
     DrawText("PAUSED", 300, 250, 60, WHITE);
@@ -1445,15 +1146,15 @@ int main() {
         .add_plugins(DefaultPlugins{})
         .insert_resource(State&lt;GameState&gt;{GameState::MainMenu})
         
-        // Main menu / Menu principal
+        // Menu principal
         .add_systems&lt;main_menu_system&gt;(Schedule::UPDATE)
             .run_if&lt;in_state&lt;GameState::MainMenu&gt;&gt;()
         
-        // Game / Jeu
+        // Jeu
         .add_systems&lt;game_logic&gt;(Schedule::UPDATE)
             .run_if&lt;in_state&lt;GameState::Playing&gt;&gt;()
         
-        // Pause / Pause
+        // Pause
         .add_systems&lt;pause_handler&gt;(Schedule::UPDATE)
         .add_systems&lt;pause_menu&gt;(Schedule::RENDER_2D)
             .run_if&lt;in_state&lt;GameState::Paused&gt;&gt;()
@@ -1466,61 +1167,13 @@ int main() {
 
         <!-- API Reference -->
         <section id="api-reference" class="section">
-            <h1 class="lang-en">Complete API Reference</h1>
-            <h1 class="lang-fr">Référence API Complète</h1>
+            <h1>Référence API Complète</h1>
 
             <div class="subsection">
                 <h2>Scene</h2>
-                <p class="lang-en">Main ECS container.</p>
-                <p class="lang-fr">Container principal de l'ECS.</p>
+                <p>Container principal de l'ECS.</p>
                 
-                <table class="api-table lang-en">
-                    <thead>
-                        <tr>
-                            <th>Method</th>
-                            <th>Description</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><code>Entity create_entity()</code></td>
-                            <td>Creates a new empty entity</td>
-                        </tr>
-                        <tr>
-                            <td><code>void destroy_entity(Entity e)</code></td>
-                            <td>Destroys an entity and its components</td>
-                        </tr>
-                        <tr>
-                            <td><code>void add_component&lt;T&gt;(Entity e, T comp)</code></td>
-                            <td>Adds a component to an entity</td>
-                        </tr>
-                        <tr>
-                            <td><code>void remove_component&lt;T&gt;(Entity e)</code></td>
-                            <td>Removes a component from an entity</td>
-                        </tr>
-                        <tr>
-                            <td><code>T* get_component_ptr&lt;T&gt;(Entity e)</code></td>
-                            <td>Gets a pointer to a component</td>
-                        </tr>
-                        <tr>
-                            <td><code>bool has_component&lt;T&gt;(Entity e)</code></td>
-                            <td>Checks if an entity has a component</td>
-                        </tr>
-                        <tr>
-                            <td><code>void insert_resource&lt;T&gt;(T&& r)</code></td>
-                            <td>Inserts a global resource</td>
-                        </tr>
-                        <tr>
-                            <td><code>void remove_resource&lt;T&gt;()</code></td>
-                            <td>Removes a global resource</td>
-                        </tr>
-                        <tr>
-                            <td><code>T* get_resource_ptr&lt;T&gt;()</code></td>
-                            <td>Gets a pointer to a resource</td>
-                        </tr>
-                    </tbody>
-                </table>
-                <table class="api-table lang-fr">
+                <table class="api-table">
                     <thead>
                         <tr>
                             <th>Méthode</th>
@@ -1570,32 +1223,9 @@ int main() {
 
             <div class="subsection">
                 <h2>Commands</h2>
-                <p class="lang-en">Interface for deferred modifications.</p>
-                <p class="lang-fr">Interface pour modifications différées.</p>
+                <p>Interface pour modifications différées.</p>
                 
-                <table class="api-table lang-en">
-                    <thead>
-                        <tr>
-                            <th>Method</th>
-                            <th>Description</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><code>EntityCommands spawn()</code></td>
-                            <td>Spawn an empty entity</td>
-                        </tr>
-                        <tr>
-                            <td><code>EntityCommands spawn(Components...)</code></td>
-                            <td>Spawn with initial components</td>
-                        </tr>
-                        <tr>
-                            <td><code>void despawn(Entity e)</code></td>
-                            <td>Despawn an entity</td>
-                        </tr>
-                    </tbody>
-                </table>
-                <table class="api-table lang-fr">
+                <table class="api-table">
                     <thead>
                         <tr>
                             <th>Méthode</th>
@@ -1611,32 +1241,6 @@ int main() {
                             <td><code>EntityCommands spawn(Components...)</code></td>
                             <td>Spawn avec composants initiaux</td>
                         </tr>
-                        <tr>
-                            <td><code>void despawn(Entity e)</code></td>
-                            <td>Despawn an entity</td>
-                        </tr>
-                        <tr>
-                            <td><code>EntityCommands entity(Entity e)</code></td>
-                            <td>Gets a builder for an existing entity</td>
-                        </tr>
-                        <tr>
-                            <td><code>void insert_resource&lt;T&gt;(T res)</code></td>
-                            <td>Schedules resource insertion</td>
-                        </tr>
-                        <tr>
-                            <td><code>void remove_resource&lt;T&gt;()</code></td>
-                            <td>Schedules resource removal</td>
-                        </tr>
-                    </tbody>
-                </table>
-                <table class="api-table lang-fr">
-                    <thead>
-                        <tr>
-                            <th>Méthode</th>
-                            <th>Description</th>
-                        </tr>
-                    </thead>
-                    <tbody>
                         <tr>
                             <td><code>void despawn(Entity e)</code></td>
                             <td>Planifie la destruction d'une entité</td>
@@ -1659,36 +1263,9 @@ int main() {
 
             <div class="subsection">
                 <h2>EntityCommands</h2>
-                <p class="lang-en">Builder for entity modification.</p>
-                <p class="lang-fr">Builder pour modification d'entités.</p>
+                <p>Builder pour modification d'entités.</p>
                 
-                <table class="api-table lang-en">
-                    <thead>
-                        <tr>
-                            <th>Method</th>
-                            <th>Description</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><code>EntityCommands& insert&lt;T&gt;(T comp)</code></td>
-                            <td>Adds a component (chainable)</td>
-                        </tr>
-                        <tr>
-                            <td><code>EntityCommands& remove&lt;T&gt;()</code></td>
-                            <td>Removes a component (chainable)</td>
-                        </tr>
-                        <tr>
-                            <td><code>Entity id() const</code></td>
-                            <td>Returns the entity ID</td>
-                        </tr>
-                        <tr>
-                            <td><code>EntityCommands& with_children(Func)</code></td>
-                            <td>Adds children to the entity</td>
-                        </tr>
-                    </tbody>
-                </table>
-                <table class="api-table lang-fr">
+                <table class="api-table">
                     <thead>
                         <tr>
                             <th>Méthode</th>
@@ -1718,32 +1295,9 @@ int main() {
 
             <div class="subsection">
                 <h2>Query&lt;Wrappers...&gt;</h2>
-                <p class="lang-en">Iteration over entities.</p>
-                <p class="lang-fr">Itération sur les entités.</p>
+                <p>Itération sur les entités.</p>
                 
-                <table class="api-table lang-en">
-                    <thead>
-                        <tr>
-                            <th>Method</th>
-                            <th>Description</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><code>Iterator begin() const</code></td>
-                            <td>Start of iteration</td>
-                        </tr>
-                        <tr>
-                            <td><code>Iterator end() const</code></td>
-                            <td>End of iteration</td>
-                        </tr>
-                        <tr>
-                            <td><code>u64 size() const</code></td>
-                            <td>Number of matched entities</td>
-                        </tr>
-                    </tbody>
-                </table>
-                <table class="api-table lang-fr">
+                <table class="api-table">
                     <thead>
                         <tr>
                             <th>Méthode</th>
@@ -1767,25 +1321,7 @@ int main() {
                 </table>
 
                 <h3>Query::Iterator</h3>
-                <table class="api-table lang-en">
-                    <thead>
-                        <tr>
-                            <th>Method</th>
-                            <th>Description</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><code>Entity entity() const</code></td>
-                            <td>Gets current entity ID</td>
-                        </tr>
-                        <tr>
-                            <td><code>auto operator*()</code></td>
-                            <td>Gets component wrappers</td>
-                        </tr>
-                    </tbody>
-                </table>
-                <table class="api-table lang-fr">
+                <table class="api-table">
                     <thead>
                         <tr>
                             <th>Méthode</th>
@@ -1807,28 +1343,9 @@ int main() {
 
             <div class="subsection">
                 <h2>EventWriter&lt;T&gt;</h2>
-                <p class="lang-en">Sending events.</p>
-                <p class="lang-fr">Envoi d'événements.</p>
+                <p>Envoi d'événements.</p>
                 
-                <table class="api-table lang-en">
-                    <thead>
-                        <tr>
-                            <th>Method</th>
-                            <th>Description</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><code>void send(const T& event)</code></td>
-                            <td>Sends an event (copy)</td>
-                        </tr>
-                        <tr>
-                            <td><code>void send(T&& event)</code></td>
-                            <td>Sends an event (move)</td>
-                        </tr>
-                    </tbody>
-                </table>
-                <table class="api-table lang-fr">
+                <table class="api-table">
                     <thead>
                         <tr>
                             <th>Méthode</th>
@@ -1850,32 +1367,9 @@ int main() {
 
             <div class="subsection">
                 <h2>EventReader&lt;T&gt;</h2>
-                <p class="lang-en">Reading events.</p>
-                <p class="lang-fr">Lecture d'événements.</p>
+                <p>Lecture d'événements.</p>
                 
-                <table class="api-table lang-en">
-                    <thead>
-                        <tr>
-                            <th>Method</th>
-                            <th>Description</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><code>bool has_events() const</code></td>
-                            <td>Checks if there are events</td>
-                        </tr>
-                        <tr>
-                            <td><code>Iterator begin() const</code></td>
-                            <td>Start of iteration</td>
-                        </tr>
-                        <tr>
-                            <td><code>Iterator end() const</code></td>
-                            <td>End of iteration</td>
-                        </tr>
-                    </tbody>
-                </table>
-                <table class="api-table lang-fr">
+                <table class="api-table">
                     <thead>
                         <tr>
                             <th>Méthode</th>

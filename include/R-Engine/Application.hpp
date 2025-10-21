@@ -77,7 +77,7 @@ class R_ENGINE_API Application final
         sys::SystemConfigurator add_systems(ScheduleLabel label);
 
         /**
-         * @brief Configures ordering constrai32s for system sets.
+         * @brief Configures ordering constraints for system sets.
          * @details Use this to define the execution order of entire groups of systems.
          * Sets must be represented as distinct types (e.g., struct PhysicsSet {};).
          * @tparam SetTypes The set types to configure.
@@ -88,7 +88,7 @@ class R_ENGINE_API Application final
         sys::SetConfigurator<SetTypes...> configure_sets(Schedule when) noexcept;
 
         /**
-        * @brief Inserts a resource i32o the Application scene.
+        * @brief Inserts a resource into the Application scene.
         * @details Resources are unique, global data structures accessible by systems.
         * @param res The resource to insert.
         * @return A reference to the Application for chaining.
@@ -133,10 +133,10 @@ class R_ENGINE_API Application final
         void run();
 
         /**
-         * @brief Gets a poi32er to a resource from the application's scene.
+         * @brief Gets a pointer to a resource from the application's scene.
          * @details Useful for inspecting state, especially in tests.
          * @tparam T The type of the resource to get.
-         * @return A poi32er to the resource, or nullptr if it doesn't exist.
+         * @return A pointer to the resource, or nullptr if it doesn't exist.
          */
         template<typename T>
         T *get_resource_ptr() noexcept;
@@ -167,8 +167,8 @@ class R_ENGINE_API Application final
         template<typename SetType>
         sys::SystemSetId _ensure_set_exists(sys::ScheduleGraph &graph) noexcept;
 
-        template<typename Plugi32>
-        void _add_one_plugin(Plugi32 &&plugin) noexcept;
+        template<typename PluginT>
+        void _add_one_plugin(PluginT &&plugin) noexcept;
 
         template<auto SystemFunc>
         sys::SystemTypeId _add_one_system_to_graph(sys::ScheduleGraph &graph) noexcept;

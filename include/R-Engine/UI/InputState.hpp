@@ -19,7 +19,6 @@ struct R_ENGINE_API UiInputState {
         r::ecs::Entity prev_hovered = r::ecs::NULL_ENTITY;
         r::ecs::Entity active = r::ecs::NULL_ENTITY;
         r::ecs::Entity focused = r::ecs::NULL_ENTITY;
-        r::ecs::Entity last_clicked = r::ecs::NULL_ENTITY;
 };
 
 } /* namespace r */

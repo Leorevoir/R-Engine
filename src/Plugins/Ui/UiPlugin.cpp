@@ -22,13 +22,12 @@ void UiPlugin::build(Application &app)
         .insert_resource(UiTextures{})
         .insert_resource(UiInputState{})
         .insert_resource(UiEvents{})
+        .add_events<r::UiClick>()
         .add_systems<ui::startup_system>(Schedule::STARTUP)
         .add_systems<ui::update_system>(Schedule::UPDATE)
         .add_systems<ui::compute_layout_system, ui::pointer_system, ui::scroll_input_system, ui::scroll_clamp_system,
             ui::keyboard_nav_system>(Schedule::UPDATE)
         .after<ui::update_system>()
-        .add_systems<ui::clear_click_state_system>(Schedule::UPDATE)
-        .after<ui::pointer_system>()
         .add_systems<ui::render_system>(Schedule::RENDER_2D)
         .add_systems<[](r::ecs::ResMut<r::UiTextures> tex, r::ecs::ResMut<r::UiFonts> fonts) {
             if (IsWindowReady()) {

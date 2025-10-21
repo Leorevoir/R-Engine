@@ -118,6 +118,20 @@ r::MeshHandle r::Meshes::add(const ::Model &model, const std::string &texture_pa
     return handle;
 }
 
+::Model *r::Meshes::get(const r::MeshHandle handle) noexcept
+{
+    if (handle >= _data.size()) {
+        return nullptr;
+    }
+
+    auto &e = _data[handle];
+
+    if (!e.valid) {
+        return nullptr;
+    }
+    return &e.model;
+}
+
 const ::Model *r::Meshes::get(const r::MeshHandle handle) const noexcept
 {
     if (handle >= _data.size()) {

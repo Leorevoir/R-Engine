@@ -98,6 +98,7 @@ struct R_ENGINE_API Meshes final {
         * @brief get a mesh entry by its handle
         */
         const ::Model *get(const u32 handle) const noexcept;
+        ::Model *get(const u32 handle) noexcept;
 
         /**
         * @brief draw a mesh at a given position, scale, and tint color

@@ -23,7 +23,6 @@ void update_system(r::ecs::ResMut<UiEvents> events, r::ecs::ResMut<UiInputState>
 {
     events.ptr->pressed.clear();
     events.ptr->released.clear();
-    events.ptr->clicked.clear();
     events.ptr->entered.clear();
     events.ptr->left.clear();
     events.ptr->focus_changed.clear();
@@ -40,11 +39,6 @@ void update_system(r::ecs::ResMut<UiEvents> events, r::ecs::ResMut<UiInputState>
     if (ui.ptr->isKeyPressed(KEY_F1)) {
         cfg.ptr->debug_draw_bounds = !cfg.ptr->debug_draw_bounds;
     }
-}
-
-void clear_click_state_system(r::ecs::ResMut<UiInputState> input) noexcept
-{
-    input.ptr->last_clicked = r::ecs::NULL_ENTITY;
 }
 
 }// namespace r::ui

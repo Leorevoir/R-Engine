@@ -148,29 +148,93 @@ inline r::Application::SystemConfigurator &r::Application::SystemConfigurator::b
     return *this;
 }
 
+/**
+* SystemConfigurator Implementation
+*/
+
 template<auto PredicateFunc>
 inline r::Application::SystemConfigurator &r::Application::SystemConfigurator::run_if() noexcept
+{
+    _current_condition = _create_condition_wrapper<PredicateFunc>();
+    _apply_condition();
+    return *this;
+}
+
+template<auto PredicateFunc>
+inline r::Application::SystemConfigurator &r::Application::SystemConfigurator::run_and() noexcept
+{
+    const auto new_condition = _create_condition_wrapper<PredicateFunc>();
+
+    if (_current_condition) {
+        _current_condition = [old_cond = _current_condition, new_cond = new_condition](ecs::Scene &scene) {
+            return old_cond(scene) && new_cond(scene);
+        };
+    } else {
+        _current_condition = new_condition;
+    }
+
+    _apply_condition();
+    return *this;
+}
+
+template<auto PredicateFunc>
+inline r::Application::SystemConfigurator &r::Application::SystemConfigurator::run_or() noexcept
+{
+    const auto new_condition = _create_condition_wrapper<PredicateFunc>();
+
+    if (_current_condition) {
+        _current_condition = [old_cond = _current_condition, new_cond = new_condition](ecs::Scene &scene) {
+            return old_cond(scene) || new_cond(scene);
+        };
+    } else {
+        _current_condition = new_condition;
+    }
+
+    _apply_condition();
+    return *this;
+}
+
+template<auto PredicateFunc>
+inline r::Application::SystemConfigurator &r::Application::SystemConfigurator::run_unless() noexcept
+{
+    _current_condition = _create_condition_wrapper<PredicateFunc>(true);
+    _apply_condition();
+    return *this;
+}
+
+/**
+ * private
+ */
+
+template<auto PredicateFunc>
+inline auto r::Application::SystemConfigurator::_create_condition_wrapper(bool negated) -> std::function<bool(ecs::Scene &)>
 {
     using traits = ecs::function_traits<std::remove_cvref_t<decltype(PredicateFunc)>>;
     using args = typename traits::args;
 
-    auto condition_wrapper = [app = this->_app](ecs::Scene &scene) -> bool {
-        return ecs::call_predicate_with_resolved(
+    return [app = this->_app, negated](ecs::Scene &scene) -> bool {
+        bool result = ecs::call_predicate_with_resolved(
             PredicateFunc, scene, app->_command_buffer, args{}, std::make_index_sequence<std::tuple_size_v<args>>{});
-    };
 
+        return negated ? !result : result;
+    };
+}
+
+inline void r::Application::SystemConfigurator::_apply_condition()
+{
     for (const auto &system_id : _system_ids) {
-        _graph->nodes.at(system_id).condition = condition_wrapper;
+        _graph->nodes.at(system_id).condition = _current_condition;
     }
-    return *this;
 }
 
 template<typename SetType>
 inline r::Application::SystemConfigurator &r::Application::SystemConfigurator::in_set() noexcept
 {
     SystemSetId set_id = _app->_ensure_set_exists<SetType>(*_graph);
+
     for (const auto &system_id : _system_ids) {
         auto &node = _graph->nodes.at(system_id);
+
         if (std::find(node.member_of_sets.begin(), node.member_of_sets.end(), set_id) == node.member_of_sets.end()) {
             node.member_of_sets.push_back(set_id);
         }

@@ -230,9 +230,43 @@ class R_ENGINE_API Application final
                 template<typename SetType>
                 SystemConfigurator &in_set() noexcept;
 
+                /**
+                 * @brief Adds a condition that must also be true (logical AND).
+                 * @details If no condition exists, this behaves like run_if.
+                 * @tparam PredicateFunc The predicate to AND with the existing condition.
+                 * @return A reference to this SystemConfigurator for chaining.
+                 */
+                template<auto PredicateFunc>
+                SystemConfigurator &run_and() noexcept;
+
+                /**
+                 * @brief Adds a condition that can also be true (logical OR).
+                 * @details If no condition exists, this behaves like run_if.
+                 * @tparam PredicateFunc The predicate to OR with the existing condition.
+                 * @return A reference to this SystemConfigurator for chaining.
+                 */
+                template<auto PredicateFunc>
+                SystemConfigurator &run_or() noexcept;
+
+                /**
+                 * @brief Sets a condition that must NOT be met for the systems to run.
+                 * @details This overwrites any previous conditions.
+                 * @tparam PredicateFunc The predicate to negate.
+                 * @return A reference to this SystemConfigurator for chaining.
+                 */
+                template<auto PredicateFunc>
+                SystemConfigurator &run_unless() noexcept;
+
             private:
                 ScheduleGraph *_graph;
                 std::vector<SystemTypeId> _system_ids;
+
+                std::function<bool(r::ecs::Scene &)> _current_condition;
+
+                template<auto PredicateFunc>
+                auto _create_condition_wrapper(bool negated = false) -> std::function<bool(ecs::Scene &)>;
+
+                void _apply_condition();
         };
 
         /**

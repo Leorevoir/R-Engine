@@ -8,23 +8,6 @@
 #include <queue>
 #include <sstream>
 
-r::Application::SystemNode::SystemNode() : id(typeid(void)), func(nullptr)
-{
-    /* __ctor__ */
-}
-
-r::Application::SystemNode::SystemNode(const std::string &p_name, SystemTypeId p_id, SystemFn p_func,
-    std::vector<SystemTypeId> p_dependencies)
-    : name(std::move(p_name)), id(p_id), func(p_func), dependencies(std::move(p_dependencies))
-{
-    /* __ctor__ */
-}
-
-r::Application::SystemSet::SystemSet(const std::string &pname, SystemSetId pid) noexcept : name(pname), id(pid)
-{
-    /* __ctor__ */
-}
-
 /**
 * public
 */
@@ -125,11 +108,11 @@ void r::Application::_run_schedule(const Schedule sched)
     _execute_systems(graph);
 }
 
-void r::Application::_sort_schedule(ScheduleGraph &graph)
+void r::Application::_sort_schedule(sys::ScheduleGraph &graph)
 {
     graph.execution_order.clear();
-    std::unordered_map<SystemTypeId, int> in_degree;
-    std::unordered_map<SystemTypeId, std::vector<SystemTypeId>> adj_list;
+    std::unordered_map<sys::SystemTypeId, i32> in_degree;
+    std::unordered_map<sys::SystemTypeId, std::vector<sys::SystemTypeId>> adj_list;
 
     /* Initialize in-degree for all systems */
     for (const auto &[id, node] : graph.nodes) {
@@ -146,8 +129,8 @@ void r::Application::_sort_schedule(ScheduleGraph &graph)
     graph.dirty = false;
 }
 
-void r::Application::_build_adjacency_list(const ScheduleGraph &graph, std::unordered_map<SystemTypeId, int> &in_degree,
-    std::unordered_map<SystemTypeId, std::vector<SystemTypeId>> &adj_list)
+void r::Application::_build_adjacency_list(const sys::ScheduleGraph &graph, std::unordered_map<sys::SystemTypeId, i32> &in_degree,
+    std::unordered_map<sys::SystemTypeId, std::vector<sys::SystemTypeId>> &adj_list)
 {
     /* Build adjacency list from direct system dependencies */
     for (const auto &[id, node] : graph.nodes) {
@@ -161,8 +144,8 @@ void r::Application::_build_adjacency_list(const ScheduleGraph &graph, std::unor
     }
 }
 
-void r::Application::_apply_set_ordering_constraints(const ScheduleGraph &graph, std::unordered_map<SystemTypeId, int> &in_degree,
-    std::unordered_map<SystemTypeId, std::vector<SystemTypeId>> &adj_list)
+void r::Application::_apply_set_ordering_constraints(const sys::ScheduleGraph &graph, std::unordered_map<sys::SystemTypeId, int> &in_degree,
+    std::unordered_map<sys::SystemTypeId, std::vector<sys::SystemTypeId>> &adj_list)
 {
     /* Add dependencies from set ordering and system-to-set ordering */
     for (const auto &[id, node] : graph.nodes) {
@@ -219,11 +202,12 @@ void r::Application::_apply_set_ordering_constraints(const ScheduleGraph &graph,
     }
 }
 
-void r::Application::_perform_topological_sort(ScheduleGraph &graph, std::unordered_map<SystemTypeId, int> &in_degree,
-    const std::unordered_map<SystemTypeId, std::vector<SystemTypeId>> &adj_list)
+void r::Application::_perform_topological_sort(sys::ScheduleGraph &graph, std::unordered_map<sys::SystemTypeId, i32> &in_degree,
+    const std::unordered_map<sys::SystemTypeId, std::vector<sys::SystemTypeId>> &adj_list)
 {
     /* Topological sort (Kahn's algorithm) */
-    std::queue<SystemTypeId> q;
+    std::queue<sys::SystemTypeId> q;
+
     for (const auto &[id, _] : graph.nodes) {
         if (in_degree[id] == 0) {
             q.push(id);
@@ -231,7 +215,7 @@ void r::Application::_perform_topological_sort(ScheduleGraph &graph, std::unorde
     }
 
     while (!q.empty()) {
-        SystemTypeId u = q.front();
+        const sys::SystemTypeId u = q.front();
         q.pop();
 
         /* push pointer to the node into execution_order */
@@ -259,7 +243,7 @@ void r::Application::_perform_topological_sort(ScheduleGraph &graph, std::unorde
     }
 }
 
-void r::Application::_execute_systems(const ScheduleGraph &graph)
+void r::Application::_execute_systems(const sys::ScheduleGraph &graph)
 {
     for (const auto *node_ptr : graph.execution_order) {
         if (node_ptr->condition && !node_ptr->condition(_scene)) {
@@ -294,7 +278,7 @@ void r::Application::_apply_state_transitions()
     }
 }
 
-void r::Application::_run_transition_schedule(ScheduleGraph &graph)
+void r::Application::_run_transition_schedule(sys::ScheduleGraph &graph)
 {
     if (graph.nodes.empty())
         return;

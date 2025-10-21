@@ -1,98 +1,133 @@
-#include "R-Engine/ECS/Query.hpp"
 #include <R-Engine/Application.hpp>
 #include <R-Engine/Core/Backend.hpp>
 #include <R-Engine/Core/States.hpp>
+#include <R-Engine/ECS/Event.hpp>
+#include <R-Engine/ECS/RunConditions.hpp>
 #include <R-Engine/Plugins/DefaultPlugins.hpp>
 #include <R-Engine/Plugins/WindowPlugin.hpp>
+
 #include <iostream>
+#include <string>
 
-enum class AppState { MainMenu, Playing };
+enum class AppState { MainMenu, Playing, Paused };
 
-void setup_menu()
+struct GameScore {
+        int value = 0;
+};
+
+struct PlayerActionEvent {
+        std::string description;
+};
+
+/**
+ * systems
+ */
+
+static void menu_system(r::ecs::ResMut<r::NextState<AppState>> next_state)
 {
-    std::cout << "--- OnEnter: MainMenu ---" << std::endl;
+    DrawText("Main Menu (Press ENTER)", 250, 250, 30, BLACK);
 }
-void cleanup_menu()
+
+static void game_logic_system(r::ecs::ResMut<r::NextState<AppState>> next_state, r::ecs::EventWriter<PlayerActionEvent> event_writer)
 {
-    std::cout << "--- OnExit: MainMenu ---" << std::endl;
+    DrawText("Playing!", 320, 250, 40, BLACK);
+    DrawText("Press P to Pause", 300, 300, 20, DARKGRAY);
+    DrawText("Press SPACE to trigger an event", 240, 340, 20, DARKGRAY);
+
+    if (IsKeyPressed(KEY_P)) {
+        next_state.ptr->set(AppState::Paused);
+    }
+    if (IsKeyPressed(KEY_SPACE)) {
+        event_writer.send({"Player Jumped!"});
+    }
 }
 
-void menu_logic(r::ecs::ResMut<r::NextState<AppState>> next_state)
+static void paused_overlay_system(r::ecs::ResMut<r::NextState<AppState>> next_state)
 {
-    if (IsKeyPressed(KEY_ENTER)) {
-        std::cout << "INPUT: ENTER pressed, transition to Playing..." << std::endl;
+    DrawRectangle(0, 0, 800, 600, {0, 0, 0, 100});
+    DrawText("PAUSED", 320, 250, 40, RAYWHITE);
+    DrawText("Press P to Resume", 300, 300, 20, LIGHTGRAY);
+    if (IsKeyPressed(KEY_P)) {
         next_state.ptr->set(AppState::Playing);
     }
 }
 
-void game_logic(r::ecs::ResMut<r::NextState<AppState>> next_state)
+static void display_score_system(r::ecs::Res<GameScore> score)
 {
-    if (IsKeyPressed(KEY_UP)) {
-        std::cout << "INPUT: UP pressed, back to MainMenu..." << std::endl;
-        next_state.ptr->set(AppState::MainMenu);
+    DrawText(TextFormat("Score: %d", score.ptr->value), 680, 20, 20, SKYBLUE);
+}
+
+static void playing_or_paused_system()
+{
+    DrawText("State: Playing or Paused", 10, 40, 20, GREEN);
+}
+
+static void playing_and_event_system(r::ecs::EventReader<PlayerActionEvent> reader)
+{
+    for (const auto &event : reader) {
+        std::cout << "--- 'Playing' AND 'on_event' system fired with event: " << event.description << " ---" << std::endl;
     }
 }
 
-void spawn_player_on_start()
+static void not_in_menu_system()
 {
-    std::cout << "--- OnTransition: MainMenu -> Playing (Spawning player) ---" << std::endl;
+    DrawText("NOT in Main Menu", 10, 70, 20, MAROON);
 }
 
-void get_state(r::ecs::Res<r::State<AppState>> state)
+static void state_control_system(r::ecs::Res<r::State<AppState>> state, r::ecs::ResMut<r::NextState<AppState>> next_state)
 {
-    AppState current_state = state.ptr->current();
-
-    switch (current_state) {
-        case AppState::MainMenu:
-            std::cout << "DEBUG: Current state is MainMenu" << std::endl;
-            break;
-        case AppState::Playing:
-            std::cout << "DEBUG: Current state is Playing" << std::endl;
-            break;
+    if (state.ptr->current() == AppState::MainMenu && IsKeyPressed(KEY_ENTER)) {
+        next_state.ptr->set(AppState::Playing);
     }
-
-    if (state.ptr->previous().has_value()) {
-        AppState previous_state = state.ptr->previous().value();
-    }
+    DrawFPS(10, 10);
 }
 
-/**
- * @brief Temporary system function to update game state
- */
-void update_logic(r::ecs::Res<r::State<AppState>> state, r::ecs::ResMut<r::NextState<AppState>> next_state)
+static void cleanup_game_system(r::ecs::Commands commands)
 {
-    switch (state.ptr->current()) {
-        case AppState::MainMenu:
-            if (IsKeyPressed(KEY_ENTER)) {
-                std::cout << "INPUT: ENTER pressed, transition to Playing..." << std::endl;
-                next_state.ptr->set(AppState::Playing);
-            }
-            break;
-
-        case AppState::Playing:
-            if (IsKeyPressed(KEY_UP)) {
-                std::cout << "INPUT: UP pressed, back to MainMenu..." << std::endl;
-                next_state.ptr->set(AppState::MainMenu);
-            }
-            break;
-    }
+    std::cout << "--- OnEnter(MainMenu): Cleaning up game resources. ---" << std::endl;
+    commands.remove_resource<GameScore>();
 }
 
-int main()
+static void setup_game_system(r::ecs::Commands commands)
+{
+    std::cout << "--- OnEnter(Playing): Setting up game resources (like the score). ---" << std::endl;
+    commands.insert_resource(GameScore{0});
+}
+
+int main(void)
 {
     r::Application{}
         .add_plugins(r::DefaultPlugins{}.set(r::WindowPlugin{r::WindowPluginConfig{
             .size = {800, 600},
-            .title = "Game states example",
-            .cursor = r::WindowCursorState::Visible,
+            .title = "Combined Run Conditions Showcase",
         }}))
         .init_state(AppState::MainMenu)
+        .add_events<PlayerActionEvent>()
 
-        .add_systems<update_logic>(r::Schedule::UPDATE)
-        .add_systems<setup_menu>(r::OnEnter(AppState::MainMenu))
-        .add_systems<cleanup_menu>(r::OnExit(AppState::MainMenu))
-        .add_systems<spawn_player_on_start>(r::OnTransition(AppState::MainMenu, AppState::Playing))
-        .add_systems<get_state>(r::Schedule::UPDATE)
+        .add_systems<cleanup_game_system>(r::OnEnter(AppState::MainMenu))
+        .add_systems<setup_game_system>(r::OnEnter(AppState::Playing))
+        .add_systems<state_control_system>(r::Schedule::UPDATE)
+
+        .add_systems<menu_system>(r::Schedule::UPDATE)
+        .run_if<r::run_conditions::in_state<AppState::MainMenu>>()
+        .add_systems<game_logic_system>(r::Schedule::UPDATE)
+        .run_if<r::run_conditions::in_state<AppState::Playing>>()
+        .add_systems<paused_overlay_system>(r::Schedule::UPDATE)
+        .run_if<r::run_conditions::in_state<AppState::Paused>>()
+
+        .add_systems<playing_or_paused_system>(r::Schedule::UPDATE)
+        .run_if<r::run_conditions::in_state<AppState::Playing>>()
+        .run_or<r::run_conditions::in_state<AppState::Paused>>()
+
+        .add_systems<playing_and_event_system>(r::Schedule::UPDATE)
+        .run_if<r::run_conditions::in_state<AppState::Playing>>()
+        .run_and<r::run_conditions::on_event<PlayerActionEvent>>()
+
+        .add_systems<not_in_menu_system>(r::Schedule::UPDATE)
+        .run_unless<r::run_conditions::in_state<AppState::MainMenu>>()
+
+        .add_systems<display_score_system>(r::Schedule::UPDATE)
+        .run_if<r::run_conditions::resource_exists<GameScore>>()
 
         .run();
 

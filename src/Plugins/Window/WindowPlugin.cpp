@@ -89,9 +89,9 @@ static void _destroy_window_system() noexcept
 
 r::WindowPlugin::WindowPlugin(const WindowPluginConfig &config) noexcept : _config(config)
 {
-    // if (_config.disable_raylib_log) {
-    //     SetTraceLogLevel(LOG_NONE);
-    // }
+    if (_config.disable_raylib_log) {
+        SetTraceLogLevel(LOG_NONE);
+    }
 }
 
 // clang-format off

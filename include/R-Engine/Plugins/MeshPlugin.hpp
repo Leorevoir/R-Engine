@@ -98,6 +98,7 @@ struct R_ENGINE_API Meshes final {
         * @brief get a mesh entry by its handle
         */
         const ::Model *get(const u32 handle) const noexcept;
+        ::Model *get(const u32 handle) noexcept;
 
         /**
         * @brief draw a mesh at a given position, scale, and tint color
@@ -131,6 +132,11 @@ struct R_ENGINE_API Mesh3d final {
         * @brief generate a cube mesh centered at the given position with the given size
         */
         static ::Mesh Cube(const f32 size, const Vec3f &center = {0.f, 0.f, 0.f}) noexcept;
+
+        /**
+         * @brief generate a sphere mesh with the given radius, number of rings and slices
+         */
+        static ::Mesh Sphere(const f32 radius, const i32 rings, const i32 slices) noexcept;
 
         /**
         * @brief generate a sphere mesh centered at the given position with the given radius and number of slices

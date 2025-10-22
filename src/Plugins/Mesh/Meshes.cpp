@@ -2,58 +2,6 @@
 #include <R-Engine/Maths/Quaternion.hpp>
 #include <R-Engine/Plugins/MeshPlugin.hpp>
 #include <cmath>
-#include <utility>
-
-/**
- * public MeshEntry
- */
-
-r::MeshEntry::MeshEntry(MeshEntry &&other) noexcept
-    : cpu_mesh(other.cpu_mesh), model(other.model), texture(other.texture), texture_path(std::move(other.texture_path)),
-      owns_texture(other.owns_texture), valid(other.valid)
-{
-    other.valid = false;
-    other.cpu_mesh = {};
-    other.model = {};
-}
-
-r::MeshEntry &r::MeshEntry::operator=(MeshEntry &&other) noexcept
-{
-    if (this != &other) {
-        if (valid) {
-            UnloadModel(model);
-            if (cpu_mesh.vertexCount > 0) {
-                UnloadMesh(cpu_mesh);
-            }
-        }
-
-        /* Steal resources from the other object */
-        cpu_mesh = other.cpu_mesh;
-        model = other.model;
-        texture = other.texture;
-        texture_path = std::move(other.texture_path);
-        owns_texture = other.owns_texture;
-        valid = other.valid;
-
-        /* Neuter the moved-from object */
-        other.valid = false;
-        other.cpu_mesh = {};
-        other.model = {};
-    }
-    return *this;
-}
-
-r::MeshEntry::~MeshEntry()
-{
-    if (!valid) {
-        return;
-    }
-    UnloadModel(model);
-    if (cpu_mesh.vertexCount > 0) {
-        UnloadMesh(cpu_mesh);
-    }
-    valid = false;
-}
 
 /**
  * public Meshes
@@ -66,8 +14,7 @@ r::Meshes::~Meshes()
 
 r::MeshHandle r::Meshes::add(const ::Mesh &mesh, const std::string &texture_path)
 {
-
-    if (mesh.vertexCount == 0 || mesh.triangleCount == 0 || !mesh.vertices || !mesh.indices) {
+    if (mesh.vertexCount == 0 || !mesh.vertices) {
         Logger::error("Failed to bind mesh: invalid mesh data");
         return MeshInvalidHandle;
     }
@@ -98,8 +45,12 @@ r::MeshHandle r::Meshes::add(const ::Mesh &mesh, const std::string &texture_path
 
 r::MeshHandle r::Meshes::add(const ::Model &model, const std::string &texture_path)
 {
-    if (model.meshCount == 0 || !model.meshes) {
-        Logger::error("Failed to bind model: invalid model data");
+    if (model.meshCount == 0) {
+        Logger::error("Failed to bind model: invalid model data: mesh count is zero");
+        return MeshInvalidHandle;
+    }
+    if (!model.meshes) {
+        Logger::error("Failed to bind model: invalid model data: meshes pointer is null");
         return MeshInvalidHandle;
     }
 
@@ -116,6 +67,20 @@ r::MeshHandle r::Meshes::add(const ::Model &model, const std::string &texture_pa
     entry.valid = true;
     Logger::debug("bind model with handle: " + std::to_string(handle));
     return handle;
+}
+
+::Model *r::Meshes::get(const r::MeshHandle handle) noexcept
+{
+    if (handle >= _data.size()) {
+        return nullptr;
+    }
+
+    auto &e = _data[handle];
+
+    if (!e.valid) {
+        return nullptr;
+    }
+    return &e.model;
 }
 
 const ::Model *r::Meshes::get(const r::MeshHandle handle) const noexcept

@@ -32,6 +32,8 @@ class R_ENGINE_API ThreadPool
         std::mutex _queue_mutex;
         std::condition_variable _condition;
         bool _stop;
+
+        void _arbeit();
 };
 
 }// namespace core

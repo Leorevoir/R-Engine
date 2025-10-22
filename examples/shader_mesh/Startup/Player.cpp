@@ -9,7 +9,7 @@ void r::startup_system_create_player(ecs::Commands &commands) noexcept
         Controllable{},
         Player{},
         Transform3d{
-            .position = {0, 1, 0}
+            .position = {0, 0, -15}
         },
         Velocity{
             {.0f, .0f, .0f}

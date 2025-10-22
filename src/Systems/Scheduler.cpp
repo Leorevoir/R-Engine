@@ -179,6 +179,32 @@ void r::core::Scheduler::run(
 * private
 */
 
+static void inline scheduler_system_sort_systems(std::vector<r::sys::SystemTypeId> &ready_systems, const r::sys::ScheduleGraph &graph)
+{
+    std::sort(ready_systems.begin(), ready_systems.end(),
+    [&graph](const r::sys::SystemTypeId& a_id, const r::sys::SystemTypeId& b_id)
+    {
+        const auto& a_node = graph.nodes.at(a_id);
+        const auto& b_node = graph.nodes.at(b_id);
+
+        const bool a_is_readonly = a_node.component_access.writes.empty() && a_node.resource_access.writes.empty();
+        const bool b_is_readonly = b_node.component_access.writes.empty() && b_node.resource_access.writes.empty();
+
+        if (a_is_readonly != b_is_readonly) {
+            return a_is_readonly;
+        }
+
+        const size_t a_writes = a_node.component_access.writes.size() + a_node.resource_access.writes.size();
+        const size_t b_writes = b_node.component_access.writes.size() + b_node.resource_access.writes.size();
+
+        if (a_writes != b_writes) {
+            return a_writes < b_writes;
+        }
+
+        return a_id.hash_code() < b_id.hash_code();
+    });
+}
+
 void r::core::Scheduler::_sort_graph(sys::ScheduleGraph &graph)
 {
     graph.execution_stages.clear();
@@ -215,6 +241,8 @@ void r::core::Scheduler::_sort_graph(sys::ScheduleGraph &graph)
         if (ready_systems.empty()) {
             throw exception::Error("Scheduler", "Cycle detected in system dependencies.");
         }
+
+        scheduler_system_sort_systems(ready_systems, graph);
 
         const auto systems_for_stage = _select_systems_for_stage(ready_systems, graph);
         if (systems_for_stage.empty()) {

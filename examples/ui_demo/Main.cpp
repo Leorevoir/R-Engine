@@ -45,8 +45,8 @@ static void build_menu_ui(r::ecs::Commands &cmds, r::ecs::Res<r::WindowPluginCon
 {
     (void) win;
 
-    cmds.spawn(r::UiNode{}, r::Style{.width_pct = 100.f, .height_pct = 100.f, .background = r::Color{30, 30, 38, 255}},
-            r::ComputedLayout{}, r::Visibility::Visible)
+    cmds.spawn(r::UiNode{}, r::Style{.width_pct = 100.f, .height_pct = 100.f, .background = r::Color{30, 30, 38, 255}}, r::ComputedLayout{},
+            r::Visibility::Visible)
         .with_children([&](r::ecs::ChildBuilder &parent) {
             /* Center container */
             parent
@@ -180,35 +180,37 @@ static void setup_controls(r::ecs::ResMut<r::UiPluginConfig> cfg, r::ecs::ResMut
     map.ptr->bindAction("ToggleTheme", r::KEYBOARD, KEY_T);
 }
 
-static void menu_logic_system(r::ecs::Res<r::UiInputState> input_state, r::ecs::ResMut<r::UiPluginConfig> cfg,
+static void menu_logic_system(r::ecs::EventReader<r::UiClick> click_reader, r::ecs::ResMut<r::UiPluginConfig> cfg,
     r::ecs::Query<r::ecs::Ref<MenuButton>> buttons)
 {
-    const auto clicked = input_state.ptr->last_clicked;
-    if (clicked == r::ecs::NULL_ENTITY) {
-        return;
-    }
-
-    MenuAction action = MenuAction::None;
-    for (auto it = buttons.begin(); it != buttons.end(); ++it) {
-        auto [btn] = *it;
-        if (static_cast<r::ecs::Entity>(it.entity()) == clicked && btn.ptr) {
-            action = btn.ptr->action;
-            break;
+    for (const auto &click : click_reader) {
+        const auto clicked_entity = click.entity;
+        if (clicked_entity == r::ecs::NULL_ENTITY) {
+            continue;
         }
-    }
 
-    switch (action) {
-        case MenuAction::Play:
-            cfg.ptr->overlay_text = "Play selected";
-            break;
-        case MenuAction::Options:
-            cfg.ptr->overlay_text = "Options selected";
-            break;
-        case MenuAction::Quit:
-            r::Application::quit.store(true, std::memory_order_relaxed);
-            break;
-        default:
-            break;
+        MenuAction action = MenuAction::None;
+        for (auto it = buttons.begin(); it != buttons.end(); ++it) {
+            auto [btn] = *it;
+            if (static_cast<r::ecs::Entity>(it.entity()) == clicked_entity && btn.ptr) {
+                action = btn.ptr->action;
+                break;
+            }
+        }
+
+        switch (action) {
+            case MenuAction::Play:
+                cfg.ptr->overlay_text = "Play selected";
+                break;
+            case MenuAction::Options:
+                cfg.ptr->overlay_text = "Options selected";
+                break;
+            case MenuAction::Quit:
+                r::Application::quit.store(true, std::memory_order_relaxed);
+                break;
+            default:
+                break;
+        }
     }
 }
 
@@ -225,6 +227,5 @@ int main()
         .add_systems<theme_toggle_system>(r::Schedule::UPDATE)
         .add_systems<menu_logic_system>(r::Schedule::UPDATE)
         .after<r::ui::pointer_system>()
-        .before<r::ui::clear_click_state_system>()
         .run();
 }

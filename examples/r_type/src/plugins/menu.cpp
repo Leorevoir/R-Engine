@@ -120,37 +120,39 @@ static void build_main_menu(r::ecs::Commands& cmds)
     });
 }
 
-static void menu_button_handler(r::ecs::Res<r::UiInputState> input_state, r::ecs::Query<r::ecs::Ref<MenuButton>> buttons,
+static void menu_button_handler(r::ecs::EventReader<r::UiClick> click_reader, r::ecs::Query<r::ecs::Ref<MenuButton>> buttons,
                                 r::ecs::ResMut<r::NextState<GameState>> next_state)
 {
-    const auto clicked = input_state.ptr->last_clicked;
-    if (clicked == r::ecs::NULL_ENTITY) {
-        return;
-    }
-
-    MenuButton::Action action = MenuButton::Action::None;
-    for (auto it = buttons.begin(); it != buttons.end(); ++it) {
-        auto [btn] = *it;
-        if (static_cast<r::ecs::Entity>(it.entity()) == clicked && btn.ptr) {
-            action = btn.ptr->action;
-            break;
+    for (const auto &click : click_reader) {
+        const auto clicked_entity = click.entity;
+        if (clicked_entity == r::ecs::NULL_ENTITY) {
+            continue;
         }
-    }
 
-    switch (action) {
-        case MenuButton::Action::Play:
-            r::Logger::info("Starting game...");
-            next_state.ptr->set(GameState::EnemiesBattle);
-            break;
-        case MenuButton::Action::Options:
-            r::Logger::info("Options clicked (not implemented)");
-            break;
-        case MenuButton::Action::Quit:
-            r::Logger::info("Quitting game...");
-            r::Application::quit.store(true, std::memory_order_relaxed);
-            break;
-        default:
-            break;
+        MenuButton::Action action = MenuButton::Action::None;
+        for (auto it = buttons.begin(); it != buttons.end(); ++it) {
+            auto [btn] = *it;
+            if (static_cast<r::ecs::Entity>(it.entity()) == clicked_entity && btn.ptr) {
+                action = btn.ptr->action;
+                break;
+            }
+        }
+
+        switch (action) {
+            case MenuButton::Action::Play:
+                r::Logger::info("Starting game...");
+                next_state.ptr->set(GameState::EnemiesBattle);
+                break;
+            case MenuButton::Action::Options:
+                r::Logger::info("Options clicked (not implemented)");
+                break;
+            case MenuButton::Action::Quit:
+                r::Logger::info("Quitting game...");
+                r::Application::quit.store(true, std::memory_order_relaxed);
+                break;
+            default:
+                break;
+        }
     }
 }
 
@@ -219,7 +221,6 @@ void MenuPlugin::build(r::Application& app)
         .add_systems<menu_button_handler>(r::Schedule::UPDATE)
         .run_if<r::run_conditions::in_state<GameState::MainMenu>>()
         .after<r::ui::pointer_system>()
-        .before<r::ui::clear_click_state_system>()
         .add_systems<cleanup_menu>(r::OnExit{GameState::MainMenu})
 
         /* GameOver State */

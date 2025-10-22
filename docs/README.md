@@ -1,181 +1,283 @@
-# R-Engine ECS Documentation
+# R-Engine ECS Documentation# Website
 
-Complete web documentation for the R-Engine Entity Component System (ECS).
 
-## 📖 Content
 
-This documentation covers all aspects of the R-Engine ECS:
+Documentation Docusaurus pour le système ECS (Entity Component System) de R-Engine.This website is built using [Docusaurus](https://docusaurus.io/), a modern static website generator.
 
-- **Introduction**: General overview of the ECS architecture
-- **Architecture**: Diagrams and execution flow
-- **Core Concepts**: 
-  - Entities
-  - Components
-  - Systems
-  - Resources
-  - Queries
-  - Commands
-- **Advanced Features**:
-  - Events
-  - Hierarchies (Parent-Child relationships)
-  - Run Conditions
-  - Schedules (System scheduling)
-- **Storage System**: Archetype-based architecture
-- **Complete Examples**: Functional and commented code
-- **API Reference**: Complete documentation of classes and methods
 
-## 🚀 Usage
 
-### Option 1: Open HTML File Directly
+## 🚀 Démarrage rapide## Installation
+
+
+
+### Prérequis```bash
+
+yarn
+
+- Node.js 18+ ```
+
+- npm ou yarn
+
+## Local Development
+
+### Installation
 
 ```bash
-# Linux/MacOS
-xdg-open docs/index.html
 
-# Windows
-start docs/index.html
-```
+```bashyarn start
 
-### Option 2: Local HTTP Server
+cd docs-new```
 
-For the best experience (especially to test all JavaScript features):
+npm install
+
+```This command starts a local development server and opens up a browser window. Most changes are reflected live without having to restart the server.
+
+
+
+### Développement## Build
+
+
+
+```bash```bash
+
+npm startyarn build
+
+``````
+
+
+
+Ouvre http://localhost:3000 avec hot-reload.This command generates static content into the `build` directory and can be served using any static contents hosting service.
+
+
+
+### Build de production## Deployment
+
+
+
+```bashUsing SSH:
+
+npm run build
+
+``````bash
+
+USE_SSH=true yarn deploy
+
+### Prévisualisation du build```
+
+
+
+```bashNot using SSH:
+
+npm run serve
+
+``````bash
+
+GIT_USER=<Your GitHub username> yarn deploy
+
+## 📖 Contenu```
+
+
+
+La documentation couvre:If you are using GitHub pages for hosting, this command is a convenient way to build the website and push to the `gh-pages` branch.
+
+
+- **Introduction**: Vue d'ensemble de l'ECS
+- **Architecture**: Diagrammes et flux d'exécution
+- **Concepts de base**: Entities, Components, Systems, Resources, Queries, Commands
+- **Fonctionnalités avancées**: Events, Hierarchies, Run Conditions, Schedules
+- **Système de stockage**: Architecture par archétypes
+- **Exemples**: Code fonctionnel et commenté
+- **Référence API**: Documentation complète des classes
+
+## 🌐 Langues supportées
+
+- 🇬🇧 English (par défaut)
+- 🇫🇷 Français
+
+Pour ajouter des traductions:
 
 ```bash
-# With Python 3
-cd docs
-python3 -m http.server 8000
-
-# With Node.js (npx)
-cd docs
-npx http-server -p 8000
-
-# With PHP
-cd docs
-php -S localhost:8000
+npm run write-translations -- --locale fr
 ```
 
-Then open your browser at: `http://localhost:8000`
-
-### Option 3: VS Code Live Server
-
-If you're using VS Code with the "Live Server" extension:
-
-1. Right-click on `docs/index.html`
-2. Select "Open with Live Server"
-
-## ✨ Features
-
-### Navigation
-
-- **Sidebar**: Quick navigation between sections
-- **Smooth Scrolling**: Smooth scrolling to sections
-- **Active Link Highlighting**: Automatic highlighting of active links
-- **Mobile Responsive**: Hamburger menu on mobile
-
-### Interactivity
-
-- **Copy Code**: Button to copy code examples
-- **Search**: Search within navigation (sidebar)
-- **Back to Top**: Button to scroll back to top
-
-### Content
-
-- **Code Examples**: Over 20 commented code examples
-- **API Tables**: Reference tables for all APIs
-- **Diagrams**: ASCII diagrams to visualize architecture
-- **Info Boxes**: Information boxes, warnings, and best practices
-
-## 📁 File Structure
+## 📁 Structure
 
 ```
-docs/
-├── index.html     # Main documentation page
-├── style.css      # CSS styles (modern and responsive design)
-├── script.js      # JavaScript scripts (interactivity)
-└── README.md      # This file
+docs/               # Documentation source (Markdown)
+├── intro.md
+├── architecture.md
+├── core-concepts/
+├── advanced/
+├── examples/
+└── api/
+
+i18n/               # Traductions
+└── fr/
+    └── docusaurus-plugin-content-docs/
+        └── current/
+
+static/             # Assets statiques
+└── img/
+
+src/                # Composants React personnalisés
+└── css/
+    └── custom.css
 ```
 
-## 🎨 Customization
+## ⚙️ Configuration
 
-### Changing Colors
+### docusaurus.config.ts
 
-Edit the CSS variables in `style.css`:
+Configuration principale:
+- Métadonnées du site
+- Thème et plugins
+- i18n
+- Navbar/Footer
+
+### sidebars.ts
+
+Structure de la navigation latérale.
+
+## 🎨 Personnalisation
+
+Modifier les styles dans `src/css/custom.css`:
 
 ```css
 :root {
-    --primary-color: #0066cc;      /* Primary color */
-    --primary-dark: #004999;       /* Dark primary color */
-    --bg-sidebar: #2c3e50;         /* Sidebar background */
-    /* ... other variables ... */
+  --ifm-color-primary: #0066cc;
+  --ifm-code-font-size: 95%;
 }
 ```
 
-### Adding Content
+## 📦 Déploiement
 
-1. Add a new section in `index.html`
-2. Create a link in the sidebar
-3. Scripts will automatically handle smooth scrolling and navigation
+### GitHub Pages
 
-## 🌐 Browser Compatibility
+```bash
+npm run deploy
+```
 
-- ✅ Chrome/Chromium (90+)
-- ✅ Firefox (88+)
-- ✅ Safari (14+)
-- ✅ Edge (90+)
+### Autres plateformes
 
-## 📱 Mobile Support
+```bash
+npm run build
+# Servir le dossier build/
+```
 
-The documentation is fully responsive and optimized for:
-- Smartphones (320px+)
-- Tablets (768px+)
-- Desktop (1024px+)
+## 🔧 Scripts disponibles
 
-## 🖨️ Printing
+- `npm start` - Serveur de développement
+- `npm run build` - Build de production
+- `npm run serve` - Prévisualiser le build
+- `npm run clear` - Nettoyer le cache
+- `npm run write-translations` - Générer les fichiers de traduction
+- `npm run deploy` - Déployer sur GitHub Pages
 
-The documentation includes optimized print styles. Use `Ctrl+P` or `Cmd+P` to print.
+## 📝 Écrire de la documentation
 
-## 🔍 SEO and Accessibility
+### Créer un nouveau document
 
-- Semantic HTML hierarchy
-- Keyboard navigation
-- WCAG AA compliant color contrast
-- Meta tags for social sharing (to be added if needed)
+1. Créer `docs/mon-document.md`:
 
-## 📝 Technical Notes
+```markdown
+---
+sidebar_position: 1
+---
 
-### Technologies Used
+# Mon Document
 
-- **HTML5**: Semantic structure
-- **CSS3**: CSS Variables, Flexbox, Grid, Animations
-- **Vanilla JavaScript**: No external dependencies
-- **Responsive Design**: Mobile-first approach
+Contenu...
+```
 
-### Performance
+2. Tester avec `npm start`
 
-- No external libraries (fast loading)
-- Optimized CSS and JS
-- Images replaced with ASCII diagrams (lightweight)
+### Blocs Markdown spéciaux
 
-## 🤝 Contributing
+```markdown
+:::note
+Note
+:::
 
-To improve this documentation:
+:::tip
+Conseil
+:::
 
-1. Edit `index.html` for content
-2. Edit `style.css` for design
-3. Edit `script.js` for interactive features
+:::warning
+Avertissement
+:::
 
-## 📚 Additional Resources
+:::danger
+Danger
+:::
+```
 
-- [R-Engine source code](../)
-- [Practical examples](../examples/)
-- [Unit tests](../tests/)
+### Code avec coloration
 
-## 📄 License
+````markdown
+```cpp
+void system() {
+    // Code C++
+}
+```
+````
 
-This documentation is part of the R-Engine project.
+## 🌍 i18n (Internationalisation)
+
+### Workflow de traduction
+
+1. **Écrire en anglais** dans `docs/`
+2. **Générer les templates**:
+   ```bash
+   npm run write-translations -- --locale fr
+   ```
+3. **Traduire** les fichiers dans `i18n/fr/`
+4. **Build avec toutes les locales**:
+   ```bash
+   npm run build
+   ```
+
+### Tester une locale
+
+```bash
+npm start -- --locale fr
+```
+
+## 🤝 Contribution
+
+1. Fork le projet
+2. Créer une branche (`git checkout -b doc/feature`)
+3. Modifier les fichiers dans `docs/`
+4. Tester localement
+5. Commit et Push
+6. Créer une Pull Request
+
+## 📚 Ressources
+
+- [Docusaurus Documentation](https://docusaurus.io/docs)
+- [Markdown Guide](https://docusaurus.io/docs/markdown-features)
+- [i18n Tutorial](https://docusaurus.io/docs/i18n/tutorial)
+
+## 🐛 Problèmes connus
+
+### Port déjà utilisé
+
+```bash
+npm start -- --port 3001
+```
+
+### Erreurs de cache
+
+```bash
+npm run clear
+npm start
+```
+
+## 📄 Licence
+
+Partie du projet R-Engine.
 
 ---
 
-**Generated on**: 2025-10-20  
 **Version**: 1.0.0  
-**Author**: R-Engine Team
+**Construit avec**: [Docusaurus](https://docusaurus.io/)  
+**Date**: Octobre 2025

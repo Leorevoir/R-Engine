@@ -17,6 +17,7 @@ namespace ecs {
  */
 template<typename T>
 struct Res {
+        using ResourceType = T;
         const T *ptr = nullptr;
 };
 
@@ -27,6 +28,7 @@ struct Res {
  */
 template<typename T>
 struct ResMut {
+        using ResourceType = T;
         T *ptr = nullptr;
 };
 

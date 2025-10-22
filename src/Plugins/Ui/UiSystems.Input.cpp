@@ -237,7 +237,8 @@ static void handle_hover_events(r::ecs::Entity hovered, r::ecs::ResMut<UiInputSt
  * @param state UI input state to update
  * @param events UI events to generate for click interactions
  */
-static void handle_click_events(r::ecs::Entity hovered, r::ecs::ResMut<UiInputState> state, r::ecs::ResMut<UiEvents> events)
+static void handle_click_events(r::ecs::Entity hovered, r::ecs::ResMut<UiInputState> state, r::ecs::ResMut<UiEvents> events,
+    r::ecs::EventWriter<r::UiClick> click_writer)
 {
     if (state.ptr->mouse_left_pressed && hovered != r::ecs::NULL_ENTITY) {
         if (state.ptr->focused != r::ecs::NULL_ENTITY && state.ptr->focused != hovered) {
@@ -253,15 +254,14 @@ static void handle_click_events(r::ecs::Entity hovered, r::ecs::ResMut<UiInputSt
         if (state.ptr->active != r::ecs::NULL_ENTITY) {
             events.ptr->released.push_back(state.ptr->active);
             if (hovered == state.ptr->active) {
-                events.ptr->clicked.push_back(state.ptr->active);
-                state.ptr->last_clicked = state.ptr->active;
+                click_writer.send({state.ptr->active});
             }
         }
         state.ptr->active = r::ecs::NULL_ENTITY;
     }
 }
 
-void pointer_system(r::ecs::ResMut<UiInputState> state, r::ecs::ResMut<UiEvents> events,
+void pointer_system(r::ecs::ResMut<UiInputState> state, r::ecs::ResMut<UiEvents> events, r::ecs::EventWriter<r::UiClick> click_writer,
     r::ecs::Query<r::ecs::Ref<r::UiNode>, r::ecs::Ref<r::ComputedLayout>, r::ecs::Optional<r::Style>, r::ecs::Optional<r::Visibility>,
         r::ecs::Optional<r::ecs::Parent>, r::ecs::Optional<r::UiButton>, r::ecs::Optional<r::UiScroll>, r::ecs::Optional<r::ecs::Children>>
         q) noexcept
@@ -274,11 +274,11 @@ void pointer_system(r::ecs::ResMut<UiInputState> state, r::ecs::ResMut<UiEvents>
     auto hovered = find_hovered_entity(items, data, mx, my);
 
     handle_hover_events(hovered, state, events);
-    handle_click_events(hovered, state, events);
+    handle_click_events(hovered, state, events, click_writer);
 }
 
 void keyboard_nav_system(r::ecs::Res<r::UserInput> input, r::ecs::ResMut<r::UiInputState> state, r::ecs::ResMut<r::UiEvents> events,
-    r::ecs::Query<r::ecs::Optional<r::UiButton>, r::ecs::Optional<r::Visibility>> q)
+    r::ecs::EventWriter<r::UiClick> click_writer, r::ecs::Query<r::ecs::Optional<r::UiButton>, r::ecs::Optional<r::Visibility>> q)
 {
     std::vector<u32> order;
     order.reserve(64);
@@ -323,7 +323,7 @@ void keyboard_nav_system(r::ecs::Res<r::UserInput> input, r::ecs::ResMut<r::UiIn
         state.ptr->active = h;
         events.ptr->pressed.push_back(h);
         events.ptr->released.push_back(h);
-        events.ptr->clicked.push_back(h);
+        click_writer.send({h});
     }
 }
 

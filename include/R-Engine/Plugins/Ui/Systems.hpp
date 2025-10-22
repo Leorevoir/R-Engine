@@ -2,6 +2,7 @@
 
 #include <R-Engine/Core/Backend.hpp>
 #include <R-Engine/ECS/Command.hpp>
+#include <R-Engine/ECS/Event.hpp>
 #include <R-Engine/ECS/Query.hpp>
 #include <R-Engine/Plugins/InputPlugin.hpp>
 #include <R-Engine/Plugins/RenderPlugin.hpp>
@@ -38,7 +39,7 @@ void clear_click_state_system(r::ecs::ResMut<UiInputState> input) noexcept;
 /**
  * @brief Pointer hit-test and interactions (hover/pressed/released/clicked/focus).
  */
-void pointer_system(r::ecs::ResMut<UiInputState> state, r::ecs::ResMut<UiEvents> events,
+void pointer_system(r::ecs::ResMut<UiInputState> state, r::ecs::ResMut<UiEvents> events, r::ecs::EventWriter<r::UiClick> click_writer,
     r::ecs::Query<r::ecs::Ref<r::UiNode>, r::ecs::Ref<r::ComputedLayout>, r::ecs::Optional<r::Style>, r::ecs::Optional<r::Visibility>,
         r::ecs::Optional<r::ecs::Parent>, r::ecs::Optional<r::UiButton>, r::ecs::Optional<r::UiScroll>, r::ecs::Optional<r::ecs::Children>>
         q) noexcept;
@@ -47,7 +48,7 @@ void pointer_system(r::ecs::ResMut<UiInputState> state, r::ecs::ResMut<UiEvents>
  * @brief Keyboard navigation (TAB/Shift+TAB focus, Enter/Space activate).
  */
 void keyboard_nav_system(r::ecs::Res<r::UserInput> input, r::ecs::ResMut<r::UiInputState> state, r::ecs::ResMut<r::UiEvents> events,
-    r::ecs::Query<r::ecs::Optional<r::UiButton>, r::ecs::Optional<r::Visibility>> q);
+    r::ecs::EventWriter<r::UiClick> click_writer, r::ecs::Query<r::ecs::Optional<r::UiButton>, r::ecs::Optional<r::Visibility>> q);
 
 /**
  * @brief Apply mouse wheel input to the closest scrollable ancestor under the pointer.

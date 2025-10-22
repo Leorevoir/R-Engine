@@ -73,8 +73,8 @@ void r::Application::_main_loop()
             _run_schedule(Schedule::FIXED_UPDATE);
             _apply_commands();
         }
-        _run_schedule(Schedule::EVENT_CLEANUP);
         _render_routine();
+        _run_schedule(Schedule::EVENT_CLEANUP);
     }
 }
 

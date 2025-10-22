@@ -2,11 +2,13 @@
 
 #include <R-Engine/Maths/Vec.hpp>
 
-struct Player final {
+namespace r {
+
+struct Controllable {
 };
-struct Controllable final {
+struct Player {
 };
-struct Velocity final : r::Vec3f {
+struct Velocity final : public Vec3f {
     public:
         constexpr Velocity operator=(const r::Vec3f &other) noexcept
         {
@@ -16,3 +18,5 @@ struct Velocity final : r::Vec3f {
             return *this;
         }
 };
+
+}// namespace r

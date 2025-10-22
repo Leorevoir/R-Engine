@@ -1,6 +1,6 @@
 #include "Startup.hpp"
 
-void r::startup_load_inputs(ecs::ResMut<InputMap> input_map) noexcept
+void r::startup_system_create_inputs(ecs::ResMut<InputMap> input_map) noexcept
 {
     auto *map = input_map.ptr;
 

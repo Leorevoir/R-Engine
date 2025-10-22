@@ -3,7 +3,7 @@
 
 // clang-format off
 
-void r::startup_load_player(ecs::Commands &commands) noexcept
+void r::startup_system_create_player(ecs::Commands &commands) noexcept
 {
     commands.spawn(
         Controllable{},

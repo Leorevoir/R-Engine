@@ -18,7 +18,7 @@ const config: Config = {
   url: 'https://Leorevoir.github.io',
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
-  baseUrl: process.env.NODE_ENV === 'development' ? '/' : '/R-Engine/',
+  baseUrl: '/',
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
@@ -27,15 +27,20 @@ const config: Config = {
 
   onBrokenLinks: 'warn',
 
-  // Internationalization - Support for English only (French disabled temporarily)
+  // Internationalization - Support for English and French
   i18n: {
     defaultLocale: 'en',
-    locales: ['en'],
+    locales: ['en', 'fr'],
     localeConfigs: {
       en: {
         label: 'English',
         direction: 'ltr',
         htmlLang: 'en-US',
+      },
+      fr: {
+        label: 'Français',
+        direction: 'ltr',
+        htmlLang: 'fr-FR',
       },
     },
   },
@@ -79,6 +84,10 @@ const config: Config = {
           label: 'Documentation',
         },
         {
+          type: 'localeDropdown',
+          position: 'right',
+        },
+        {
           href: 'https://github.com/Leorevoir/R-Engine',
           label: 'GitHub',
           position: 'right',
@@ -93,7 +102,7 @@ const config: Config = {
           items: [
             {
               label: 'Introduction',
-              to: '/intro',
+              to: '/',
             },
             {
               label: 'Core Concepts',

@@ -1,7 +1,7 @@
 #pragma once
 
 template<class F, class... Args>
-auto r::ThreadPool::enqueue(F &&f, Args &&...args) -> std::future<typename std::invoke_result<F, Args...>::type>
+auto r::core::ThreadPool::enqueue(F &&f, Args &&...args) -> std::future<typename std::invoke_result<F, Args...>::type>
 {
     using return_type = typename std::invoke_result<F, Args...>::type;
 

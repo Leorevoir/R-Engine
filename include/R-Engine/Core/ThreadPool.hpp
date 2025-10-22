@@ -12,6 +12,8 @@
 
 namespace r {
 
+namespace core {
+
 /**
 * @brief Thread pool for managing and executing tasks concurrently.
 */
@@ -31,6 +33,8 @@ class R_ENGINE_API ThreadPool
         std::condition_variable _condition;
         bool _stop;
 };
+
+}// namespace core
 
 }// namespace r
 

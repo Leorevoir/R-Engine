@@ -141,37 +141,39 @@ static void build_main_menu(r::ecs::Commands &cmds, r::ecs::Res<r::WindowPluginC
         });
 }
 
-static void menu_logic_system(r::ecs::Res<r::UiInputState> input_state, 
+static void menu_logic_system(r::ecs::EventReader<r::UiClick> click_reader, 
     r::ecs::Query<r::ecs::Ref<MenuButton>> buttons)
 {
-    const auto clicked = input_state.ptr->last_clicked;
-    if (clicked == r::ecs::NULL_ENTITY) {
-        return;
-    }
-
-    MenuAction action = MenuAction::None;
-    for (auto it = buttons.begin(); it != buttons.end(); ++it) {
-        auto [btn] = *it;
-        if (static_cast<r::ecs::Entity>(it.entity()) == clicked && btn.ptr) {
-            action = btn.ptr->action;
-            break;
+    for (const auto &click : click_reader) {
+        const auto clicked = click.entity;
+        if (clicked == r::ecs::NULL_ENTITY) {
+            continue;
         }
-    }
 
-    switch (action) {
-        case MenuAction::Play:
-            // TODO: Démarrer le jeu
-            r::Logger::info("Play button clicked!");
-            break;
-        case MenuAction::Options:
-            // TODO: Ouvrir les options
-            r::Logger::info("Options button clicked!");
-            break;
-        case MenuAction::Quit:
-            r::Application::quit.store(true, std::memory_order_relaxed);
-            break;
-        default:
-            break;
+        MenuAction action = MenuAction::None;
+        for (auto it = buttons.begin(); it != buttons.end(); ++it) {
+            auto [btn] = *it;
+            if (static_cast<r::ecs::Entity>(it.entity()) == clicked && btn.ptr) {
+                action = btn.ptr->action;
+                break;
+            }
+        }
+
+        switch (action) {
+            case MenuAction::Play:
+                // TODO: Démarrer le jeu
+                r::Logger::info("Play button clicked!");
+                break;
+            case MenuAction::Options:
+                // TODO: Ouvrir les options
+                r::Logger::info("Options button clicked!");
+                break;
+            case MenuAction::Quit:
+                r::Application::quit.store(true, std::memory_order_relaxed);
+                break;
+            default:
+                break;
+        }
     }
 }
 
@@ -187,6 +189,5 @@ int main()
         .add_systems<setup_theme, build_main_menu>(r::Schedule::STARTUP)
         .add_systems<menu_logic_system>(r::Schedule::UPDATE)
         .after<r::ui::pointer_system>()
-        .before<r::ui::clear_click_state_system>()
         .run();
 }

@@ -15,8 +15,13 @@ r::Shaders::~Shaders() noexcept
 
 r::ShaderHandle r::Shaders::load(const std::string &vs_path, const std::string &fs_path)
 {
-    if (!path::exists(vs_path) || !path::exists(fs_path)) {
-        Logger::error("Shader file not found.");
+    if (!path::exists(vs_path)) {
+        Logger::error("Shader file not found: " + vs_path);
+        return ShaderInvalidHandle;
+    }
+
+    if (!path::exists(fs_path)) {
+        Logger::error("Shader file not found: " + fs_path);
         return ShaderInvalidHandle;
     }
 

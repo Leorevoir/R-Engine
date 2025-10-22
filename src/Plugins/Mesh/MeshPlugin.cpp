@@ -78,8 +78,7 @@ static inline const r::Transform3d mesh_plugin_get_transform3d(
 static inline ::Shader mesh_plugin_apply_shader(
     ::Model *model,
     const r::ecs::Optional<r::Material3d> &material_opt,
-    r::ecs::Res<r::Shaders> &shaders,
-    const f32 dt
+    r::ecs::Res<r::Shaders> &shaders
 ) noexcept
 {
     ::Shader original_shader = {};
@@ -92,12 +91,6 @@ static inline ::Shader mesh_plugin_apply_shader(
             model->materials[0].shader = *custom_shader;
 
             mesh_plugin_send_uniforms(*custom_shader, *material_opt.ptr);
-
-            const i32 time_loc = GetShaderLocation(*custom_shader, "globalTime");
-
-            if (time_loc != -1) {
-                mesh_plugin_set_shader_value(*custom_shader, time_loc, dt);
-            }
         }
     }
 
@@ -118,8 +111,8 @@ static inline void mesh_plugin_restore_shader(::Model *model, const ::Shader &or
 static void mesh_render_system(
     MeshRenderQuery query,
     r::ecs::ResMut<r::Meshes> meshes,
-    r::ecs::Res<r::Shaders> shaders,
-    r::ecs::Res<r::core::FrameTime> time) noexcept
+    r::ecs::Res<r::Shaders> shaders
+) noexcept
 {
     for (const auto &[mesh_comp, transform, material_opt] : query) {
         const r::Transform3d final_transform = mesh_plugin_get_transform3d(*transform.ptr, *mesh_comp.ptr);
@@ -129,7 +122,7 @@ static void mesh_render_system(
             continue;
         }
 
-        const auto &original_shader = mesh_plugin_apply_shader(model, material_opt, shaders, time.ptr->global_time);
+        const auto &original_shader = mesh_plugin_apply_shader(model, material_opt, shaders);
 
         meshes.ptr->draw(mesh_comp.ptr->id, final_transform.position, final_transform.rotation, final_transform.scale,
             mesh_comp.ptr->color);

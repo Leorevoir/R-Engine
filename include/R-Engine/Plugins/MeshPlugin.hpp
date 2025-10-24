@@ -5,7 +5,9 @@
 #include <R-Engine/Plugins/Plugin.hpp>
 #include <R-Engine/Types.hpp>
 
+#include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace r {
 

@@ -11,7 +11,7 @@
 
 namespace r::ui {
 
-static constexpr inline ::Camera _to_raylib(const r::Camera3d &c) noexcept
+[[maybe_unused]] static constexpr inline ::Camera _to_raylib(const r::Camera3d &c) noexcept
 {
     return {
         .position = {c.position.x, c.position.y, c.position.z},
@@ -52,7 +52,7 @@ static constexpr auto PLACEHOLDER_THRESHOLD = std::numeric_limits<r::ecs::Entity
 /**
  * @brief Computes the intersection of two rectangles
  * @param x X coordinate of first rectangle
- * @param y Y coordinate of first rectangle  
+ * @param y Y coordinate of first rectangle
  * @param w Width of first rectangle
  * @param h Height of first rectangle
  * @param x2 X coordinate of second rectangle

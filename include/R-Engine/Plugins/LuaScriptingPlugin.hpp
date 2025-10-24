@@ -81,7 +81,7 @@ class R_ENGINE_API LuaScriptingPlugin final : public Plugin
         void build(Application &app) noexcept override;
 
     private:
-        LuaScriptingPluginConfig _config;
+        [[maybe_unused]] LuaScriptingPluginConfig _config;
 };
 
 }// namespace r

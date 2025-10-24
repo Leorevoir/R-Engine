@@ -10,30 +10,19 @@ Les hiérarchies permettent des relations parent-enfant entre entités, utiles p
 
 ### Avec des Enfants
 
-Créer des entités avec des enfants :
+La manière principale de créer des hiérarchies est de créer des entités avec des enfants :
 
 ```cpp
 void setup(Commands& commands) {
     // Créer le parent
     Entity parent = commands.spawn(Transform{}).id();
-    
+
     // Ajouter des enfants
     commands.entity(parent).with_children([&](Commands& child_commands) {
         child_commands.spawn(Transform{});
         child_commands.spawn(Transform{});
     });
 }
-```
-
-### Définir le Parent
-
-Définir le parent après la création :
-
-```cpp
-Entity parent = commands.spawn(Transform{}).id();
-Entity child = commands.spawn(Transform{}).id();
-
-commands.entity(child).set_parent(parent);
 ```
 
 ## Parcourir les Hierarchies
@@ -91,12 +80,11 @@ void transform_propagation(
 
 ## Retirer de la Hiérarchie
 
-```cpp
-// Retirer l'enfant du parent
-commands.entity(child).remove_parent();
+La destruction d'une entité détruira également tous ses descendants de manière récursive.
 
-// Détruire avec les enfants
-commands.entity(parent).despawn_recursive();
+```cpp
+// Ceci détruira le parent et tous ses enfants.
+commands.entity(parent).despawn();
 ```
 
 ## Bonnes Pratiques

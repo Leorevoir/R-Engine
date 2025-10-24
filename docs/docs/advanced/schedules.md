@@ -12,11 +12,10 @@ R-Engine provides several default schedules:
 
 ```cpp
 Schedule::STARTUP    // Run once at application start
-Schedule::PRE_UPDATE // Before main update
-Schedule::UPDATE     // Main game loop
-Schedule::POST_UPDATE // After update
+Schedule::UPDATE     // Main game loop (every frame)
 Schedule::RENDER_2D  // 2D rendering
 Schedule::RENDER_3D  // 3D rendering
+// ... and more
 ```
 
 ## Using Schedules
@@ -31,19 +30,22 @@ Application{}
 
 ## System Ordering
 
-### Within Schedule
+### Within a Schedule
+
+Use `.after<System>()` and `.before<System>()` to define explicit dependencies.
 
 ```cpp
-.add_systems<input, movement, collision>(Schedule::UPDATE)
-.after<input>()  // movement runs after input
+// Guarantees movement_system runs after input_system in the same frame
+app.add_systems<movement_system>(Schedule::UPDATE)
+   .after<input_system>();
 ```
 
 ### Between Schedules
 
-Schedules run in predefined order:
+Schedules run in a predefined order each frame:
 
 ```
-STARTUP (once)
+(STARTUP once)
 ↓
 PRE_UPDATE
 ↓
@@ -51,35 +53,35 @@ UPDATE
 ↓
 POST_UPDATE
 ↓
-RENDER_2D
-↓
 RENDER_3D
+↓
+RENDER_2D
 ↓
 (repeat from PRE_UPDATE)
 ```
 
 ## System Sets
 
-Group related systems:
+Group related systems to manage their dependencies collectively. A set is defined using a simple, empty `struct`.
 
 ```cpp
-enum class GameSets {
-    Input,
-    Logic,
-    Physics,
-    Rendering
-};
+// Define sets as simple types
+struct InputSet {};
+struct LogicSet {};
+struct PhysicsSet {};
 
-.add_systems<input_system>(Schedule::UPDATE)
-.in_set(GameSets::Input)
+// Add systems to sets
+app.add_systems<keyboard_input, mouse_input>(Schedule::UPDATE)
+   .in_set<InputSet>();
 
-.add_systems<movement, ai>(Schedule::UPDATE)
-.in_set(GameSets::Logic)
-.after_set(GameSets::Input)
+// Order entire sets relative to each other
+app.add_systems<player_movement, enemy_ai>(Schedule::UPDATE)
+   .in_set<LogicSet>()
+   .after<InputSet>();
 
-.add_systems<physics>(Schedule::UPDATE)
-.in_set(GameSets::Physics)
-.after_set(GameSets::Logic)
+app.add_systems<collision_detection>(Schedule::UPDATE)
+   .in_set<PhysicsSet>()
+   .after<LogicSet>();
 ```
 
 ## Best Practices
@@ -88,27 +90,33 @@ enum class GameSets {
 
 ```cpp
 // Input phase
-.add_systems<keyboard_input, mouse_input>(Schedule::PRE_UPDATE)
+app.add_systems<keyboard_input, mouse_input>(Schedule::PRE_UPDATE);
 
 // Logic phase
-.add_systems<player_movement, enemy_ai>(Schedule::UPDATE)
+app.add_systems<player_movement, enemy_ai>(Schedule::UPDATE);
 
 // Physics phase
-.add_systems<collision, physics>(Schedule::POST_UPDATE)
+app.add_systems<collision, physics_solver>(Schedule::POST_UPDATE);
 
 // Render phase
-.add_systems<sprite_render, ui_render>(Schedule::RENDER_2D)
+app.add_systems<sprite_render, ui_render>(Schedule::RENDER_2D);
 ```
 
 ### Use Sets for Dependencies
 
 ```cpp
-.add_systems<game_logic_a, game_logic_b>(Schedule::UPDATE)
-.in_set(GameSets::Logic)
+struct LogicSet {};
+struct RenderingSet {};
 
-.add_systems<render_a, render_b>(Schedule::RENDER_2D)
-.in_set(GameSets::Rendering)
-.after_set(GameSets::Logic)
+app.add_systems<game_logic_a, game_logic_b>(Schedule::UPDATE)
+   .in_set<LogicSet>();
+
+app.add_systems<render_a, render_b>(Schedule::RENDER_2D)
+   .in_set<RenderingSet>();
+
+// To ensure rendering happens after logic, you can configure the sets
+app.configure_sets<RenderingSet>(Schedule::UPDATE)
+   .after<LogicSet>();
 ```
 
 ## Example: Complete Setup
@@ -117,10 +125,10 @@ enum class GameSets {
 Application{}
     // Startup
     .add_systems<load_assets, spawn_player>(Schedule::STARTUP)
-    
+
     // Pre-update: Input
     .add_systems<input_system>(Schedule::PRE_UPDATE)
-    
+
     // Update: Game Logic
     .add_systems<
         player_movement,
@@ -128,10 +136,10 @@ Application{}
         projectile_movement
     >(Schedule::UPDATE)
     .after<input_system>()
-    
+
     // Post-update: Physics
-    .add_systems<collision_detection, physics>(Schedule::POST_UPDATE)
-    
+    .add_systems<collision_detection, physics_solver>(Schedule::POST_UPDATE)
+
     // Render
     .add_systems<render_sprites, render_ui>(Schedule::RENDER_2D)
     .run();

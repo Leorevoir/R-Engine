@@ -10,30 +10,19 @@ Hierarchies enable parent-child relationships between entities, useful for trans
 
 ### With Children
 
-Spawn entities with children:
+The primary way to create hierarchies is to spawn entities with children:
 
 ```cpp
 void setup(Commands& commands) {
     // Create parent
     Entity parent = commands.spawn(Transform{}).id();
-    
+
     // Add children
     commands.entity(parent).with_children([&](Commands& child_commands) {
         child_commands.spawn(Transform{});
         child_commands.spawn(Transform{});
     });
 }
-```
-
-### Set Parent
-
-Set parent after creation:
-
-```cpp
-Entity parent = commands.spawn(Transform{}).id();
-Entity child = commands.spawn(Transform{}).id();
-
-commands.entity(child).set_parent(parent);
 ```
 
 ## Traversing Hierarchies
@@ -91,12 +80,11 @@ void transform_propagation(
 
 ## Removing from Hierarchy
 
-```cpp
-// Remove child from parent
-commands.entity(child).remove_parent();
+Despawning an entity will also despawn all of its descendants recursively.
 
-// Despawn with children
-commands.entity(parent).despawn_recursive();
+```cpp
+// This will despawn the parent and all its children.
+commands.entity(parent).despawn();
 ```
 
 ## Best Practices

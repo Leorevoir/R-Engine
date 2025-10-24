@@ -2,9 +2,9 @@
 sidebar_position: 4
 ---
 
-# Scheduldes
+# Schedules
 
-Les schedules organisent l'exécution des systèmes en phases distinctes.
+Les schedules (ou planificateurs) organisent l'exécution des systèmes en phases distinctes.
 
 ## Schedules Intégrés
 
@@ -12,11 +12,10 @@ R-Engine fournit plusieurs schedules par défaut :
 
 ```cpp
 Schedule::STARTUP    // Exécuté une fois au démarrage de l'application
-Schedule::PRE_UPDATE // Avant la mise à jour principale
-Schedule::UPDATE     // Boucle de jeu principale
-Schedule::POST_UPDATE // Après la mise à jour
+Schedule::UPDATE     // Boucle de jeu principale (chaque frame)
 Schedule::RENDER_2D  // Rendu 2D
 Schedule::RENDER_3D  // Rendu 3D
+// ... et plus
 ```
 
 ## Utiliser les Schedules
@@ -33,17 +32,20 @@ Application{}
 
 ### Au Sein d'un Schedule
 
+Utilisez `.after<System>()` et `.before<System>()` pour définir des dépendances explicites.
+
 ```cpp
-.add_systems<input, movement, collision>(Schedule::UPDATE)
-.after<input>()  // movement s'exécute après input
+// Garantit que movement_system s'exécute après input_system dans la même frame
+app.add_systems<movement_system>(Schedule::UPDATE)
+   .after<input_system>();
 ```
 
 ### Entre les Schedules
 
-Les schedules s'exécutent dans un ordre prédéfini :
+Les schedules s'exécutent dans un ordre prédéfini à chaque frame :
 
 ```
-STARTUP (une fois)
+(STARTUP une fois)
 ↓
 PRE_UPDATE
 ↓
@@ -51,35 +53,35 @@ UPDATE
 ↓
 POST_UPDATE
 ↓
-RENDER_2D
-↓
 RENDER_3D
+↓
+RENDER_2D
 ↓
 (répéter depuis PRE_UPDATE)
 ```
 
 ## System Sets
 
-Groupez les systèmes liés :
+Groupez les systèmes liés pour gérer leurs dépendances collectivement. Un "set" est défini à l'aide d'une simple `struct` vide.
 
 ```cpp
-enum class GameSets {
-    Input,
-    Logic,
-    Physics,
-    Rendering
-};
+// Définir les sets comme des types simples
+struct InputSet {};
+struct LogicSet {};
+struct PhysicsSet {};
 
-.add_systems<input_system>(Schedule::UPDATE)
-.in_set(GameSets::Input)
+// Ajouter les systèmes aux sets
+app.add_systems<keyboard_input, mouse_input>(Schedule::UPDATE)
+   .in_set<InputSet>();
 
-.add_systems<movement, ai>(Schedule::UPDATE)
-.in_set(GameSets::Logic)
-.after_set(GameSets::Input)
+// Ordonner les sets les uns par rapport aux autres
+app.add_systems<player_movement, enemy_ai>(Schedule::UPDATE)
+   .in_set<LogicSet>()
+   .after<InputSet>();
 
-.add_systems<physics>(Schedule::UPDATE)
-.in_set(GameSets::Physics)
-.after_set(GameSets::Logic)
+app.add_systems<collision_detection>(Schedule::UPDATE)
+   .in_set<PhysicsSet>()
+   .after<LogicSet>();
 ```
 
 ## Bonnes Pratiques
@@ -88,27 +90,33 @@ enum class GameSets {
 
 ```cpp
 // Phase d'entrée
-.add_systems<keyboard_input, mouse_input>(Schedule::PRE_UPDATE)
+app.add_systems<keyboard_input, mouse_input>(Schedule::PRE_UPDATE);
 
 // Phase de logique
-.add_systems<player_movement, enemy_ai>(Schedule::UPDATE)
+app.add_systems<player_movement, enemy_ai>(Schedule::UPDATE);
 
 // Phase de physique
-.add_systems<collision, physics>(Schedule::POST_UPDATE)
+app.add_systems<collision, physics_solver>(Schedule::POST_UPDATE);
 
 // Phase de rendu
-.add_systems<sprite_render, ui_render>(Schedule::RENDER_2D)
+app.add_systems<sprite_render, ui_render>(Schedule::RENDER_2D);
 ```
 
 ### Utiliser les Sets pour les Dépendances
 
 ```cpp
-.add_systems<game_logic_a, game_logic_b>(Schedule::UPDATE)
-.in_set(GameSets::Logic)
+struct LogicSet {};
+struct RenderingSet {};
 
-.add_systems<render_a, render_b>(Schedule::RENDER_2D)
-.in_set(GameSets::Rendering)
-.after_set(GameSets::Logic)
+app.add_systems<game_logic_a, game_logic_b>(Schedule::UPDATE)
+   .in_set<LogicSet>();
+
+app.add_systems<render_a, render_b>(Schedule::RENDER_2D)
+   .in_set<RenderingSet>();
+
+// Pour s'assurer que le rendu a lieu après la logique, vous pouvez configurer les sets
+app.configure_sets<RenderingSet>(Schedule::UPDATE)
+   .after<LogicSet>();
 ```
 
 ## Exemple : Configuration Complète
@@ -117,10 +125,10 @@ enum class GameSets {
 Application{}
     // Démarrage
     .add_systems<load_assets, spawn_player>(Schedule::STARTUP)
-    
+
     // Pré-mise à jour : Entrées
     .add_systems<input_system>(Schedule::PRE_UPDATE)
-    
+
     // Mise à jour : Logique de Jeu
     .add_systems<
         player_movement,
@@ -128,10 +136,10 @@ Application{}
         projectile_movement
     >(Schedule::UPDATE)
     .after<input_system>()
-    
+
     // Post-mise à jour : Physique
-    .add_systems<collision_detection, physics>(Schedule::POST_UPDATE)
-    
+    .add_systems<collision_detection, physics_solver>(Schedule::POST_UPDATE)
+
     // Rendu
     .add_systems<render_sprites, render_ui>(Schedule::RENDER_2D)
     .run();

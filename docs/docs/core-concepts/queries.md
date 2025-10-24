@@ -57,10 +57,19 @@ Query<Mut<Position>, With<Player>, Without<Frozen>> query
 
 ## Getting Entity ID
 
+You can get the ID of the current entity from the query's iterator.
+
 ```cpp
-void system(Query<Entity, Ref<Position>> query) {
-    for (auto [entity, pos] : query) {
-        std::cout << "Entity " << entity.id() << "\n";
+void system(Query<Ref<Position>> query) {
+    for (auto it = query.begin(); it != query.end(); ++it) {
+        // Get the component tuple
+        auto [pos] = *it;
+        
+        // Get the entity ID from the iterator
+        Entity entity = it.entity();
+        
+        std::cout << "Entity " << entity 
+                  << " is at (" << pos->x << ", " << pos->y << ")\n";
     }
 }
 ```

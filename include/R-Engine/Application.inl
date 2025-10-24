@@ -7,7 +7,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace r::detail {
+namespace r::details {
 template<typename>
 struct is_on_enter : std::false_type {
 };
@@ -28,7 +28,36 @@ struct is_on_transition : std::false_type {
 template<typename T>
 struct is_on_transition<OnTransition<T>> : std::true_type {
 };
-}// namespace r::detail
+
+/**
+* @brief system to update events after they have been processed
+*/
+template<typename EventT>
+static inline void __update_events_system(ecs::ResMut<ecs::Events<EventT>> events)
+{
+    if (events.ptr) {
+        events.ptr->update();
+    }
+}
+
+/**
+ * @brief Schedules that can only run on the main thread
+ * @details These schedules often involve operations that are not thread-safe,
+ * especially the startup and shutdown phases, as well as rendering-related tasks.
+ */
+static constexpr inline std::array<r::Schedule, 9> g_main_thread_only_schedules = {{
+    r::Schedule::PRE_STARTUP,
+    r::Schedule::STARTUP,
+    r::Schedule::BEFORE_RENDER_2D,
+    r::Schedule::RENDER_2D,
+    r::Schedule::AFTER_RENDER_2D,
+    r::Schedule::BEFORE_RENDER_3D,
+    r::Schedule::RENDER_3D,
+    r::Schedule::AFTER_RENDER_3D,
+    r::Schedule::SHUTDOWN,
+}};
+
+}// namespace r::details
 
 /**
 * Application Implementation
@@ -92,40 +121,24 @@ r::Application &r::Application::add_plugins(Plugins &&...plugins) noexcept
     return *this;
 }
 
-namespace r {
-
-namespace detail {
-
-/**
-* @brief system to update events after they have been processed
-*/
-template<typename EventT>
-static void __update_events_system(ecs::ResMut<ecs::Events<EventT>> events)
-{
-    if (events.ptr) {
-        events.ptr->update();
-    }
-}
-
-}// namespace detail
-
-}// namespace r
-
 template<typename... EventTs>
 r::Application &r::Application::add_events() noexcept
 {
     (insert_resource(ecs::Events<EventTs>{}), ...);
-    (add_systems<detail::__update_events_system<EventTs>>(Schedule::EVENT_CLEANUP), ...);
+    (add_systems<details::__update_events_system<EventTs>>(Schedule::EVENT_CLEANUP), ...);
 
     return *this;
 }
 
 template<auto SystemFunc>
-r::sys::SystemTypeId r::Application::_add_one_system_to_graph(sys::ScheduleGraph &graph) noexcept
+r::sys::SystemTypeId r::Application::_add_one_system_to_graph(sys::ScheduleGraph &graph, bool main_thread_only) noexcept
 {
     sys::SystemTypeId id(typeid(sys::SystemTag<SystemFunc>));
-
     sys::SystemNode node(id.name(), id, &system_invoker_template<SystemFunc>, {});
+
+    node.is_main_thread_only = main_thread_only;
+
+    ecs::get_system_access<SystemFunc>(node.component_access, node.resource_access);
 
     if (graph.nodes.count(id)) {
         node.dependencies = std::move(graph.nodes.at(id).dependencies);
@@ -207,26 +220,44 @@ r::sys::SystemConfigurator r::Application::add_systems(ScheduleLabel label)
 
     if constexpr (std::is_same_v<ScheduleLabel, Schedule>) {
         target_graph = &_systems[label];
-    } else if constexpr (detail::is_on_enter<ScheduleLabel>::value) {
+
+    } else if constexpr (details::is_on_enter<ScheduleLabel>::value) {
         using StateEnum = typename ScheduleLabel::EnumType;
         auto &state_schedules = _states[typeid(StateEnum)];
         target_graph = &state_schedules.on_enter[static_cast<usize>(label.state)];
-    } else if constexpr (detail::is_on_exit<ScheduleLabel>::value) {
+
+    } else if constexpr (details::is_on_exit<ScheduleLabel>::value) {
         using StateEnum = typename ScheduleLabel::EnumType;
         auto &state_schedules = _states[typeid(StateEnum)];
         target_graph = &state_schedules.on_exit[static_cast<usize>(label.state)];
-    } else if constexpr (detail::is_on_transition<ScheduleLabel>::value) {
+
+    } else if constexpr (details::is_on_transition<ScheduleLabel>::value) {
         using StateEnum = typename ScheduleLabel::EnumType;
         auto &state_schedules = _states[typeid(StateEnum)];
         typename sys::States::Transition transition{static_cast<usize>(label.from), static_cast<usize>(label.to)};
         target_graph = &state_schedules.on_transition[transition];
+
     } else {
         static_assert(always_false<ScheduleLabel>,
             "Unsupported type provided to add_systems. Must be a Schedule enum or a state event like OnEnter{...}.");
     }
 
+    /**
+    * @info Check if the schedule is main-thread-only
+    */
+
+    bool main_thread_only = false;
+    if constexpr (std::is_same_v<ScheduleLabel, Schedule>) {
+        for (const auto &s : details::g_main_thread_only_schedules) {
+            if (label == s) {
+                main_thread_only = true;
+                break;
+            }
+        }
+    }
+
     std::vector<sys::SystemTypeId> ids;
-    (ids.push_back(_add_one_system_to_graph<SystemFuncs>(*target_graph)), ...);
+    (ids.push_back(_add_one_system_to_graph<SystemFuncs>(*target_graph, main_thread_only)), ...);
 
     return sys::SystemConfigurator(this, target_graph, std::move(ids));
 }

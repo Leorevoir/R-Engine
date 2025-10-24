@@ -1,5 +1,7 @@
 #pragma once
 
+#include "R-Engine/Core/ThreadPool.hpp"
+#include "R-Engine/Systems/Scheduler.hpp"
 #include <R-Engine/R-EngineExport.hpp>
 
 #include <R-Engine/Core/Clock.hpp>
@@ -150,19 +152,10 @@ class R_ENGINE_API Application final
         void _shutdown();
         void _render_routine();
         void _run_schedule(const Schedule sched);
-        void _sort_schedule(sys::ScheduleGraph &graph);
-        void _execute_systems(const sys::ScheduleGraph &graph);
         void _apply_commands();
         void _apply_state_transitions();
         void _run_transition_schedule(sys::ScheduleGraph &graph);
-
-        /* Graph sorting helpers */
-        void _build_adjacency_list(const sys::ScheduleGraph &graph, std::unordered_map<sys::SystemTypeId, i32> &in_degree,
-            std::unordered_map<sys::SystemTypeId, std::vector<sys::SystemTypeId>> &adj_list);
-        void _apply_set_ordering_constraints(const sys::ScheduleGraph &graph, std::unordered_map<sys::SystemTypeId, i32> &in_degree,
-            std::unordered_map<sys::SystemTypeId, std::vector<sys::SystemTypeId>> &adj_list);
-        void _perform_topological_sort(sys::ScheduleGraph &graph, std::unordered_map<sys::SystemTypeId, i32> &in_degree,
-            const std::unordered_map<sys::SystemTypeId, std::vector<sys::SystemTypeId>> &adj_list);
+        void _prepare_thread_local_buffers(size_t count);
 
         template<typename SetType>
         sys::SystemSetId _ensure_set_exists(sys::ScheduleGraph &graph) noexcept;
@@ -171,12 +164,16 @@ class R_ENGINE_API Application final
         void _add_one_plugin(PluginT &&plugin) noexcept;
 
         template<auto SystemFunc>
-        sys::SystemTypeId _add_one_system_to_graph(sys::ScheduleGraph &graph) noexcept;
+        sys::SystemTypeId _add_one_system_to_graph(sys::ScheduleGraph &graph, bool main_thread_only) noexcept;
 
         core::Clock _clock = {};
         ScheduleMap _systems = {};
         ecs::Scene _scene = {};
         ecs::CommandBuffer _command_buffer = {};
+
+        std::unique_ptr<core::ThreadPool> _thread_pool;
+        std::unique_ptr<core::Scheduler> _scheduler;
+        std::vector<std::unique_ptr<ecs::CommandBuffer>> _thread_local_command_buffers;
 };
 
 }// namespace r

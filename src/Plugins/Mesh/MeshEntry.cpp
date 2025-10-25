@@ -45,8 +45,5 @@ r::MeshEntry::~MeshEntry()
         return;
     }
     UnloadModel(model);
-    if (cpu_mesh.vertexCount > 0) {
-        UnloadMesh(cpu_mesh);
-    }
     valid = false;
 }

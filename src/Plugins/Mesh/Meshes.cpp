@@ -2,6 +2,7 @@
 #include <R-Engine/Maths/Quaternion.hpp>
 #include <R-Engine/Plugins/MeshPlugin.hpp>
 #include <cmath>
+#include <utility>
 
 /**
  * public Meshes
@@ -97,14 +98,12 @@ void r::Meshes::process_pending_meshes()
         std::visit(
             [&](auto &&arg) {
                 using T = std::decay_t<decltype(arg)>;
-                if constexpr (std::is_same_v<T, ::Mesh>) {
-                    /* The Model will point to the data inside cpu_mesh,
-                    so we need to store it here. */
-                    entry.cpu_mesh = arg;
-                    entry.model = LoadModelFromMesh(entry.cpu_mesh);
-                } else if constexpr (std::is_same_v<T, ::Model>) {
+                if constexpr (std::is_same_v<T, ::Model>) {
                     /* The model is self-contained. */
                     entry.model = std::move(arg);
+                } else if constexpr (std::is_same_v<T, ::Mesh>) {
+                    entry.model = LoadModelFromMesh(arg);
+                    entry.cpu_mesh = std::move(arg);
                 } else if constexpr (std::is_same_v<T, ModelIdentifier>) {
                     /* The model is loaded from path here, on the main thread. */
                     entry.model = LoadModel(arg.path.c_str());

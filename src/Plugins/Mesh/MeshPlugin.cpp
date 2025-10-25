@@ -27,27 +27,6 @@ using MeshRenderQuery = r::ecs::Query<
  * Helpers
  */
 
-static inline void mesh_plugin_set_shader_value(const ::Shader &shader, const r::ShaderLocation loc, const std::any &data_any) noexcept
-{
-    if (data_any.type() == typeid(r::Vec4f)) {
-        const auto value = std::any_cast<r::Vec4f>(data_any);
-
-        SetShaderValue(shader, loc, &value, SHADER_UNIFORM_VEC4);
-    } else if (data_any.type() == typeid(f32)) {
-        const auto value = std::any_cast<f32>(data_any);
-
-        SetShaderValue(shader, loc, &value, SHADER_UNIFORM_FLOAT);
-    } else if (data_any.type() == typeid(i32)) {
-        const auto value = std::any_cast<i32>(data_any);
-
-        SetShaderValue(shader, loc, &value, SHADER_UNIFORM_INT);
-    } else if (data_any.type() == typeid(r::Vec3f)) {
-        const auto value = std::any_cast<r::Vec3f>(data_any);
-
-        SetShaderValue(shader, loc, &value, SHADER_UNIFORM_VEC3);
-    }
-}
-
 static inline void mesh_plugin_send_uniforms(const ::Shader &shader, const r::Material3d &material) noexcept
 {
     for (const auto &[name, data_any] : material.get_uniforms()) {
@@ -57,7 +36,7 @@ static inline void mesh_plugin_send_uniforms(const ::Shader &shader, const r::Ma
             continue;
         }
 
-        mesh_plugin_set_shader_value(shader, loc, data_any);
+        r::Shaders::set_value(shader, loc, data_any);
     }
 }
 

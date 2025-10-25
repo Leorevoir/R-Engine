@@ -255,6 +255,13 @@ r::sys::SystemConfigurator r::Application::add_systems(ScheduleLabel label)
                 break;
             }
         }
+    } else if constexpr (details::is_on_enter<ScheduleLabel>::value ||
+                         details::is_on_exit<ScheduleLabel>::value ||
+                         details::is_on_transition<ScheduleLabel>::value)
+    {
+        /* State transitions often involve setup/teardown of graphics resources
+        and should be run on the main thread. */
+        main_thread_only = true;
     }
 
     std::vector<sys::SystemTypeId> ids;

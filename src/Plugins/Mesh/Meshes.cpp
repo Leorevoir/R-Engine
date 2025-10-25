@@ -103,7 +103,6 @@ void r::Meshes::process_pending_meshes()
                     entry.model = std::move(arg);
                 } else if constexpr (std::is_same_v<T, ::Mesh>) {
                     entry.model = LoadModelFromMesh(arg);
-                    entry.cpu_mesh = std::move(arg);
                 } else if constexpr (std::is_same_v<T, ModelIdentifier>) {
                     /* The model is loaded from path here, on the main thread. */
                     entry.model = LoadModel(arg.path.c_str());

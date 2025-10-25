@@ -83,7 +83,6 @@ struct R_ENGINE_API MeshEntry {
         MeshEntry(MeshEntry &&other) noexcept;
         MeshEntry &operator=(MeshEntry &&other) noexcept;
 
-        ::Mesh cpu_mesh{};
         ::Model model{};
         const ::Texture2D *texture{};
         std::string texture_path{};

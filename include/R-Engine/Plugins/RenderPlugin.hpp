@@ -24,14 +24,20 @@ struct R_ENGINE_API Camera3d {
 
 // clang-format on
 
+struct R_ENGINE_API RenderPluginConfig {
+    public:
+        Color clear_color = {255, 255, 255, 255};
+};
+
 class R_ENGINE_API RenderPlugin final : public Plugin
 {
     public:
-        RenderPlugin(const r::Camera3d &camera = Camera3d());
+        RenderPlugin(const RenderPluginConfig = {}, const r::Camera3d &camera = Camera3d());
         void build(Application &app) override;
 
     private:
-        Camera3d camera;
+        Camera3d _camera;
+        RenderPluginConfig _config;
 };
 
 }// namespace r

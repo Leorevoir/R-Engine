@@ -10,6 +10,7 @@
 #include <R-Engine/ECS/Query.hpp>
 #include <R-Engine/Plugins/InputPlugin.hpp>
 #include <R-Engine/Plugins/MeshPlugin.hpp>
+#include <utility>
 
 // clang-format off
 
@@ -43,7 +44,7 @@ static void spawn_player_system(r::ecs::Commands& commands, r::ecs::ResMut<r::Me
 {
     ::Model player_model_data = r::Mesh3d::Glb("examples/r_type/assets/R-9.glb");
     if (player_model_data.meshCount > 0) {
-        r::MeshHandle player_mesh_handle = meshes.ptr->add(player_model_data);
+        r::MeshHandle player_mesh_handle = meshes.ptr->add(std::move(player_model_data));
 
         if (player_mesh_handle != r::MeshInvalidHandle) {
             commands.spawn(
@@ -101,7 +102,7 @@ static void player_input_system(
             cooldown.ptr->timer = PLAYER_FIRE_RATE;
             ::Mesh bullet_mesh_data = r::Mesh3d::Circle(0.5f, 16);
             if (bullet_mesh_data.vertexCount > 0 && bullet_mesh_data.vertices) {
-                r::MeshHandle bullet_mesh_handle = meshes.ptr->add(bullet_mesh_data);
+                r::MeshHandle bullet_mesh_handle = meshes.ptr->add(std::move(bullet_mesh_data));
                 if (bullet_mesh_handle != r::MeshInvalidHandle) {
                     commands.spawn(
                         PlayerBullet{},

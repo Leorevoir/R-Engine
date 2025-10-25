@@ -7,66 +7,126 @@
  * public Meshes
  */
 
+r::Meshes::Meshes(Meshes &&other) noexcept
+{
+    std::lock_guard<std::mutex> lock(other._pending_meshes_mutex);
+    _pending_meshes = std::move(other._pending_meshes);
+    _data = std::move(other._data);
+    _free_handles = std::move(other._free_handles);
+    _texture_manager = std::move(other._texture_manager);
+}
+
+r::Meshes &r::Meshes::operator=(Meshes &&other) noexcept
+{
+    if (this != &other) {
+        std::scoped_lock lock(_pending_meshes_mutex, other._pending_meshes_mutex);
+        _pending_meshes = std::move(other._pending_meshes);
+        _data = std::move(other._data);
+        _free_handles = std::move(other._free_handles);
+        _texture_manager = std::move(other._texture_manager);
+    }
+    return *this;
+}
+
 r::Meshes::~Meshes()
 {
     _data.clear();
 }
 
-r::MeshHandle r::Meshes::add(const ::Mesh &mesh, const std::string &texture_path)
+r::MeshHandle r::Meshes::add(::Mesh &&mesh, const std::string &texture_path)
 {
     if (mesh.vertexCount == 0 || !mesh.vertices) {
-        Logger::error("Failed to bind mesh: invalid mesh data");
+        Logger::error("Failed to queue mesh for creation: invalid mesh data");
+        UnloadMesh(mesh);
         return MeshInvalidHandle;
     }
 
     const r::MeshHandle handle = _allocate();
-    auto &entry = _data[handle];
-
-    entry.cpu_mesh = mesh;
-    entry.model = LoadModelFromMesh(entry.cpu_mesh);
-
-    /** @debug initialize cpu_mesh to avoid double free on destruction */
-    entry.cpu_mesh.vertexCount = 0;
-    entry.cpu_mesh.triangleCount = 0;
-    entry.cpu_mesh.vertices = nullptr;
-    entry.cpu_mesh.normals = nullptr;
-    entry.cpu_mesh.texcoords = nullptr;
-    entry.cpu_mesh.indices = nullptr;
-
-    /** @debug load texture if a path is provided using the Texture Manager */
-    if (!texture_path.empty()) {
-        _add_texture(entry, (texture_path));
+    {
+        std::lock_guard<std::mutex> lock(_pending_meshes_mutex);
+        _pending_meshes.push_back({std::move(mesh), texture_path, handle});
     }
-
-    entry.valid = true;
-    Logger::debug("bind mesh with handle: " + std::to_string(handle));
     return handle;
 }
 
-r::MeshHandle r::Meshes::add(const ::Model &model, const std::string &texture_path)
+r::MeshHandle r::Meshes::add(::Model &&model, const std::string &texture_path)
 {
-    if (model.meshCount == 0) {
-        Logger::error("Failed to bind model: invalid model data: mesh count is zero");
-        return MeshInvalidHandle;
-    }
-    if (!model.meshes) {
-        Logger::error("Failed to bind model: invalid model data: meshes pointer is null");
+    if (model.meshCount == 0 || !model.meshes) {
+        Logger::error("Failed to queue model for creation: invalid model data");
+        UnloadModel(model);
         return MeshInvalidHandle;
     }
 
     const r::MeshHandle handle = _allocate();
-    auto &entry = _data[handle];
+    {
+        std::lock_guard<std::mutex> lock(_pending_meshes_mutex);
+        _pending_meshes.push_back({std::move(model), texture_path, handle});
+    }
+    return handle;
+}
 
-    entry.model = model;
-
-    /** @debug load texture if a path is provided using the Texture Manager */
-    if (!texture_path.empty()) {
-        _add_texture(entry, (texture_path));
+r::MeshHandle r::Meshes::add(const std::string &model_path, const std::string &texture_path)
+{
+    if (model_path.empty()) {
+        Logger::error("Failed to queue model for creation: model path is empty.");
+        return MeshInvalidHandle;
     }
 
-    entry.valid = true;
-    Logger::debug("bind model with handle: " + std::to_string(handle));
+    const r::MeshHandle handle = _allocate();
+    {
+        std::lock_guard<std::mutex> lock(_pending_meshes_mutex);
+        _pending_meshes.push_back({ModelIdentifier{model_path}, texture_path, handle});
+    }
     return handle;
+}
+
+void r::Meshes::process_pending_meshes()
+{
+    std::vector<MeshCreationCommand> commands_to_process;
+    {
+        std::lock_guard<std::mutex> lock(_pending_meshes_mutex);
+        if (_pending_meshes.empty()) {
+            return;
+        }
+        commands_to_process.swap(_pending_meshes);
+    }
+
+    for (auto &command : commands_to_process) {
+        auto &entry = _data[command.handle];
+
+        std::visit(
+            [&](auto &&arg) {
+                using T = std::decay_t<decltype(arg)>;
+                if constexpr (std::is_same_v<T, ::Mesh>) {
+                    /* The Model will point to the data inside cpu_mesh,
+                    so we need to store it here. */
+                    entry.cpu_mesh = arg;
+                    entry.model = LoadModelFromMesh(entry.cpu_mesh);
+                } else if constexpr (std::is_same_v<T, ::Model>) {
+                    /* The model is self-contained. */
+                    entry.model = std::move(arg);
+                } else if constexpr (std::is_same_v<T, ModelIdentifier>) {
+                    /* The model is loaded from path here, on the main thread. */
+                    entry.model = LoadModel(arg.path.c_str());
+                    if (entry.model.meshCount == 0) {
+                        Logger::error("Failed to process deferred model from path: " + arg.path);
+                        /* The entry will remain invalid by default. */
+                        return;
+                    }
+                }
+            },
+            std::move(command.data));
+
+        if (entry.model.meshCount > 0) {
+            if (!command.texture_path.empty()) {
+                _add_texture(entry, command.texture_path);
+            }
+            entry.valid = true;
+            Logger::debug("Processed deferred mesh for handle: " + std::to_string(command.handle));
+        } else {
+            entry.valid = false;
+        }
+    }
 }
 
 ::Model *r::Meshes::get(const r::MeshHandle handle) noexcept
@@ -146,18 +206,9 @@ void r::Meshes::remove(const r::MeshHandle handle)
         return;
     }
 
-    UnloadModel(e.model);
-    if (e.cpu_mesh.vertexCount > 0) {
-        UnloadMesh(e.cpu_mesh);
-    }
-
-    if (!e.texture_path.empty()) {
-        _texture_manager.unload(e.texture_path);
-        e.texture_path.clear();
-        e.texture = nullptr;
-    }
-
+    e = MeshEntry{};
     e.valid = false;
+    _free_handles.push_back(handle);
 }
 /**
 * private
@@ -165,8 +216,16 @@ void r::Meshes::remove(const r::MeshHandle handle)
 
 r::MeshHandle r::Meshes::_allocate()
 {
+    if (!_free_handles.empty()) {
+        MeshHandle handle = _free_handles.back();
+        _free_handles.pop_back();
+        _data[handle] = MeshEntry{};
+        return handle;
+    }
+
+    MeshHandle handle = static_cast<MeshHandle>(_data.size());
     _data.emplace_back();
-    return static_cast<r::MeshHandle>(_data.size() - 1);
+    return handle;
 }
 
 void r::Meshes::_add_texture(MeshEntry &entry, const std::string &texture_path)

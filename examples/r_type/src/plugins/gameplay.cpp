@@ -12,6 +12,7 @@
 #include <R-Engine/ECS/RunConditions.hpp>
 #include <R-Engine/Plugins/MeshPlugin.hpp>
 #include <cstdlib>
+#include <utility>
 
 // clang-format off
 
@@ -54,7 +55,7 @@ static void enemy_spawner_system(r::ecs::Commands& commands, r::ecs::ResMut<Enem
 
         ::Model enemy_model_data = r::Mesh3d::Glb("examples/r_type/assets/enemy.glb");
         if (enemy_model_data.meshCount > 0) {
-            r::MeshHandle enemy_mesh_handle = meshes.ptr->add(enemy_model_data);
+            r::MeshHandle enemy_mesh_handle = meshes.ptr->add(std::move(enemy_model_data));
             if (enemy_mesh_handle != r::MeshInvalidHandle) {
                 commands.spawn(
                     Enemy{},
@@ -94,7 +95,7 @@ static void boss_spawn_system(r::ecs::Commands& commands, r::ecs::ResMut<r::Mesh
     ::Model boss_model_data = r::Mesh3d::Glb("examples/r_type/assets/Boss.glb");
 
     if (boss_model_data.meshCount > 0) {
-        r::MeshHandle boss_mesh_handle = meshes.ptr->add(boss_model_data);
+        r::MeshHandle boss_mesh_handle = meshes.ptr->add(std::move(boss_model_data));
         if (boss_mesh_handle != r::MeshInvalidHandle) {
             commands.spawn(
                 Boss{},
@@ -137,7 +138,7 @@ static void boss_ai_system(
 
             ::Mesh bullet_mesh_data = r::Mesh3d::Circle(2.0f, 16);
             if (bullet_mesh_data.vertexCount > 0 && bullet_mesh_data.vertices) {
-                r::MeshHandle bullet_mesh_handle = meshes.ptr->add(bullet_mesh_data);
+                r::MeshHandle bullet_mesh_handle = meshes.ptr->add(std::move(bullet_mesh_data));
                 if (bullet_mesh_handle != r::MeshInvalidHandle) {
                     commands.spawn(
                         EnemyBullet{},

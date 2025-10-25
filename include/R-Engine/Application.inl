@@ -206,6 +206,7 @@ r::Application &r::Application::init_state(T initial_state) noexcept
         }
 
         _apply_commands();
+        _run_schedule(Schedule::EVENT_CLEANUP);
 
         next_state_res->next.reset();
     };

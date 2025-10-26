@@ -278,4 +278,18 @@ constexpr T Vec<N, T>::length() const noexcept
     return std::sqrt(dot(*this));
 }
 
+template<usize N, typename T>
+    requires concepts::Vec<N, T>
+constexpr T Vec<N, T>::length_sq() const noexcept
+{
+    return dot(*this);
+}
+
+template<usize N, typename T>
+    requires concepts::Vec<N, T>
+constexpr Vec<N, T> Vec<N, T>::lerp(const Vec<N, T> &other, T t) const noexcept
+{
+    return (*this) + (other - (*this)) * t;
+}
+
 }// namespace r

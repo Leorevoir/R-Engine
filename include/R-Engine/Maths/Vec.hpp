@@ -113,6 +113,8 @@ struct Vec : public details::VecData<N, T> {
         constexpr Vec<N, T> cross(const Vec<N, T> &other) const noexcept;
         constexpr Vec<N, T> normalize() const noexcept;
         constexpr T length() const noexcept;
+        constexpr T length_sq() const noexcept;
+        constexpr Vec<N, T> lerp(const Vec<N, T> &other, T t) const noexcept;
 };
 
 template<typename T>

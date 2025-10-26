@@ -108,6 +108,14 @@ static inline void mesh_plugin_restore_shader(::Model *model, const ::Shader &or
  * System
  */
 
+static void process_mesh_creation_system(
+    r::ecs::ResMut<r::Meshes> meshes
+) noexcept
+{
+    /* Process any meshes that were created on worker threads. */
+    meshes.ptr->process_pending_meshes();
+}
+
 static void mesh_render_system(
     MeshRenderQuery query,
     r::ecs::ResMut<r::Meshes> meshes,
@@ -149,7 +157,10 @@ r::MeshPlugin::~MeshPlugin()
 
 void r::MeshPlugin::build(r::Application &app)
 {
-    app.insert_resource(Meshes{}).insert_resource(Shaders{}).add_systems<mesh_render_system>(Schedule::RENDER_3D);
+    app.insert_resource(Meshes{})
+        .insert_resource(Shaders{})
+        .add_systems<process_mesh_creation_system>(Schedule::BEFORE_RENDER_3D)
+        .add_systems<mesh_render_system>(Schedule::RENDER_3D);
 
     Logger::debug("MeshPlugin built");
 }

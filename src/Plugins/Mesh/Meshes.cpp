@@ -102,6 +102,7 @@ void r::Meshes::process_pending_meshes()
                     /* The model is self-contained. */
                     entry.model = std::move(arg);
                 } else if constexpr (std::is_same_v<T, ::Mesh>) {
+                    UploadMesh(&arg, false);
                     entry.model = LoadModelFromMesh(arg);
                 } else if constexpr (std::is_same_v<T, ModelIdentifier>) {
                     /* The model is loaded from path here, on the main thread. */

@@ -11,12 +11,45 @@
 #include <R-Engine/Plugins/UiPlugin.hpp>
 #include <R-Engine/UI/Button.hpp>
 #include <R-Engine/UI/Components.hpp>
+#include <R-Engine/UI/Events.hpp>
 #include <R-Engine/UI/Image.hpp>
 #include <R-Engine/UI/InputState.hpp>
 #include <R-Engine/UI/Text.hpp>
 #include <R-Engine/UI/Theme.hpp>
 
 // clang-format off
+
+/* ================================================================================= */
+/* Menu Systems :: Helpers */
+/* ================================================================================= */
+
+static void create_menu_title(r::ecs::ChildBuilder& parent)
+{
+    parent.spawn(
+        r::UiNode{},
+        r::Style{.height = 200.f, .width_pct = 100.f, .background = r::Color{0, 0, 0, 1}, .margin = 0.f, .padding = 0.f},
+        r::UiImage{.path = "examples/minimal-r_type/assets/textures/r-type_title.png", .tint = r::Color{255, 255, 255, 255}, .keep_aspect = true},
+        r::ComputedLayout{},
+        r::Visibility::Visible
+    );
+}
+
+static void create_menu_button(r::ecs::ChildBuilder& parent, MenuButton::Action action, const std::string& text)
+{
+    parent.spawn(
+        r::UiNode{}, r::UiButton{}, MenuButton{action},
+        r::Style{
+            .width = 280.f,
+            .height = 45.f,
+            .direction = r::LayoutDirection::Column,
+            .justify = r::JustifyContent::Center,
+            .align = r::AlignItems::Center
+        },
+        r::UiText{.content = text, .font_size = 22, .font_path = {}},
+        r::ComputedLayout{},
+        r::Visibility::Visible
+    );
+}
 
 /* ================================================================================= */
 /* Menu Systems */
@@ -43,10 +76,7 @@ static void setup_ui_theme(r::ecs::ResMut<r::UiTheme> theme, r::ecs::ResMut<r::U
 
 static void build_main_menu(r::ecs::Commands& cmds)
 {
-    r::Logger::info("Building main menu");
-
-    /* Root menu container */
-    auto menu_root = cmds.spawn(
+    cmds.spawn(
         MenuRoot{}, r::UiNode{},
         r::Style{
             .width_pct = 100.f,
@@ -61,62 +91,11 @@ static void build_main_menu(r::ecs::Commands& cmds)
         },
         r::ComputedLayout{},
         r::Visibility::Visible
-    );
-
-    menu_root.with_children([&](r::ecs::ChildBuilder& parent) {
-        /* R-Type Title Logo */
-        parent.spawn(
-            r::UiNode{},
-            r::Style{.height = 200.f, .width_pct = 100.f, .background = r::Color{0, 0, 0, 1}, .margin = 0.f, .padding = 0.f},
-            r::UiImage{.path = "examples/r_type/assets/r-type_title.png", .tint = r::Color{255, 255, 255, 255}, .keep_aspect = true},
-            r::ComputedLayout{},
-            r::Visibility::Visible
-        );
-
-        /* Play Button */
-        parent.spawn(
-            r::UiNode{}, r::UiButton{}, MenuButton{MenuButton::Action::Play},
-            r::Style{
-                .width = 280.f,
-                .height = 45.f,
-                .direction = r::LayoutDirection::Column,
-                .justify = r::JustifyContent::Center,
-                .align = r::AlignItems::Center
-            },
-            r::UiText{.content = std::string("Play"), .font_size = 22},
-            r::ComputedLayout{},
-            r::Visibility::Visible
-        );
-
-        /* Options Button */
-        parent.spawn(
-            r::UiNode{}, r::UiButton{}, MenuButton{MenuButton::Action::Options},
-            r::Style{
-                .width = 280.f,
-                .height = 45.f,
-                .direction = r::LayoutDirection::Column,
-                .justify = r::JustifyContent::Center,
-                .align = r::AlignItems::Center
-            },
-            r::UiText{.content = std::string("Options"), .font_size = 22},
-            r::ComputedLayout{},
-            r::Visibility::Visible
-        );
-
-        /* Quit Button */
-        parent.spawn(
-            r::UiNode{}, r::UiButton{}, MenuButton{MenuButton::Action::Quit},
-            r::Style{
-                .width = 280.f,
-                .height = 45.f,
-                .direction = r::LayoutDirection::Column,
-                .justify = r::JustifyContent::Center,
-                .align = r::AlignItems::Center
-            },
-            r::UiText{.content = std::string("Quit"), .font_size = 22},
-            r::ComputedLayout{},
-            r::Visibility::Visible
-        );
+    ).with_children([&](r::ecs::ChildBuilder& parent) {
+        create_menu_title(parent);
+        create_menu_button(parent, MenuButton::Action::Play, "Play");
+        create_menu_button(parent, MenuButton::Action::Options, "Options");
+        create_menu_button(parent, MenuButton::Action::Quit, "Quit");
     });
 }
 
@@ -124,7 +103,7 @@ static void menu_button_handler(r::ecs::EventReader<r::UiClick> click_reader, r:
                                 r::ecs::ResMut<r::NextState<GameState>> next_state)
 {
     for (const auto &click : click_reader) {
-        const auto clicked_entity = click.entity;
+        const r::ecs::Entity clicked_entity = click.entity;
         if (clicked_entity == r::ecs::NULL_ENTITY) {
             continue;
         }
@@ -132,7 +111,7 @@ static void menu_button_handler(r::ecs::EventReader<r::UiClick> click_reader, r:
         MenuButton::Action action = MenuButton::Action::None;
         for (auto it = buttons.begin(); it != buttons.end(); ++it) {
             auto [btn] = *it;
-            if (static_cast<r::ecs::Entity>(it.entity()) == clicked_entity && btn.ptr) {
+            if (it.entity() == clicked_entity && btn.ptr) {
                 action = btn.ptr->action;
                 break;
             }
@@ -158,7 +137,6 @@ static void menu_button_handler(r::ecs::EventReader<r::UiClick> click_reader, r:
 
 static void cleanup_menu(r::ecs::Commands& cmds, r::ecs::Query<r::ecs::Ref<MenuRoot>> menu_entities)
 {
-    r::Logger::info("Cleaning up menu");
     for (auto it = menu_entities.begin(); it != menu_entities.end(); ++it) {
         cmds.despawn(it.entity());
     }
@@ -166,8 +144,6 @@ static void cleanup_menu(r::ecs::Commands& cmds, r::ecs::Query<r::ecs::Ref<MenuR
 
 static void show_game_over_ui(r::ecs::Commands& cmds)
 {
-    r::Logger::info("Showing Game Over UI");
-
     cmds.spawn(
         GameOverRoot{}, r::UiNode{},
         r::Style{
@@ -183,16 +159,15 @@ static void show_game_over_ui(r::ecs::Commands& cmds)
         r::Visibility::Visible
     )
     .with_children([&](r::ecs::ChildBuilder& parent) {
-        parent.spawn(r::UiNode{}, r::UiText{.content = "GAME OVER", .font_size = 80, .color = {255, 50, 50, 255}},
+        parent.spawn(r::UiNode{}, r::UiText{.content = "GAME OVER", .font_size = 80, .color = {255, 50, 50, 255}, .font_path = {}},
                      r::Style{.height = 90.f}, r::ComputedLayout{}, r::Visibility::Visible);
-        parent.spawn(r::UiNode{}, r::UiText{.content = "Press ENTER to Restart", .font_size = 30, .color = {200, 200, 200, 255}},
+        parent.spawn(r::UiNode{}, r::UiText{.content = "Press ENTER to Restart", .font_size = 30, .color = {200, 200, 200, 255}, .font_path = {}},
                      r::Style{.height = 40.f}, r::ComputedLayout{}, r::Visibility::Visible);
     });
 }
 
 static void cleanup_game_over_ui(r::ecs::Commands& cmds, r::ecs::Query<r::ecs::With<GameOverRoot>> query)
 {
-    r::Logger::info("Cleaning up Game Over UI");
     for (auto it = query.begin(); it != query.end(); ++it) {
         cmds.despawn(it.entity());
     }
@@ -219,8 +194,7 @@ void MenuPlugin::build(r::Application& app)
         /* Main Menu State */
         .add_systems<build_main_menu>(r::OnEnter{GameState::MainMenu})
         .add_systems<menu_button_handler>(r::Schedule::UPDATE)
-        .run_if<r::run_conditions::in_state<GameState::MainMenu>>()
-        .after<r::ui::pointer_system>()
+            .run_if<r::run_conditions::on_event<r::UiClick>>()
         .add_systems<cleanup_menu>(r::OnExit{GameState::MainMenu})
 
         /* GameOver State */

@@ -23,10 +23,10 @@
 static void setup_core_game_system(r::ecs::ResMut<r::Camera3d> camera, r::ecs::ResMut<r::InputMap> input_map)
 {
     /* --- Configure Camera --- */
-    /* Position the camera for a side-scrolling view on the XZ plane (Z is up). */
-    camera.ptr->position = {0.0f, -20.0f, 0.0f};
+    /* Position the camera for a side-scrolling view on the XY plane (Z is depth). */
+    camera.ptr->position = {0.0f, 0.0f, 20.0f};
     camera.ptr->target = {0.0f, 0.0f, 0.0f};
-    camera.ptr->up = {0.0f, 0.0f, 1.0f};
+    camera.ptr->up = {0.0f, 1.0f, 0.0f};
     camera.ptr->fovy = 45.0f;
 
     /* --- Bind Inputs --- */
@@ -57,7 +57,7 @@ int main()
         .add_plugins(CombatPlugin{})
 
         /* Add the remaining core setup */
-        .add_systems<setup_core_game_system>(r::OnEnter{GameState::EnemiesBattle})
+        .add_systems<setup_core_game_system>(r::Schedule::STARTUP)
 
         .run();
 

@@ -20,13 +20,18 @@ enum class PostProcessingState {
     Sobel           = 9,
     Bloom           = 10,
     Blur            = 11,
-    Disabled        = 12,
+    Contrast        = 12,
+    Protanopia      = 13,
+    Deuteranopia    = 14,
+    Tritanopia      = 15,
+    Disabled        = 16,
 };
 
 // clang-format on
 
 struct R_ENGINE_API PostProcessingPluginConfig final {
         PostProcessingState state = PostProcessingState::Disabled;
+        f32 contrast_level = 1.5f;
 };
 
 class R_ENGINE_API PostProcessingPlugin final : public Plugin

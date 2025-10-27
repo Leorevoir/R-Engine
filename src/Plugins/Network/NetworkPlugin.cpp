@@ -1,6 +1,3 @@
-
-
-
 #include "NetworkPlugin.hpp"
 #include <vector>
 #include <cstdint>

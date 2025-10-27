@@ -78,10 +78,11 @@ static void lua_scripting_plugin_script_loader(ScriptQuery query, LuaScriptsRes 
 * public
 */
 
-r::LuaScriptingPlugin::LuaScriptingPlugin(const LuaScriptingPluginConfig &config) noexcept : _config(config)
-{
-    /* __ctor__ */
-}
+// INFO: keep commented out until configuration options are added
+// r::LuaScriptingPlugin::LuaScriptingPlugin(const LuaScriptingPluginConfig &config) noexcept : _config(config)
+// {
+//     /* __ctor__ */
+// }
 
 void r::LuaScriptingPlugin::build(Application &app) noexcept
 {

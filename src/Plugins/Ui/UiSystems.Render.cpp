@@ -11,17 +11,6 @@
 
 namespace r::ui {
 
-static constexpr inline ::Camera _to_raylib(const r::Camera3d &c) noexcept
-{
-    return {
-        .position = {c.position.x, c.position.y, c.position.z},
-        .target = {c.target.x, c.target.y, c.target.z},
-        .up = {c.up.x, c.up.y, c.up.z},
-        .fovy = c.fovy,
-        .projection = static_cast<int>(c.projection),
-    };
-}
-
 /// @brief Item to be rendered with associated metadata
 struct DrawItem {
         int z;                          ///< Z-index for depth sorting

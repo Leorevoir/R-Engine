@@ -1,11 +1,16 @@
 #pragma once
 
 #include <R-Engine/ECS/Resolver.hpp>
+#include <R-Engine/Systems/ScheduleGraph.hpp>
 #include <R-Engine/Types.hpp>
 
 #include <tuple>
 #include <type_traits>
 #include <utility>
+
+#ifndef R_UNUSED
+    #define R_UNUSED __attribute__((unused))
+#endif /* R_UNUSED */
 
 namespace r {
 
@@ -71,6 +76,9 @@ struct function_traits<R (*)(Args...) noexcept> {
         using args = std::tuple<std::remove_cvref_t<Args>...>;
 };
 
+template<auto Func>
+void get_system_access(sys::Access &comp_access, sys::Access &res_access);
+
 /**
  * @brief invoke a system function with arguments resolved from the ECS Scene.
  *
@@ -80,14 +88,8 @@ struct function_traits<R (*)(Args...) noexcept> {
  * @param func system function type
  * @param args argument types (deduced from function_traits)
  */
-
 template<typename Func, typename... Args, size_t... I>
-static inline auto call_with_resolved(Func &&f, Scene &scene, CommandBuffer &cmd, std::tuple<Args...>, std::index_sequence<I...>)
-{
-    Resolver resolver(&scene, &cmd);
-    auto resolved_args = std::make_tuple(resolver.resolve(std::type_identity<Args>{})...);
-    return std::apply(std::forward<Func>(f), resolved_args);
-}
+static inline auto call_with_resolved(Func &&f, Scene &scene, CommandBuffer &cmd, std::tuple<Args...>, std::index_sequence<I...>);
 
 /**
  * @brief invoke a predicate function with arguments resolved from the ECS Scene.
@@ -100,12 +102,7 @@ static inline auto call_with_resolved(Func &&f, Scene &scene, CommandBuffer &cmd
  */
 template<typename Predicate, typename... Args, size_t... I>
 static inline bool call_predicate_with_resolved(Predicate &&p, Scene &scene, CommandBuffer &cmd, std::tuple<Args...>,
-    std::index_sequence<I...>)
-{
-    Resolver resolver(&scene, &cmd);
-    auto resolved_args = std::make_tuple(resolver.resolve(std::type_identity<Args>{})...);
-    return static_cast<bool>(std::apply(std::forward<Predicate>(p), resolved_args));
-}
+    std::index_sequence<I...>);
 
 /**
  * @brief entry point to execute a system.
@@ -118,16 +115,15 @@ static inline bool call_predicate_with_resolved(Predicate &&p, Scene &scene, Com
  *
  * without manually wiring dependencies.
  */
-
 template<typename Func>
-static inline void run_system(Func &&f, Scene &scene, CommandBuffer &cmd)
-{
-    using traits = function_traits<std::remove_cvref_t<Func>>;
-    using args = typename traits::args;
-
-    call_with_resolved(std::forward<Func>(f), scene, cmd, args{}, std::make_index_sequence<std::tuple_size_v<args>>{});
-}
+static inline void run_system(Func &&f, Scene &scene, CommandBuffer &cmd);
 
 }// namespace ecs
 
 }// namespace r
+
+#include "Inline/System.inl"
+
+#ifdef R_UNUSED
+    #undef R_UNUSED
+#endif /* R_UNUSED */

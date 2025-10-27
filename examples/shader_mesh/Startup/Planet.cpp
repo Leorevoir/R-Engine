@@ -1,6 +1,3 @@
-#include "R-Engine/Plugins/RenderPlugin.hpp"
-#include "Startup.hpp"
-
 #include "Startup.hpp"
 
 // clang-format off

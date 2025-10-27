@@ -2,7 +2,6 @@
 #include <R-Engine/Core/Filepath.hpp>
 #include <R-Engine/Core/Logger.hpp>
 #include <R-Engine/Maths/Quaternion.hpp>
-
 #include <R-Engine/Plugins/MeshPlugin.hpp>
 
 /**

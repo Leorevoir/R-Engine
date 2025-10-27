@@ -16,25 +16,117 @@ namespace {
 /**
  * globals
  */
+// clang-format off
 
 static struct {
         const std::string name;
         ::Shader shader;
         i32 resolutionLoc;
         i32 timeLoc;
+        i32 contrastLoc;
 } g_shaders[] = {
-    {.name = r::path::get("assets/shaders/postprocessing/grayscale.frag"), .shader = {}, .resolutionLoc = -1, .timeLoc = -1},
-    {.name = r::path::get("assets/shaders/postprocessing/posterization.frag"), .shader = {}, .resolutionLoc = -1, .timeLoc = -1},
-    {.name = r::path::get("assets/shaders/postprocessing/dream_vision.frag"), .shader = {}, .resolutionLoc = -1, .timeLoc = -1},
-    {.name = r::path::get("assets/shaders/postprocessing/pixelizer.frag"), .shader = {}, .resolutionLoc = -1, .timeLoc = -1},
-    {.name = r::path::get("assets/shaders/postprocessing/cross_hatching.frag"), .shader = {}, .resolutionLoc = -1, .timeLoc = -1},
-    {.name = r::path::get("assets/shaders/postprocessing/cross_stitching.frag"), .shader = {}, .resolutionLoc = -1, .timeLoc = -1},
-    {.name = r::path::get("assets/shaders/postprocessing/predator.frag"), .shader = {}, .resolutionLoc = -1, .timeLoc = -1},
-    {.name = r::path::get("assets/shaders/postprocessing/scanlines.frag"), .shader = {}, .resolutionLoc = -1, .timeLoc = -1},
-    {.name = r::path::get("assets/shaders/postprocessing/fisheye.frag"), .shader = {}, .resolutionLoc = -1, .timeLoc = -1},
-    {.name = r::path::get("assets/shaders/postprocessing/sobel.frag"), .shader = {}, .resolutionLoc = -1, .timeLoc = -1},
-    {.name = r::path::get("assets/shaders/postprocessing/bloom.frag"), .shader = {}, .resolutionLoc = -1, .timeLoc = -1},
-    {.name = r::path::get("assets/shaders/postprocessing/blur.frag"), .shader = {}, .resolutionLoc = -1, .timeLoc = -1},
+    {
+        .name = r::path::get("assets/shaders/postprocessing/grayscale.frag"),
+        .shader = {},
+        .resolutionLoc = -1,
+        .timeLoc = -1,
+        .contrastLoc = -1},
+    {
+        .name = r::path::get("assets/shaders/postprocessing/posterization.frag"),
+        .shader = {},
+        .resolutionLoc = -1,
+        .timeLoc = -1,
+        .contrastLoc = -1},
+    {
+        .name = r::path::get("assets/shaders/postprocessing/dream_vision.frag"),
+        .shader = {},
+        .resolutionLoc = -1,
+        .timeLoc = -1,
+        .contrastLoc = -1},
+    {
+        .name = r::path::get("assets/shaders/postprocessing/pixelizer.frag"),
+        .shader = {},
+        .resolutionLoc = -1,
+        .timeLoc = -1,
+        .contrastLoc = -1},
+    {
+        .name = r::path::get("assets/shaders/postprocessing/cross_hatching.frag"),
+        .shader = {},
+        .resolutionLoc = -1,
+        .timeLoc = -1,
+        .contrastLoc = -1},
+    {
+        .name = r::path::get("assets/shaders/postprocessing/cross_stitching.frag"),
+        .shader = {},
+        .resolutionLoc = -1,
+        .timeLoc = -1,
+        .contrastLoc = -1},
+    {
+        .name = r::path::get("assets/shaders/postprocessing/predator.frag"),
+        .shader = {},
+        .resolutionLoc = -1,
+        .timeLoc = -1,
+        .contrastLoc = -1},
+    {
+        .name = r::path::get("assets/shaders/postprocessing/scanlines.frag"),
+        .shader = {},
+        .resolutionLoc = -1,
+        .timeLoc = -1,
+        .contrastLoc = -1},
+    {
+        .name = r::path::get("assets/shaders/postprocessing/fisheye.frag"),
+        .shader = {},
+        .resolutionLoc = -1,
+        .timeLoc = -1,
+        .contrastLoc = -1},
+    {
+        .name = r::path::get("assets/shaders/postprocessing/sobel.frag"),
+        .shader = {},
+        .resolutionLoc = -1,
+        .timeLoc = -1,
+        .contrastLoc = -1},
+    {
+        .name = r::path::get("assets/shaders/postprocessing/bloom.frag"),
+        .shader = {},
+        .resolutionLoc = -1,
+        .timeLoc = -1,
+        .contrastLoc = -1
+    },
+    {
+        .name = r::path::get("assets/shaders/postprocessing/blur.frag"),
+        .shader = {},
+        .resolutionLoc = -1,
+        .timeLoc = -1,
+        .contrastLoc = -1
+    },
+    {
+        .name = r::path::get("assets/shaders/postprocessing/contrast.frag"),
+        .shader = {},
+        .resolutionLoc = -1,
+        .timeLoc = -1,
+        .contrastLoc = -1
+    },
+    {
+        .name = r::path::get("assets/shaders/postprocessing/protanopia.frag"),
+        .shader = {},
+        .resolutionLoc = -1,
+        .timeLoc = -1,
+        .contrastLoc = -1
+    },
+    {
+        .name = r::path::get("assets/shaders/postprocessing/deuteranopia.frag"),
+        .shader = {},
+        .resolutionLoc = -1,
+        .timeLoc = -1,
+        .contrastLoc = -1
+    },
+    {
+        .name = r::path::get("assets/shaders/postprocessing/tritanopia.frag"),
+        .shader = {},
+        .resolutionLoc = -1,
+        .timeLoc = -1,
+        .contrastLoc = -1
+    },
 };
 
 static struct {
@@ -93,6 +185,7 @@ static void post_processing_plugin_startup(const r::ecs::Res<r::WindowPluginConf
         fx.shader = LoadShader(nullptr, fx.name.c_str());
         fx.resolutionLoc = GetShaderLocation(fx.shader, "resolution");
         fx.timeLoc = GetShaderLocation(fx.shader, "time");
+        fx.contrastLoc = GetShaderLocation(fx.shader, "contrast");
     }
 }
 
@@ -113,8 +206,11 @@ static void post_processing_plugin_begin_capture(const r::ecs::Res<r::RenderPlug
     post_processing_clear(rl_color);
 }
 
-static void post_processing_plugin_end_capture_and_draw(const r::ecs::Res<r::PostProcessingPluginConfig> config_ptr,
-    const r::ecs::Res<r::WindowPluginConfig> window_config, const r::ecs::Res<r::core::FrameTime> frame_time) noexcept
+static void post_processing_plugin_end_capture_and_draw(
+    const r::ecs::Res<r::PostProcessingPluginConfig> config_ptr,
+    const r::ecs::Res<r::WindowPluginConfig> window_config,
+    const r::ecs::Res<r::core::FrameTime> frame_time
+) noexcept
 {
     if (!g_render_texture.initialized) {
         return;
@@ -139,6 +235,10 @@ static void post_processing_plugin_end_capture_and_draw(const r::ecs::Res<r::Pos
     if (active_shader_fx.timeLoc != -1) {
         const f32 time = frame_time.ptr->global_time;
         SetShaderValue(active_shader_fx.shader, active_shader_fx.timeLoc, &time, SHADER_UNIFORM_FLOAT);
+    }
+
+    if (active_shader_fx.contrastLoc != -1) {
+        SetShaderValue(active_shader_fx.shader, active_shader_fx.contrastLoc, &config_ptr.ptr->contrast_level, SHADER_UNIFORM_FLOAT);
     }
 
     post_processing_begin_shader_mode(active_shader_fx.shader);

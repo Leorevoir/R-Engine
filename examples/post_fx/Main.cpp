@@ -103,6 +103,18 @@ static void ui_info_system(const r::ecs::Res<r::PostProcessingPluginConfig> conf
         case r::PostProcessingState::Blur:
             effect_name = "Blur";
             break;
+        case r::PostProcessingState::Contrast:
+            effect_name = "Contrast";
+            break;
+        case r::PostProcessingState::Protanopia:
+            effect_name = "Protanopia";
+            break;
+        case r::PostProcessingState::Deuteranopia:
+            effect_name = "Deuteranopia";
+            break;
+        case r::PostProcessingState::Tritanopia:
+            effect_name = "Tritanopia";
+            break;
         case r::PostProcessingState::Disabled:
             effect_name = "Disabled";
             break;

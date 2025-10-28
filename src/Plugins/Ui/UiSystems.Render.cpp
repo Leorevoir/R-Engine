@@ -337,63 +337,63 @@ static void render_backgrounds(const std::vector<DrawItem> &items, const RenderD
  * @param q ECS query containing UI entities
  * @param input UI input state for highlighting active elements
  */
-// template<typename QueryType>
-// static void render_debug_overlay(r::ecs::Res<UiPluginConfig> cfg, QueryType &q, r::ecs::Res<r::UiInputState> input)
-// {
-//     if (cfg.ptr->show_debug_overlay) {
-//         DrawRectangle(8, 8, 220, 28, {255, 255, 255, 200});
-//         const char *text = cfg.ptr->overlay_text.c_str();
-//         const int font_size = 18;
-//         DrawText(text, 14, 12, font_size, {0, 0, 0, 255});
-//         DrawFPS(10, 40);
-//     }
-//
-//     if (cfg.ptr->debug_draw_bounds) {
-//         for (auto it = q.begin(); it != q.end(); ++it) {
-//             auto [node, layout, style_opt, vis_opt, parent_opt, text_opt, image_opt, button_opt, scroll_opt, children_opt] = *it;
-//             (void) node;
-//             (void) style_opt;
-//             (void) vis_opt;
-//             (void) text_opt;
-//             (void) image_opt;
-//             (void) button_opt;
-//             (void) scroll_opt;
-//             (void) parent_opt;
-//             (void) children_opt;
-//             const int x = static_cast<int>(layout.ptr->x);
-//             const int y = static_cast<int>(layout.ptr->y);
-//             const int w = static_cast<int>(layout.ptr->w);
-//             const int h = static_cast<int>(layout.ptr->h);
-//             DrawRectangleLines(x, y, w, h, {120, 120, 120, 120});
-//         }
-//
-//         auto draw_highlight = [&](r::ecs::Entity h, ::Color c) {
-//             if (h == r::ecs::NULL_ENTITY)
-//                 return;
-//             for (auto it = q.begin(); it != q.end(); ++it) {
-//                 auto [node, layout, sopt, vopt, popt, topt, iopt, bopt, scopt, chopt] = *it;
-//                 (void) node;
-//                 (void) sopt;
-//                 (void) vopt;
-//                 (void) popt;
-//                 (void) topt;
-//                 (void) iopt;
-//                 (void) bopt;
-//                 (void) scopt;
-//                 (void) chopt;
-//                 auto eid = static_cast<r::ecs::Entity>(it.entity());
-//                 if (eid == h) {
-//                     ::Rectangle r{layout.ptr->x, layout.ptr->y, layout.ptr->w, layout.ptr->h};
-//                     DrawRectangleLinesEx(r, 2, c);
-//                     break;
-//                 }
-//             }
-//         };
-//         draw_highlight(input.ptr->hovered, {0, 255, 0, 200});
-//         draw_highlight(input.ptr->active, {255, 165, 0, 200});
-//         draw_highlight(input.ptr->focused, {255, 255, 0, 200});
-//     }
-// }
+template<typename QueryType>
+static void render_debug_overlay(r::ecs::Res<UiPluginConfig> cfg, QueryType &q, r::ecs::Res<r::UiInputState> input)
+{
+    if (cfg.ptr->show_debug_overlay) {
+        DrawRectangle(8, 8, 220, 28, {255, 255, 255, 200});
+        const char *text = cfg.ptr->overlay_text.c_str();
+        const int font_size = 18;
+        DrawText(text, 14, 12, font_size, {0, 0, 0, 255});
+        DrawFPS(10, 40);
+    }
+
+    if (cfg.ptr->debug_draw_bounds) {
+        for (auto it = q.begin(); it != q.end(); ++it) {
+            auto [node, layout, style_opt, vis_opt, parent_opt, text_opt, image_opt, button_opt, scroll_opt, children_opt] = *it;
+            (void) node;
+            (void) style_opt;
+            (void) vis_opt;
+            (void) text_opt;
+            (void) image_opt;
+            (void) button_opt;
+            (void) scroll_opt;
+            (void) parent_opt;
+            (void) children_opt;
+            const int x = static_cast<int>(layout.ptr->x);
+            const int y = static_cast<int>(layout.ptr->y);
+            const int w = static_cast<int>(layout.ptr->w);
+            const int h = static_cast<int>(layout.ptr->h);
+            DrawRectangleLines(x, y, w, h, {120, 120, 120, 120});
+        }
+
+        auto draw_highlight = [&](r::ecs::Entity h, ::Color c) {
+            if (h == r::ecs::NULL_ENTITY)
+                return;
+            for (auto it = q.begin(); it != q.end(); ++it) {
+                auto [node, layout, sopt, vopt, popt, topt, iopt, bopt, scopt, chopt] = *it;
+                (void) node;
+                (void) sopt;
+                (void) vopt;
+                (void) popt;
+                (void) topt;
+                (void) iopt;
+                (void) bopt;
+                (void) scopt;
+                (void) chopt;
+                auto eid = static_cast<r::ecs::Entity>(it.entity());
+                if (eid == h) {
+                    ::Rectangle r{layout.ptr->x, layout.ptr->y, layout.ptr->w, layout.ptr->h};
+                    DrawRectangleLinesEx(r, 2, c);
+                    break;
+                }
+            }
+        };
+        draw_highlight(input.ptr->hovered, {0, 255, 0, 200});
+        draw_highlight(input.ptr->active, {255, 165, 0, 200});
+        draw_highlight(input.ptr->focused, {255, 255, 0, 200});
+    }
+}
 
 /**
  * @brief Renders scrollbars for scrollable UI containers
@@ -657,18 +657,20 @@ static void render_foreground(QueryType &q, const RenderData &data, r::ecs::ResM
     }
 }
 
-void render_system(r::ecs::Res<r::UiInputState> input, r::ecs::Res<r::UiTheme> theme, r::ecs::ResMut<r::UiTextures> textures,
-    r::ecs::ResMut<r::UiFonts> fonts,
+void render_system(r::ecs::Res<UiPluginConfig> cfg, r::ecs::Res<r::Camera3d> cam, r::ecs::Res<r::UiInputState> input,
+    r::ecs::Res<r::UiTheme> theme, r::ecs::ResMut<r::UiTextures> textures, r::ecs::ResMut<r::UiFonts> fonts,
     r::ecs::Query<r::ecs::Ref<r::UiNode>, r::ecs::Ref<r::ComputedLayout>, r::ecs::Optional<r::Style>, r::ecs::Optional<r::Visibility>,
         r::ecs::Optional<r::ecs::Parent>, r::ecs::Optional<r::UiText>, r::ecs::Optional<r::UiImage>, r::ecs::Optional<r::UiButton>,
         r::ecs::Optional<r::UiScroll>, r::ecs::Optional<r::ecs::Children>>
         q) noexcept
 {
-    auto [items, data] = collect_draw_items(q);
+    (void) cam;
 
+    auto [items, data] = collect_draw_items(q);
     setup_entity_mappings(data);
     calculate_content_bottoms(items, data);
     render_backgrounds(items, data, input, theme);
+    render_debug_overlay(cfg, q, input);
     render_scrollbars(data, theme);
     render_foreground(q, data, textures, fonts, theme);
 }

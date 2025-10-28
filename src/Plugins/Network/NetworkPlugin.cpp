@@ -1,7 +1,7 @@
-#include "NetworkPlugin.hpp"
+#include "../../include/R-Engine/Plugins/NetworkPlugin.hpp"
 #include <vector>
 #include <cstdint>
-#include <iostream>
+#include <R-Engine/Core/Logger.hpp>
 #include <cstring>
 #include <chrono>
 #include <stdexcept>
@@ -26,51 +26,24 @@
 
 namespace rtype::network {
 
-void NetworkPlugin::sendRawTcp(const std::vector<uint8_t>& buffer, const Endpoint& endpoint) {
+void NetworkPlugin::sendRawTcp(const std::vector<uint8_t> &buffer, const Endpoint &endpoint)
+{
     if (tcpSocket)
         tcpSocket->send(buffer, &endpoint);
 }
 
-void NetworkPlugin::recvRawTcp(std::vector<uint8_t>& buffer, Endpoint* endpoint) {
+void NetworkPlugin::recvRawTcp(std::vector<uint8_t> &buffer, Endpoint *endpoint)
+{
     if (tcpSocket)
         tcpSocket->recv(buffer, endpoint);
 }
 
-
-
-namespace {
-    enum class LogLevel {
-        INFO,
-        WARNING,
-        ERROR
-    };
-
-    void logMessage(LogLevel level, const std::string& message) {
-        const char* levelStr = nullptr;
-        switch (level) {
-            case LogLevel::INFO:
-                levelStr = "[INFO]";
-                break;
-            case LogLevel::WARNING:
-                levelStr = "[WARNING]";
-                break;
-            case LogLevel::ERROR:
-                levelStr = "[ERROR]";
-                break;
-            default:
-                levelStr = "[UNKNOWN]";
-                break;
-        }
-        std::cout << levelStr << " " << message << std::endl;
-    }
-}
-
 Socket::Socket(Protocol socketProtocol) : protocol(socketProtocol), handle(-1) {
-    logMessage(LogLevel::INFO, "Creating socket...");
+    r::Logger::info("Creating socket...");
 #ifdef _WIN32
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-        logMessage(LogLevel::ERROR, "Failed to initialize Winsock.");
+    r::Logger::error("Failed to initialize Winsock.");
         throw std::runtime_error("Failed to initialize Winsock.");
     }
 #endif
@@ -78,17 +51,17 @@ Socket::Socket(Protocol socketProtocol) : protocol(socketProtocol), handle(-1) {
     if (protocol == Protocol::UDP) {
         handle = socket(AF_INET, SOCK_DGRAM, 0);
         if (handle == INVALID_SOCKET) {
-            logMessage(LogLevel::ERROR, "Failed to create UDP socket.");
+            r::Logger::error("Failed to create UDP socket.");
             throw std::runtime_error("Failed to create UDP socket.");
         }
     } else {
         handle = socket(AF_INET, SOCK_STREAM, 0);
         if (handle == INVALID_SOCKET) {
-            logMessage(LogLevel::ERROR, "Failed to create TCP socket.");
+            r::Logger::error("Failed to create TCP socket.");
             throw std::runtime_error("Failed to create TCP socket.");
         }
     }
-    logMessage(LogLevel::INFO, "Socket created successfully.");
+    r::Logger::info("Socket created successfully.");
 }
 
 Socket::~Socket() {
@@ -112,28 +85,38 @@ void Socket::configureSocket() {
     std::cout << "Socket configured with SO_REUSEADDR." << std::endl;
 }
 
-void Socket::connect(const Endpoint& endpoint) {
-    try {
+void Socket::connect(const Endpoint &endpoint)
+{
+    try
+    {
         std::cout << "Connecting to " << endpoint.address << ":" << endpoint.port << std::endl;
         configureSocket();
 
         sockaddr_in addr = {};
         addr.sin_family = AF_INET;
         addr.sin_port = htons(endpoint.port);
-        if (inet_pton(AF_INET, endpoint.address.c_str(), &addr.sin_addr) <= 0) {
+        if (inet_pton(AF_INET, endpoint.address.c_str(), &addr.sin_addr) <= 0)
+        {
             throw std::system_error(std::make_error_code(std::errc::address_not_available), "Invalid endpoint address");
         }
 
-        if (protocol == Protocol::UDP) {
-            if (bind(handle, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) < 0) {
+        if (protocol == Protocol::UDP)
+        {
+            if (bind(handle, reinterpret_cast<sockaddr *>(&addr), sizeof(addr)) < 0)
+            {
                 throw std::runtime_error("Failed to bind UDP socket.");
             }
-        } else {
-            if (::connect(handle, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) < 0) {
+        }
+        else
+        {
+            if (::connect(handle, reinterpret_cast<sockaddr *>(&addr), sizeof(addr)) < 0)
+            {
                 throw std::runtime_error("Failed to connect TCP socket.");
             }
         }
-    } catch (const std::system_error& e) {
+    }
+    catch (const std::system_error &e)
+    {
         std::cerr << "Connection error: " << e.what() << std::endl;
         throw;
     }
@@ -141,14 +124,14 @@ void Socket::connect(const Endpoint& endpoint) {
 
 void Socket::disconnect() {
     if (handle != -1) {
-        logMessage(LogLevel::INFO, "Disconnecting socket...");
+    r::Logger::info("Disconnecting socket...");
 #ifdef _WIN32
         closesocket(handle);
 #else
         close(handle);
 #endif
         handle = -1;
-        logMessage(LogLevel::INFO, "Socket disconnected.");
+    r::Logger::info("Socket disconnected.");
     }
 }
 
@@ -250,17 +233,17 @@ void NetworkPlugin::setReconnectCallback(std::function<void()> callback) {
 void NetworkPlugin::reconnectToServer(const Endpoint& serverEndpoint, Protocol protocol) {
     int retryCount = 0;
     const int maxRetries = 5;
-    const int retryDelayMs = 1000; // 1 second
+    const int retryDelayMs = 1000;
 
     while (retryCount < maxRetries) {
         try {
-            logMessage(LogLevel::INFO, "Attempting to reconnect (attempt " + std::to_string(retryCount + 1) + ")...");
+            r::Logger::info("Attempting to reconnect (attempt " + std::to_string(retryCount + 1) + ")...");
             connectToServer(serverEndpoint, protocol);
-            logMessage(LogLevel::INFO, "Reconnection successful.");
+            r::Logger::info("Reconnection successful.");
             if (onReconnect) onReconnect();
             return;
         } catch (const std::exception& e) {
-            logMessage(LogLevel::ERROR, std::string("Reconnection attempt failed: ") + e.what());
+            r::Logger::error(std::string("Reconnection attempt failed: ") + e.what());
             if (onNetworkError) onNetworkError(e.what());
             ++retryCount;
             std::this_thread::sleep_for(std::chrono::milliseconds(retryDelayMs));
@@ -270,11 +253,9 @@ void NetworkPlugin::reconnectToServer(const Endpoint& serverEndpoint, Protocol p
     throw std::runtime_error("Failed to reconnect after " + std::to_string(maxRetries) + " attempts.");
 }
 
-
-// Sérialisation d'un Packet en buffer binaire
 std::vector<uint8_t> serializePacket(const Packet& packet) {
     std::vector<uint8_t> buffer;
-    buffer.resize(2 + 1 + 1 + 4 + 4 + 1 + 1 + 4 + 4 + 1); // header size (size sur 4 octets)
+    buffer.resize(2 + 1 + 1 + 4 + 4 + 1 + 1 + 4 + 4 + 1);
     size_t offset = 0;
     auto write16 = [&](uint16_t v) { v = htons(v); memcpy(&buffer[offset], &v, 2); offset += 2; };
     auto write32 = [&](uint32_t v) { v = htonl(v); memcpy(&buffer[offset], &v, 4); offset += 4; };
@@ -287,7 +268,7 @@ std::vector<uint8_t> serializePacket(const Packet& packet) {
     write32(packet.ackBase);
     write8(packet.ackBits);
     write8(packet.channel);
-    write32(static_cast<uint32_t>(packet.size)); // size sur 4 octets
+    write32(static_cast<uint32_t>(packet.size));
     write32(packet.clientId);
     write8(packet.command);
 
@@ -377,7 +358,7 @@ std::vector<uint8_t> decryptData(const std::vector<uint8_t>& encryptedData, cons
 }
 
 std::string generateEncryptionKey() {
-    std::vector<unsigned char> key(32); // 256-bit key
+    std::vector<unsigned char> key(32);
     if (!RAND_bytes(key.data(), static_cast<int>(key.size()))) {
         throw std::runtime_error("Failed to generate encryption key.");
     }
@@ -393,12 +374,6 @@ void NetworkPlugin::sendPacket(const Packet& packet, Protocol protocol, const En
         udpSocket->send(buffer, endpoint);
     }
 }
-
-
-
-// Format de message sécurisé :
-// [clé de chiffrement (32 octets)] + [données chiffrées]
-// La clé est générée dynamiquement pour chaque message et doit être extraite côté serveur avant déchiffrement.
 
 std::string extractEncryptionKey(const std::vector<uint8_t>& buffer) {
     if (buffer.size() < 32) {
@@ -450,4 +425,4 @@ namespace {
 
 
 
-} // namespace rtype::network
+} /* namespace rtype::network */

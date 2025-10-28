@@ -1,4 +1,4 @@
-#include "../../src/Plugins/Network/NetworkPlugin.hpp"
+#include "../../include/R-Engine/Plugins/NetworkPlugin.hpp"
 #include <iostream>
 #include <cstring>
 
@@ -12,7 +12,7 @@ int main() {
         plugin.connectToServer(tcpEndpoint, Protocol::TCP);
         std::cout << "TCP connection successful.\n";
 
-        // Paquet minimal JOIN TCP : [MAGIC][VERSION][FLAGS][CMD][GAME_ID]
+    /* Minimal JOIN TCP packet: [MAGIC][VERSION][FLAGS][CMD][GAME_ID] */
         struct JoinPacket {
             uint16_t magic;
             uint8_t version;
@@ -25,7 +25,7 @@ int main() {
         join.magic = htons(0x4257);
         join.version = 1;
         join.flags = 0;
-        join.cmd = 1; // JOIN
+    join.cmd = 1; /* JOIN command */
         join.gameId = htonl(0x12345678);
 
         std::vector<uint8_t> buffer(sizeof(JoinPacket));
@@ -37,11 +37,11 @@ int main() {
         }
         std::cout << std::endl;
 
-        // Envoi direct du buffer
+    /* Direct send of the buffer */
     plugin.sendRawTcp(buffer, tcpEndpoint);
     std::cout << "Sent minimal JOIN packet\n";
 
-    // Réception brute (optionnel)
+    /* Raw reception (optional) */
     std::vector<uint8_t> recvBuffer;
     plugin.recvRawTcp(recvBuffer, nullptr);
     std::cout << "Received raw response: ";

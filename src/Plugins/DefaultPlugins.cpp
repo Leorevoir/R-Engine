@@ -5,7 +5,6 @@
 #include <R-Engine/Plugins/MeshPlugin.hpp>
 #include <R-Engine/Plugins/RenderPlugin.hpp>
 #include <R-Engine/Plugins/TransformPlugin.hpp>
-#include <R-Engine/Plugins/UiPlugin.hpp>
 #include <R-Engine/Plugins/WindowPlugin.hpp>
 
 /**
@@ -20,7 +19,6 @@ r::DefaultPlugins::DefaultPlugins()
     add<MeshPlugin>();
     add<TransformPlugin>();
     add<AudioPlugin>();
-    add<UiPlugin>();
     add<LuaScriptingPlugin>();
 }
 

@@ -79,6 +79,7 @@ static void input_system(r::ecs::ResMut<r::UserInput> userInput)
 
     userInput.ptr->mouse_position = to_vec2f(GetMousePosition());
     userInput.ptr->mouse_delta = to_vec2f(GetMouseDelta());
+    userInput.ptr->mouse_wheel = GetMouseWheelMove();
 }
 
 void r::InputPlugin::build(Application &app)

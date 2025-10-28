@@ -24,6 +24,7 @@ struct R_ENGINE_API UserInput {
 
         Vec2f mouse_position = {.0f, .0f};
         Vec2f mouse_delta = {.0f, .0f};
+        f32 mouse_wheel = .0f;
 
         bool isKeyPressed(i32 key_code) const;
         bool isMouseButtonPressed(i32 button_code) const;

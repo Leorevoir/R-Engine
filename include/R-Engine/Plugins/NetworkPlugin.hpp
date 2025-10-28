@@ -81,15 +81,9 @@ public:
     /**
      * @brief Send raw TCP data to a remote endpoint.
      * @param buffer Data to send.
-    class NetworkPlugin
-    {
-    public:
-        /**
-         * @brief Send raw TCP data to a remote endpoint.
-         * @param buffer Data to send.
-         * @param endpoint Target endpoint.
-         */
-        void sendRawTcp(const std::vector<uint8_t> &buffer, const Endpoint &endpoint);
+     * @param endpoint Target endpoint.
+     */
+    void sendRawTcp(const std::vector<uint8_t> &buffer, const Endpoint &endpoint);
         /**
          * @brief Receive raw TCP data from a remote endpoint.
          * @param buffer Buffer to store received data.

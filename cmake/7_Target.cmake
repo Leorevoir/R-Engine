@@ -10,6 +10,12 @@ target_link_libraries(r-engine PUBLIC
     raylib
     lua_lib
 )
+
+if(BUILD_AS_SERVER_LIB)
+    target_compile_definitions(r-engine PRIVATE ECS_SERVER_MODE)
+    message(STATUS "INFO: Compiling R-Engine with server-side definitions (ECS_SERVER_MODE)")
+endif()
+
 target_compile_definitions(r-engine PRIVATE
     R_ENGINE_BUILDING_EXPORTS=1
 )

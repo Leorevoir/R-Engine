@@ -30,6 +30,21 @@ bool r::UserInput::isMouseButtonPressed(i32 button_code) const
     return it != mouse_buttons_pressed.end();
 }
 
+bool r::UserInput::isGamepadButtonPressed(i32 button_code) const
+{
+    const auto it = gamepad_buttons_pressed.find(button_code);
+    return it != gamepad_buttons_pressed.end();
+}
+
+r::Vec2f r::UserInput::getGamepadAxis(i32 gamepad_id) const
+{
+    const auto it = gamepad_axis_values.find(gamepad_id);
+    if (it != gamepad_axis_values.end()) {
+        return it->second;
+    }
+    return {0.0f, 0.0f};
+}
+
 /**
  * @brief Bind an action (action name) to a specific input. Inputs can be keyboard or mouse types.
  * @details This system adds a name to a specific key
@@ -41,7 +56,7 @@ void r::InputMap::bindAction(const std::string &action_name, InputType type, u16
 
 /**
  * @brief Check if an input has been triggered by his name
- *  
+ *
  */
 bool r::InputMap::isActionPressed(const std::string &action_name, const r::UserInput &userInput) const
 {
@@ -55,6 +70,8 @@ bool r::InputMap::isActionPressed(const std::string &action_name, const r::UserI
         if (binding.type == KEYBOARD && userInput.isKeyPressed(binding.code))
             return true;
         if (binding.type == MOUSE && userInput.isMouseButtonPressed(binding.code))
+            return true;
+        if (binding.type == GAMEPAD && userInput.isGamepadButtonPressed(binding.code))
             return true;
     }
     return false;
@@ -72,9 +89,24 @@ static void input_system(r::ecs::ResMut<r::UserInput> userInput)
     /* 3 Because we count 3 buttons on the mouse */
     userInput.ptr->mouse_buttons_pressed.clear();
     for (u16 button = 0; button < 3; ++button) {
-        if (IsMouseButtonPressed(button)) {
+        if (IsMouseButtonDown(button)) {
             userInput.ptr->mouse_buttons_pressed.insert(button);
         }
+    }
+
+    userInput.ptr->gamepad_buttons_pressed.clear();
+    userInput.ptr->gamepad_axis_values.clear();
+
+    if (IsGamepadAvailable(0)) {
+        /* Poll all gamepad buttons up to a reasonable limit */
+        for (int button = 0; button < 20; ++button) {
+            if (IsGamepadButtonDown(0, button)) {
+                userInput.ptr->gamepad_buttons_pressed.insert(button);
+            }
+        }
+        /* Poll left analog stick */
+        userInput.ptr->gamepad_axis_values[0] = {GetGamepadAxisMovement(0, GAMEPAD_AXIS_LEFT_X),
+            GetGamepadAxisMovement(0, GAMEPAD_AXIS_LEFT_Y)};
     }
 
     userInput.ptr->mouse_position = to_vec2f(GetMousePosition());

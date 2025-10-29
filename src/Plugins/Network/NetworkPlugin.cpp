@@ -24,12 +24,11 @@
 #define INVALID_SOCKET -1
 #endif
 
-
 #include <R-Engine/Application.hpp>
 #include <R-Engine/Plugins/Plugin.hpp>
-#include <R-Engine/ECS.hpp>
+
 namespace r::net {
-// Système ECS pour la réception réseau et l'émission d'événements génériques
+
 static void network_receive_system(
     ecs::ResMut<Connection> conn,
     ecs::EventWriter<NetworkMessageEvent> message_writer,
@@ -50,7 +49,6 @@ static void network_receive_system(
     }
 }
 
-// Système ECS pour la connexion réseau
 static void network_connect_system(
     ecs::ResMut<Connection> conn,
     ecs::EventReader<NetworkConnectEvent> connect_events,
@@ -82,7 +80,6 @@ static void network_connect_system(
     }
 }
 
-// Système ECS pour la déconnexion réseau
 static void network_disconnect_system(
     ecs::ResMut<Connection> conn,
     ecs::EventReader<NetworkDisconnectEvent> disconnect_events
@@ -98,7 +95,7 @@ static void network_disconnect_system(
 void NetworkPlugin::build(Application &app) {
     app.insert_resource(Connection{})
        .add_events<NetworkConnectEvent, NetworkDisconnectEvent, NetworkMessageEvent, NetworkErrorEvent>()
-       .add_systems<network_connect_system, network_disconnect_system, network_receive_system, network_send_system>(Schedule::UPDATE);
+       .add_systems<network_connect_system, network_disconnect_system, network_receive_system>(Schedule::UPDATE);
     r::Logger::debug("NetworkPlugin built");
 }
 

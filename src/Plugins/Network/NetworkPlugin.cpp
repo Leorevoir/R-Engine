@@ -24,7 +24,83 @@
 #define INVALID_SOCKET -1
 #endif
 
-namespace rtype::network {
+
+#include <R-Engine/Application.hpp>
+#include <R-Engine/Plugins/Plugin.hpp>
+#include <R-Engine/ECS.hpp>
+namespace r::net {
+// Système ECS pour la réception réseau et l'émission d'événements génériques
+static void network_receive_system(
+    ecs::ResMut<Connection> conn,
+    ecs::EventWriter<NetworkMessageEvent> message_writer,
+    ecs::EventWriter<NetworkErrorEvent> error_writer
+) {
+    if (!conn.connected || conn.handle == -1) return;
+    std::vector<uint8_t> buffer(1024);
+    ssize_t received = ::recv(conn.handle, buffer.data(), buffer.size(), MSG_DONTWAIT);
+    if (received > 0) {
+        buffer.resize(static_cast<size_t>(received));
+        Packet packet = deserializePacket(buffer);
+        message_writer.send(NetworkMessageEvent{
+            .message_type = packet.command,
+            .payload = packet.payload
+        });
+    } else if (received < 0) {
+        error_writer.send(NetworkErrorEvent{"Receive error."});
+    }
+}
+
+// Système ECS pour la connexion réseau
+static void network_connect_system(
+    ecs::ResMut<Connection> conn,
+    ecs::EventReader<NetworkConnectEvent> connect_events,
+    ecs::EventWriter<NetworkErrorEvent> error_writer
+) {
+    for (const auto& evt : connect_events) {
+        if (conn.connected) continue;
+        conn.protocol = evt.protocol;
+        conn.endpoint = evt.endpoint;
+        conn.handle = socket(AF_INET, evt.protocol == Protocol::UDP ? SOCK_DGRAM : SOCK_STREAM, 0);
+        if (conn.handle == -1) {
+            error_writer.send(NetworkErrorEvent{"Failed to create socket."});
+            continue;
+        }
+        sockaddr_in addr = {};
+        addr.sin_family = AF_INET;
+        addr.sin_port = htons(evt.endpoint.port);
+        inet_pton(AF_INET, evt.endpoint.address.c_str(), &addr.sin_addr);
+        int res = (evt.protocol == Protocol::UDP)
+            ? bind(conn.handle, reinterpret_cast<sockaddr*>(&addr), sizeof(addr))
+            : ::connect(conn.handle, reinterpret_cast<sockaddr*>(&addr), sizeof(addr));
+        if (res < 0) {
+            error_writer.send(NetworkErrorEvent{"Failed to connect/bind socket."});
+            close(conn.handle);
+            conn.handle = -1;
+            continue;
+        }
+        conn.connected = true;
+    }
+}
+
+// Système ECS pour la déconnexion réseau
+static void network_disconnect_system(
+    ecs::ResMut<Connection> conn,
+    ecs::EventReader<NetworkDisconnectEvent> disconnect_events
+) {
+    for (const auto& evt : disconnect_events) {
+        if (!conn.connected || conn.handle == -1) continue;
+        close(conn.handle);
+        conn.handle = -1;
+        conn.connected = false;
+    }
+}
+
+void NetworkPlugin::build(Application &app) {
+    app.insert_resource(Connection{})
+       .add_events<NetworkConnectEvent, NetworkDisconnectEvent, NetworkMessageEvent, NetworkErrorEvent>()
+       .add_systems<network_connect_system, network_disconnect_system, network_receive_system, network_send_system>(Schedule::UPDATE);
+    r::Logger::debug("NetworkPlugin built");
+}
 
 void NetworkPlugin::sendRawTcp(const std::vector<uint8_t> &buffer, const Endpoint &endpoint)
 {
@@ -425,4 +501,4 @@ namespace {
 
 
 
-} /* namespace rtype::network */
+} /* namespace r::net */

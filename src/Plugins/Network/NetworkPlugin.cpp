@@ -274,17 +274,62 @@ NetworkPlugin::~NetworkPlugin() {
     disconnectFromServer();
 }
 
+namespace {
+    std::atomic<bool> networkThreadRunning{false};
+    std::thread networkThread;
+}
+
+void startNetworkThread() {
+    networkThreadRunning = true;
+    networkThread = std::thread([this]() {
+        while (networkThreadRunning) {
+            if (tcpSocket && !tcpSocket->isConnected()) {
+                try {
+                    tcpSocket->connect(pendingTcpEndpoint);
+                    r::Logger::info("TCP connection established.");
+                } catch (const std::exception& e) {
+                    r::Logger::error(std::string("TCP connect error: ") + e.what());
+                }
+            }
+
+            if (udpSocket && !udpSocket->isConnected()) {
+                try {
+                    udpSocket->connect(pendingUdpEndpoint);
+                    r::Logger::info("UDP connection established.");
+                } catch (const std::exception& e) {
+                    r::Logger::error(std::string("UDP connect error: ") + e.what());
+                }
+            }
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(10)); // Prevent busy-waiting
+        }
+    });
+}
+
+void stopNetworkThread() {
+    networkThreadRunning = false;
+    if (networkThread.joinable()) {
+        networkThread.join();
+    }
+}
+
+// Modify existing functions to delegate work to the networkThread
 void NetworkPlugin::connectToServer(const Endpoint& serverEndpoint, Protocol protocol) {
     if (protocol == Protocol::TCP) {
         tcpSocket = std::make_unique<Socket>(protocol);
-        tcpSocket->connect(serverEndpoint);
+        networkThread = std::thread([this, serverEndpoint]() {
+            tcpSocket->connect(serverEndpoint);
+        });
     } else {
         udpSocket = std::make_unique<Socket>(protocol);
-        udpSocket->connect(serverEndpoint);
+        networkThread = std::thread([this, serverEndpoint]() {
+            udpSocket->connect(serverEndpoint);
+        });
     }
 }
 
 void NetworkPlugin::disconnectFromServer() {
+    stopNetworkThread();
     if (tcpSocket) {
         tcpSocket->disconnect();
         tcpSocket.reset();

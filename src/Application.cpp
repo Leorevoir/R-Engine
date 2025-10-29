@@ -29,7 +29,7 @@ r::Application::Application()
             Logger::warn("SIGINT received, quitting application...");
         });
     #else
-        Logger::debug("Server mode build detected, SIGINT handler is disabled for the ECS.");
+        Logger::warn("Server mode build detected, SIGINT handler is disabled for the ECS.");
     #endif
 }
 

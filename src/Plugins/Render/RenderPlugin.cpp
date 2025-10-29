@@ -19,13 +19,20 @@ static constexpr inline const ::Camera to_raylib(const r::Camera3d &c) noexcept
     };
 }
 
-static void render_plugin_2D_before_render_system(void) noexcept
+static void render_plugin_2D_before_render_system(const r::ecs::Res<r::RenderPluginConfig> &config) noexcept
 {
+    const ::Color rl_color = {
+        .r = config.ptr->clear_color.r,
+        .g = config.ptr->clear_color.g,
+        .b = config.ptr->clear_color.b,
+        .a = config.ptr->clear_color.a,
+    };
+
     BeginDrawing();
-    ClearBackground(RAYWHITE);
+    ClearBackground(rl_color);
 }
 
-static void render_plugin_3D_before_render_system(r::ecs::Res<r::Camera3d> camera) noexcept
+static void render_plugin_3D_before_render_system(const r::ecs::Res<r::Camera3d> &camera) noexcept
 {
     BeginMode3D(to_raylib(*camera.ptr));
 }
@@ -44,14 +51,15 @@ static void render_plugin_2D_after_render_system(void) noexcept
 * public
 */
 
-r::RenderPlugin::RenderPlugin(const r::Camera3d &camera3d) : camera(camera3d)
+r::RenderPlugin::RenderPlugin(const RenderPluginConfig config, const r::Camera3d &camera3d) : _camera(camera3d), _config(config)
 {
     /* __ctor__ */
 }
 
 void r::RenderPlugin::build(r::Application &app)
 {
-    app.insert_resource(camera)
+    app.insert_resource(_config);
+    app.insert_resource(_camera)
         .add_systems<render_plugin_2D_before_render_system>(Schedule::BEFORE_RENDER_2D)
         .add_systems<render_plugin_3D_before_render_system>(Schedule::BEFORE_RENDER_3D)
         .add_systems<render_plugin_3D_after_render_system>(Schedule::AFTER_RENDER_3D)

@@ -1,4 +1,5 @@
 #include <R-Engine/Components/Shader.hpp>
+#include <R-Engine/Maths/Vec.hpp>
 
 /**
 * public
@@ -41,4 +42,27 @@ const ::Shader *r::Shaders::get(r::ShaderHandle handle) const
         return nullptr;
     }
     return &_shaders[handle];
+}
+
+void r::Shaders::set_value(const ::Shader &shader, const r::ShaderLocation loc, const std::any &data_any) noexcept
+{
+    if (loc == r::ShaderInvalidLocation) {
+        return;
+    }
+    if (data_any.type() == typeid(i32)) {
+        const i32 value = std::any_cast<i32>(data_any);
+        SetShaderValue(shader, loc, &value, SHADER_UNIFORM_INT);
+    } else if (data_any.type() == typeid(f32)) {
+        const f32 value = std::any_cast<f32>(data_any);
+        SetShaderValue(shader, loc, &value, SHADER_UNIFORM_FLOAT);
+    } else if (data_any.type() == typeid(Vec2f)) {
+        const Vec2f value = std::any_cast<Vec2f>(data_any);
+        SetShaderValue(shader, loc, &value, SHADER_UNIFORM_VEC2);
+    } else if (data_any.type() == typeid(Vec3f)) {
+        const Vec3f value = std::any_cast<Vec3f>(data_any);
+        SetShaderValue(shader, loc, &value, SHADER_UNIFORM_VEC3);
+    } else if (data_any.type() == typeid(Vec4f)) {
+        const Vec4f value = std::any_cast<Vec4f>(data_any);
+        SetShaderValue(shader, loc, &value, SHADER_UNIFORM_VEC4);
+    }
 }

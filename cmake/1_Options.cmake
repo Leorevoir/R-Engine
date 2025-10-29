@@ -20,3 +20,5 @@ endif()
 option(ENABLE_TESTS "Enable building tests" OFF)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
+option(BUILD_AS_SERVER_LIB "Compile with definitions for server-side usage" OFF)

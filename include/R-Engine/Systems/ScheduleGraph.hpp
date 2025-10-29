@@ -6,6 +6,7 @@
 #include <string>
 #include <typeindex>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace r {
@@ -33,6 +34,11 @@ using SystemTypeId = std::type_index;
 using SystemSetId = std::type_index;
 using SystemFn = void (*)(ecs::Scene &, ecs::CommandBuffer &);
 
+struct Access {
+        std::unordered_set<std::type_index> reads;
+        std::unordered_set<std::type_index> writes;
+};
+
 struct R_ENGINE_API SystemNode {
         SystemNode();
         SystemNode(const std::string &p_name, SystemTypeId p_id, SystemFn p_func, std::vector<SystemTypeId> p_dependencies);
@@ -45,6 +51,9 @@ struct R_ENGINE_API SystemNode {
         std::vector<SystemSetId> member_of_sets;
         std::vector<SystemSetId> after_sets;
         std::vector<SystemSetId> before_sets;
+        Access component_access;
+        Access resource_access;
+        bool is_main_thread_only = false;
 };
 
 /**
@@ -64,7 +73,7 @@ struct R_ENGINE_API SystemSet {
 struct ScheduleGraph {
         std::unordered_map<SystemTypeId, SystemNode> nodes;
         std::unordered_map<SystemSetId, SystemSet> sets;
-        std::vector<const SystemNode *> execution_order;
+        std::vector<std::vector<const SystemNode *>> execution_stages;
         bool dirty = true;
 };
 

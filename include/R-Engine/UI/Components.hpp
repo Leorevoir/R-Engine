@@ -34,7 +34,7 @@ struct R_ENGINE_API Style {
         f32 max_width = 0.f;   /* 0 -> unset */
         f32 min_height = 0.f;  /* 0 -> unset */
         f32 max_height = 0.f;  /* 0 -> unset */
-        Color background{200, 200, 200, 200};
+        Color background{0, 0, 0, 0};
         i32 z_index = 0;
         i32 order = 0;     /* layout ordering within parent (lower comes first) */
         f32 margin = 0.f;  /* uniform margin in px */

@@ -122,7 +122,9 @@ size_t Socket::recv(std::vector<uint8_t>& buffer, Endpoint* endpoint) {
 bool Socket::isConnected() const { return connected; }
 
 NetworkPlugin::NetworkPlugin() noexcept {}
-NetworkPlugin::~NetworkPlugin() { disconnectFromServer(); }
+NetworkPlugin::~NetworkPlugin() {
+    stopNetworkThread();
+}
 
 void NetworkPlugin::build(Application &app) {
     app.insert_resource(Connection{})
@@ -130,22 +132,66 @@ void NetworkPlugin::build(Application &app) {
        .add_systems<network_connect_system, network_disconnect_system, network_receive_system>(Schedule::UPDATE);
 }
 
-void NetworkPlugin::startNetworkThread() { /* Implémentation omise */ }
-void NetworkPlugin::stopNetworkThread() { /* Implémentation omise */ }
+void NetworkPlugin::startNetworkThread() {
+    if (networkThreadRunning) return;
+    networkThreadRunning = true;
+    networkThread = std::thread([this]() {
+        r::Logger::info("Network thread started.");
+        while (networkThreadRunning) {
+            try {
+                if (tcpSocket && !tcpSocket->isConnected()) {
+                    r::Logger::info("Network thread: attempting TCP connection...");
+                    tcpSocket->connect(pendingTcpEndpoint);
+                    r::Logger::info("Network thread: TCP connection successful.");
+                }
+                if (udpSocket && !udpSocket->isConnected()) {
+                    r::Logger::info("Network thread: attempting UDP connection...");
+                    udpSocket->connect(pendingUdpEndpoint);
+                    r::Logger::info("Network thread: UDP connection successful.");
+                }
+            } catch (const std::exception& e) {
+                r::Logger::error(std::string("Network thread error: ") + e.what());
+                if (errorCallback) {
+                    errorCallback(e.what());
+                }
+                networkThreadRunning = false;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+        r::Logger::info("Network thread stopped.");
+    });
+}
+
+void NetworkPlugin::stopNetworkThread() {
+    networkThreadRunning = false;
+    if (networkThread.joinable()) {
+        networkThread.join();
+    }
+}
 
 void NetworkPlugin::connectToServer(const Endpoint& serverEndpoint, Protocol protocol) {
-    auto& sock = (protocol == Protocol::TCP) ? tcpSocket : udpSocket;
-    sock = std::make_unique<Socket>(protocol);
-    sock->connect(serverEndpoint);
+    stopNetworkThread();
+
+    if (protocol == Protocol::TCP) {
+        tcpSocket = std::make_unique<Socket>(protocol);
+        pendingTcpEndpoint = serverEndpoint;
+    } else {
+        udpSocket = std::make_unique<Socket>(protocol);
+        pendingUdpEndpoint = serverEndpoint;
+    }
+
+    startNetworkThread();
 }
 
 void NetworkPlugin::disconnectFromServer() {
+    stopNetworkThread();
     if (tcpSocket) tcpSocket.reset();
     if (udpSocket) udpSocket.reset();
 }
 
 void NetworkPlugin::setNetworkErrorCallback(std::function<void(const std::string&)> callback) { errorCallback = std::move(callback); }
 void NetworkPlugin::setReconnectCallback(std::function<void()> callback) { reconnectCallback = std::move(callback); }
+
 void NetworkPlugin::reconnectToServer(const Endpoint& serverEndpoint, Protocol protocol) {
     disconnectFromServer();
     connectToServer(serverEndpoint, protocol);
@@ -154,13 +200,17 @@ void NetworkPlugin::reconnectToServer(const Endpoint& serverEndpoint, Protocol p
 void NetworkPlugin::sendPacket(const Packet& packet, Protocol protocol, const Endpoint* endpoint) {
     auto buffer = serializePacket(packet);
     auto& sock = (protocol == Protocol::TCP) ? tcpSocket : udpSocket;
-    if (sock) sock->send(buffer, endpoint);
+    if (sock && sock->isConnected()) {
+        sock->send(buffer, endpoint);
+    }
 }
 
 Packet NetworkPlugin::receivePacket(Protocol protocol, Endpoint* endpoint) {
     std::vector<uint8_t> buffer;
     auto& sock = (protocol == Protocol::TCP) ? tcpSocket : udpSocket;
-    if (sock) sock->recv(buffer, endpoint);
+    if (sock && sock->isConnected()) {
+        sock->recv(buffer, endpoint);
+    }
     return buffer.empty() ? Packet{} : deserializePacket(buffer);
 }
 
@@ -172,11 +222,15 @@ uint64_t NetworkPlugin::now_ns() {
 void NetworkPlugin::resolveServerConflict(const std::vector<uint8_t>&, std::vector<uint8_t>&) {}
 
 void NetworkPlugin::sendRawTcp(const std::vector<uint8_t> &buffer, const Endpoint &endpoint) {
-    if (tcpSocket) tcpSocket->send(buffer, &endpoint);
+    if (tcpSocket && tcpSocket->isConnected()) {
+        tcpSocket->send(buffer, &endpoint);
+    }
 }
 
 void NetworkPlugin::recvRawTcp(std::vector<uint8_t> &buffer, Endpoint *endpoint) {
-    if (tcpSocket) tcpSocket->recv(buffer, endpoint);
+    if (tcpSocket && tcpSocket->isConnected()) {
+        tcpSocket->recv(buffer, endpoint);
+    }
 }
 
 std::vector<uint8_t> serializePacket(const Packet& packet) {

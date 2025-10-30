@@ -30,6 +30,16 @@ struct Endpoint {
 };
 
 /**
+ * @brief Represents a packet that has been sent but not yet acknowledged.
+ * @details Stores the serialized packet data and the time it was sent to manage retransmissions.
+ */
+struct SentPacket {
+        f32 sent_time;         ///< The global time the packet was sent.
+        u32 sequence;          ///< The sequence number of the packet.
+        std::vector<u8> buffer;///< The raw serialized packet data.
+};
+
+/**
  * @brief ECS resource representing the state of a single network connection.
  * @details This resource holds the socket handle and connection status. Systems interact
  * with this resource to perform network operations.
@@ -39,6 +49,20 @@ struct Connection {
         int handle = -1;
         bool connected = false;
         Endpoint endpoint;
+
+        /* --- Reliability State (for UDP) --- */
+
+        /* Outgoing packet state */
+        u32 local_sequence = 0;             ///< Sequence number for the next outgoing packet.
+        std::vector<SentPacket> sent_buffer;///< Buffer of sent packets awaiting acknowledgment.
+
+        /* Incoming packet state */
+        u32 remote_sequence = 0;///< Highest sequence number received from the remote peer.
+        u32 ack_bits = 0;       ///< Bitfield of acknowledged packets beyond the remote_sequence.
+
+        /* Configuration */
+        f32 rtt = 0.0f;            ///< Round-trip time estimate (not yet implemented).
+        f32 timeout_seconds = 1.0f;///< Time before a packet is considered lost and retransmitted.
 };
 
 /**
@@ -71,7 +95,7 @@ struct Packet {
         u8 flags;
         u32 sequence;
         u32 ackBase;
-        u8 ackBits;
+        u32 ackBits;
         u8 channel;
         u16 size;
         u32 clientId;
@@ -81,7 +105,7 @@ struct Packet {
 
 /**
  * @brief Event to request sending a packet over the network.
- * @details Other systems create and send this event to have the networking systems
+ * @details Other systems create this event to have the networking systems
  * serialize and transmit the packet.
  */
 struct NetworkSendEvent {

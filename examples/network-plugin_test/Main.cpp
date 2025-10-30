@@ -1,8 +1,9 @@
 #include "../../include/R-Engine/Plugins/NetworkPlugin.hpp"
 #include <iostream>
 #include <cstring>
+#include <arpa/inet.h>
 
-using namespace rtype::network;
+using namespace r::net;
 
 int main() {
     NetworkPlugin plugin;
@@ -12,7 +13,6 @@ int main() {
         plugin.connectToServer(tcpEndpoint, Protocol::TCP);
         std::cout << "TCP connection successful.\n";
 
-    /* Minimal JOIN TCP packet: [MAGIC][VERSION][FLAGS][CMD][GAME_ID] */
         struct JoinPacket {
             uint16_t magic;
             uint8_t version;
@@ -25,28 +25,20 @@ int main() {
         join.magic = htons(0x4257);
         join.version = 1;
         join.flags = 0;
-    join.cmd = 1; /* JOIN command */
+        join.cmd = 1;
         join.gameId = htonl(0x12345678);
 
         std::vector<uint8_t> buffer(sizeof(JoinPacket));
         memcpy(buffer.data(), &join, sizeof(JoinPacket));
 
-        std::cout << "Packet hex: ";
-        for (size_t i = 0; i < buffer.size(); ++i) {
-            printf("%02x ", buffer[i]);
-        }
+        plugin.sendRawTcp(buffer, tcpEndpoint);
+        std::cout << "Sent minimal JOIN packet\n";
+
+        std::vector<uint8_t> recvBuffer;
+        plugin.recvRawTcp(recvBuffer, nullptr);
+        std::cout << "Received raw response: ";
+        for (auto c : recvBuffer) printf("%02x ", c);
         std::cout << std::endl;
-
-    /* Direct send of the buffer */
-    plugin.sendRawTcp(buffer, tcpEndpoint);
-    std::cout << "Sent minimal JOIN packet\n";
-
-    /* Raw reception (optional) */
-    std::vector<uint8_t> recvBuffer;
-    plugin.recvRawTcp(recvBuffer, nullptr);
-    std::cout << "Received raw response: ";
-    for (auto c : recvBuffer) printf("%02x ", c);
-    std::cout << std::endl;
 
         plugin.disconnectFromServer();
         std::cout << "TCP disconnection successful.\n";

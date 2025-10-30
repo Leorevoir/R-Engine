@@ -32,6 +32,9 @@ static void _init_window_system(r::ecs::Res<r::WindowPluginConfig> config) noexc
     if ((config.ptr->settings & r::WindowPluginSettings::TRANSPARENT_FB) == r::WindowPluginSettings::TRANSPARENT_FB) {
         config_flags |= FLAG_WINDOW_TRANSPARENT;
     }
+    if ((config.ptr->settings & r::WindowPluginSettings(FLAG_VSYNC_HINT)) == r::WindowPluginSettings(FLAG_VSYNC_HINT)) {
+        config_flags |= FLAG_VSYNC_HINT;
+    }
 
     SetConfigFlags(config_flags);
     InitWindow(size.width, size.height, title.c_str());
@@ -78,6 +81,54 @@ static void _update_window_system() noexcept
     }
 }
 
+static void apply_window_config_changes_system(r::ecs::Res<r::WindowPluginConfig> config) noexcept
+{
+    /* VSync */
+    if ((config.ptr->settings & r::WindowPluginSettings(FLAG_VSYNC_HINT)) == r::WindowPluginSettings(FLAG_VSYNC_HINT)) {
+        if (!IsWindowState(FLAG_VSYNC_HINT)) {
+            SetWindowState(FLAG_VSYNC_HINT);
+        }
+    } else {
+        if (IsWindowState(FLAG_VSYNC_HINT)) {
+            ClearWindowState(FLAG_VSYNC_HINT);
+        }
+    }
+
+    /* Fullscreen/Borderless/Windowed */
+    bool is_fullscreen = IsWindowFullscreen();
+    bool wants_fullscreen = (config.ptr->settings & r::WindowPluginSettings::MAXIMIZED) == r::WindowPluginSettings::MAXIMIZED;
+
+    if (wants_fullscreen && !is_fullscreen) {
+        int monitor = GetCurrentMonitor();
+        SetWindowSize(GetMonitorWidth(monitor), GetMonitorHeight(monitor));
+        ToggleFullscreen();
+    } else if (!wants_fullscreen && is_fullscreen) {
+        ToggleFullscreen();
+    }
+
+    if (!wants_fullscreen) {
+        if ((config.ptr->settings & r::WindowPluginSettings::DECORATED) != r::WindowPluginSettings::DECORATED) {
+            if (!IsWindowState(FLAG_WINDOW_UNDECORATED)) {
+                SetWindowState(FLAG_WINDOW_UNDECORATED);
+            }
+        } else {
+            if (IsWindowState(FLAG_WINDOW_UNDECORATED)) {
+                ClearWindowState(FLAG_WINDOW_UNDECORATED);
+            }
+        }
+
+        int desired_width = static_cast<int>(config.ptr->size.width);
+        int desired_height = static_cast<int>(config.ptr->size.height);
+
+        if (GetScreenWidth() != desired_width || GetScreenHeight() != desired_height) {
+            SetWindowSize(desired_width, desired_height);
+        }
+    }
+
+    /* Framerate */
+    SetTargetFPS(static_cast<int>(config.ptr->frame_per_second));
+}
+
 static void _destroy_window_system() noexcept
 {
     CloseWindow();
@@ -104,9 +155,9 @@ void r::WindowPlugin::build(r::Application &app) noexcept
     app
         .insert_resource(_config)
         .insert_resource(initial_cursor_state)
-        .add_systems<_init_window_system>(Schedule::PRE_STARTUP)
-        .add_systems<_update_window_system, _update_cursor_system>(Schedule::UPDATE)
-        .add_systems<_destroy_window_system>(Schedule::SHUTDOWN);
+        .add_systems<_init_window_system>(r::Schedule::PRE_STARTUP)
+        .add_systems<_update_window_system, _update_cursor_system, apply_window_config_changes_system>(r::Schedule::UPDATE)
+        .add_systems<_destroy_window_system>(r::Schedule::SHUTDOWN);
 
     Logger::debug("WindowPlugin built");
 }

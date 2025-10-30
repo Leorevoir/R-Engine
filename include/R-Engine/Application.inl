@@ -156,7 +156,7 @@ r::Application &r::Application::init_state(T initial_state) noexcept
     insert_resource(State<T>(initial_state));
     insert_resource(NextState<T>{.next = initial_state});
 
-    _state_transition_runner = [this]() {
+    _state_transition_runners.push_back([this]() {
         auto *state_res = _scene.get_resource_ptr<State<T>>();
         auto *next_state_res = _scene.get_resource_ptr<NextState<T>>();
 
@@ -209,7 +209,7 @@ r::Application &r::Application::init_state(T initial_state) noexcept
         _run_schedule(Schedule::EVENT_CLEANUP);
 
         next_state_res->next.reset();
-    };
+    });
 
     return *this;
 }
@@ -255,10 +255,8 @@ r::sys::SystemConfigurator r::Application::add_systems(ScheduleLabel label)
                 break;
             }
         }
-    } else if constexpr (details::is_on_enter<ScheduleLabel>::value ||
-                         details::is_on_exit<ScheduleLabel>::value ||
-                         details::is_on_transition<ScheduleLabel>::value)
-    {
+    } else if constexpr (details::is_on_enter<ScheduleLabel>::value || details::is_on_exit<ScheduleLabel>::value
+        || details::is_on_transition<ScheduleLabel>::value) {
         /* State transitions often involve setup/teardown of graphics resources
         and should be run on the main thread. */
         main_thread_only = true;

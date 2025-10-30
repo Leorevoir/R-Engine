@@ -12,6 +12,7 @@ target_link_libraries(r-engine PUBLIC
     lua_lib
     OpenSSL::SSL
     OpenSSL::Crypto
+    r-type_network
 )
 target_compile_definitions(r-engine PRIVATE
     R_ENGINE_BUILDING_EXPORTS=1
@@ -21,5 +22,29 @@ target_compile_definitions(r-engine PRIVATE
 
 apply_compiler_warnings(r-engine)
 apply_linker_optimizations(r-engine)
+
+########################################
+
+add_custom_command(
+    TARGET r-engine POST_BUILD
+    COMMENT "Copying networking shared libraries..."
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        $<TARGET_FILE:r-type_network>
+        $<TARGET_FILE_DIR:r-engine>
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        $<TARGET_FILE:r-type_network_core>
+        $<TARGET_FILE_DIR:r-engine>
+    VERBATIM
+)
+
+if(NOT MSVC)
+    add_custom_command(
+        TARGET r-engine POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            $<TARGET_FILE:r-type_network_subplatform>
+            $<TARGET_FILE_DIR:r-engine>
+        VERBATIM
+    )
+endif()
 
 ########################################

@@ -8,6 +8,7 @@
 #include "R-Engine/Application.hpp"
 #include "R-Engine/Plugins/Plugin.hpp"
 #include "R-Engine/Types.hpp"
+#include <RTypeNet/Interfaces.hpp>
 #include <string>
 #include <vector>
 
@@ -45,10 +46,8 @@ struct SentPacket {
  * with this resource to perform network operations.
  */
 struct Connection {
-        Protocol protocol = Protocol::TCP;
-        int handle = -1;
+        rtype::network::Socket socket{};
         bool connected = false;
-        Endpoint endpoint;
 
         /* --- Reliability State (for UDP) --- */
 

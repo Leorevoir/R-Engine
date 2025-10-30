@@ -31,3 +31,9 @@ endif ()
 ########################################
 
 add_subdirectory(external/lua EXCLUDE_FROM_ALL)
+
+########################################
+# R-Type-Network
+########################################
+
+add_subdirectory(external/R-Type-Network)

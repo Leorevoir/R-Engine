@@ -3,19 +3,53 @@
 #include "R-Engine/Core/Clock.hpp"
 #include "R-Engine/Core/Logger.hpp"
 #include "R-Engine/Plugins/Plugin.hpp"
+#include <RTypeNet/Cleanup.hpp>
+#include <RTypeNet/Connect.hpp>
+#include <RTypeNet/Disconnect.hpp>
+#include <RTypeNet/Listen.hpp>
+#include <RTypeNet/Poll.hpp>
+#include <RTypeNet/Recv.hpp>
+#include <RTypeNet/Send.hpp>
+#include <RTypeNet/Startup.hpp>
 #include <algorithm>
-#include <arpa/inet.h>
 #include <cstring>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <unistd.h>
 #include <vector>
+
+#if defined(_WIN32)
+    #include <winsock2.h>
+    #include <ws2tcpip.h>
+#else
+    #include <arpa/inet.h>
+    #include <sys/socket.h>
+#endif
 
 namespace r::net {
 
 namespace {
 
 /* --- Internal Helper Functions --- */
+
+/**
+ * @brief Converts a string IP address to a rtype::network::Endpoint.
+ * @param address The IP address string.
+ * @param port The port number.
+ * @return A rtype::network::Endpoint object.
+ */
+rtype::network::Endpoint to_rtype_endpoint(const std::string &address, u16 port)
+{
+    rtype::network::Endpoint endpoint{};
+    endpoint.port = port;
+    /* This is a simplified conversion assuming IPv4.
+    A more robust solution (maybe for later) would handle IPv6 and use getaddrinfo. */
+    in_addr addr;
+#if defined(_WIN32)
+    InetPton(AF_INET, address.c_str(), &addr);
+#else
+    inet_pton(AF_INET, address.c_str(), &addr);
+#endif
+    std::memcpy(endpoint.ip.data() + rtype::network::IPv4Offset, &addr, rtype::network::IPv4Length);
+    return endpoint;
+}
 
 /**
  * @brief Serializes a Packet struct into a byte vector for transmission.
@@ -163,6 +197,28 @@ void process_acks(Connection &conn, u32 ack_base, u32 ack_bits)
 /* --- ECS Systems --- */
 
 /**
+ * @brief System to initialize the network library.
+ */
+static void network_startup_system()
+{
+    try {
+        rtype::network::startup();
+        r::Logger::info("Network library initialized.");
+    } catch (const std::exception &e) {
+        r::Logger::error("Network library initialization failed: " + std::string(e.what()));
+    }
+}
+
+/**
+ * @brief System to clean up the network library.
+ */
+static void network_cleanup_system()
+{
+    rtype::network::cleanup();
+    r::Logger::info("Network library cleaned up.");
+}
+
+/**
  * @brief Handles NetworkConnectEvent to establish a new network connection.
  */
 static void network_connect_system(ecs::ResMut<Connection> conn, ecs::EventReader<NetworkConnectEvent> connect_events,
@@ -180,32 +236,31 @@ static void network_connect_system(ecs::ResMut<Connection> conn, ecs::EventReade
         conn.ptr->ack_bits = 0;
         conn.ptr->sent_buffer.clear();
 
-        conn.ptr->protocol = evt.protocol;
-        conn.ptr->endpoint = evt.endpoint;
-        int sock_type = (evt.protocol == Protocol::UDP) ? SOCK_DGRAM : SOCK_STREAM;
-        conn.ptr->handle = socket(AF_INET, sock_type, 0);
+        try {
+            rtype::network::Protocol proto =
+                (evt.protocol == Protocol::UDP) ? rtype::network::Protocol::UDP : rtype::network::Protocol::TCP;
+            rtype::network::Endpoint rtype_endpoint = to_rtype_endpoint(evt.endpoint.address, evt.endpoint.port);
 
-        if (conn.ptr->handle == -1) {
-            error_writer.send({"Failed to create socket."});
-            continue;
-        }
+            if (evt.protocol == Protocol::TCP) {
+                /* For TCP, we can use an empty local endpoint */
+                conn.ptr->socket.handle = rtype::network::connect({}, rtype_endpoint, proto);
+            } else {
+                /* For UDP, we create a listening socket to be able to receive data */
+                conn.ptr->socket = rtype::network::listen(rtype_endpoint, proto);
+            }
+            conn.ptr->socket.endpoint = rtype_endpoint;
+            conn.ptr->socket.protocol = proto;
 
-        if (evt.protocol == Protocol::TCP) {
-            sockaddr_in addr = {};
-            addr.sin_family = AF_INET;
-            addr.sin_port = htons(evt.endpoint.port);
-            inet_pton(AF_INET, evt.endpoint.address.c_str(), &addr.sin_addr);
-
-            if (::connect(conn.ptr->handle, (sockaddr *) &addr, sizeof(addr)) < 0) {
-                error_writer.send({"Failed to connect TCP socket."});
-                close(conn.ptr->handle);
-                conn.ptr->handle = -1;
+            if (conn.ptr->socket.handle == rtype::network::INVALID_SOCK) {
+                error_writer.send({"Failed to create or connect socket."});
                 continue;
             }
-        }
 
-        conn.ptr->connected = true;
-        r::Logger::info("Network connection established.");
+            conn.ptr->connected = true;
+            r::Logger::info("Network connection established.");
+        } catch (const std::exception &e) {
+            error_writer.send({e.what()});
+        }
     }
 }
 
@@ -218,9 +273,8 @@ static void network_disconnect_system(ecs::ResMut<Connection> conn, ecs::EventRe
         return;///< No events to process
     }
 
-    if (conn.ptr->connected && conn.ptr->handle != -1) {
-        close(conn.ptr->handle);
-        conn.ptr->handle = -1;
+    if (conn.ptr->connected) {
+        rtype::network::disconnect(conn.ptr->socket);
         conn.ptr->connected = false;
         r::Logger::info("Network connection closed.");
     }
@@ -232,10 +286,10 @@ static void network_disconnect_system(ecs::ResMut<Connection> conn, ecs::EventRe
 static void network_send_system(ecs::ResMut<Connection> conn, ecs::EventReader<NetworkSendEvent> send_events,
     ecs::EventWriter<NetworkErrorEvent> error_writer, ecs::Res<core::FrameTime> time)
 {
-    if (!conn.ptr->connected || conn.ptr->handle == -1)
+    if (!conn.ptr->connected || conn.ptr->socket.handle == rtype::network::INVALID_SOCK)
         return;
 
-    bool is_reliable = conn.ptr->protocol == Protocol::UDP;
+    bool is_reliable = conn.ptr->socket.protocol == rtype::network::Protocol::UDP;
 
     for (const auto &evt : send_events) {
         Packet packet_to_send = evt.packet;
@@ -250,14 +304,10 @@ static void network_send_system(ecs::ResMut<Connection> conn, ecs::EventReader<N
         std::vector<u8> buffer = serializePacket(packet_to_send);
         ssize_t sent_bytes = 0;
 
-        if (conn.ptr->protocol == Protocol::TCP) {
-            sent_bytes = ::send(conn.ptr->handle, buffer.data(), buffer.size(), 0);
+        if (conn.ptr->socket.protocol == rtype::network::Protocol::TCP) {
+            sent_bytes = rtype::network::send(conn.ptr->socket.handle, buffer.data(), buffer.size(), 0);
         } else {///< UDP
-            sockaddr_in addr = {};
-            addr.sin_family = AF_INET;
-            addr.sin_port = htons(conn.ptr->endpoint.port);
-            inet_pton(AF_INET, conn.ptr->endpoint.address.c_str(), &addr.sin_addr);
-            sent_bytes = ::sendto(conn.ptr->handle, buffer.data(), buffer.size(), 0, (sockaddr *) &addr, sizeof(addr));
+            sent_bytes = rtype::network::sendto(conn.ptr->socket.handle, buffer.data(), buffer.size(), 0, conn.ptr->socket.endpoint);
         }
 
         if (sent_bytes < 0) {
@@ -274,32 +324,46 @@ static void network_send_system(ecs::ResMut<Connection> conn, ecs::EventReader<N
 static void network_receive_system(ecs::ResMut<Connection> conn, ecs::EventWriter<NetworkMessageEvent> message_writer,
     ecs::EventWriter<NetworkErrorEvent> error_writer)
 {
-    if (!conn.ptr->connected || conn.ptr->handle == -1)
+    if (!conn.ptr->connected || conn.ptr->socket.handle == rtype::network::INVALID_SOCK)
         return;
 
-    std::vector<u8> buffer(2048);
-    ssize_t received = ::recv(conn.ptr->handle, buffer.data(), buffer.size(), MSG_DONTWAIT);
+    rtype::network::PollFD pfd{conn.ptr->socket.handle, POLLIN, 0};
+    int poll_result = rtype::network::poll(&pfd, 1, 0);
 
-    if (received > 0) {
-        buffer.resize(static_cast<size_t>(received));
-        Packet packet = deserializePacket(buffer);
+    if (poll_result > 0 && (pfd.revents & POLLIN)) {
+        std::vector<u8> buffer(2048);
+        ssize_t received = 0;
+        rtype::network::Endpoint from_endpoint;
 
-        if (conn.ptr->protocol == Protocol::UDP) {
-            process_acks(*conn.ptr, packet.ackBase, packet.ackBits);
-            process_incoming_sequence(*conn.ptr, packet.sequence);
+        if (conn.ptr->socket.protocol == rtype::network::Protocol::TCP) {
+            received = rtype::network::recv(conn.ptr->socket.handle, buffer.data(), buffer.size(), 0);
+        } else {
+            received = rtype::network::recvfrom(conn.ptr->socket.handle, buffer.data(), buffer.size(), 0, from_endpoint);
         }
 
-        message_writer.send({packet.command, packet.payload});
-    } else if (received == 0 && conn.ptr->protocol == Protocol::TCP) {
-        /* TCP connection closed by peer */
-        r::Logger::info("Peer closed the connection.");
-        close(conn.ptr->handle);
-        conn.ptr->handle = -1;
-        conn.ptr->connected = false;
-    } else if (received < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
-        error_writer.send({"Network receive error."});
-        close(conn.ptr->handle);
-        conn.ptr->handle = -1;
+        if (received > 0) {
+            buffer.resize(static_cast<size_t>(received));
+            Packet packet = deserializePacket(buffer);
+
+            if (conn.ptr->socket.protocol == rtype::network::Protocol::UDP) {
+                process_acks(*conn.ptr, packet.ackBase, packet.ackBits);
+                process_incoming_sequence(*conn.ptr, packet.sequence);
+            }
+
+            message_writer.send({packet.command, packet.payload});
+        } else if (received == 0 && conn.ptr->socket.protocol == rtype::network::Protocol::TCP) {
+            /* TCP connection closed by peer */
+            r::Logger::info("Peer closed the connection.");
+            rtype::network::disconnect(conn.ptr->socket);
+            conn.ptr->connected = false;
+        } else if (received < 0) {
+            error_writer.send({"Network receive error."});
+            rtype::network::disconnect(conn.ptr->socket);
+            conn.ptr->connected = false;
+        }
+    } else if (poll_result < 0) {
+        error_writer.send({"Network poll error."});
+        rtype::network::disconnect(conn.ptr->socket);
         conn.ptr->connected = false;
     }
 }
@@ -310,19 +374,15 @@ static void network_receive_system(ecs::ResMut<Connection> conn, ecs::EventWrite
 static void network_resend_system(ecs::ResMut<Connection> conn, ecs::Res<core::FrameTime> time,
     ecs::EventWriter<NetworkErrorEvent> error_writer)
 {
-    if (!conn.ptr->connected || conn.ptr->handle == -1 || conn.ptr->protocol != Protocol::UDP) {
+    if (!conn.ptr->connected || conn.ptr->socket.handle == rtype::network::INVALID_SOCK
+        || conn.ptr->socket.protocol != rtype::network::Protocol::UDP) {
         return;
     }
 
     for (auto &sent_packet : conn.ptr->sent_buffer) {
         if (time.ptr->global_time - sent_packet.sent_time > conn.ptr->timeout_seconds) {
-            sockaddr_in addr = {};
-            addr.sin_family = AF_INET;
-            addr.sin_port = htons(conn.ptr->endpoint.port);
-            inet_pton(AF_INET, conn.ptr->endpoint.address.c_str(), &addr.sin_addr);
-
-            ssize_t sent_bytes =
-                ::sendto(conn.ptr->handle, sent_packet.buffer.data(), sent_packet.buffer.size(), 0, (sockaddr *) &addr, sizeof(addr));
+            ssize_t sent_bytes = rtype::network::sendto(conn.ptr->socket.handle, sent_packet.buffer.data(), sent_packet.buffer.size(), 0,
+                conn.ptr->socket.endpoint);
 
             if (sent_bytes < 0) {
                 error_writer.send({"Network resend error."});
@@ -342,8 +402,11 @@ void NetworkPlugin::build(Application &app)
 {
     app.insert_resource(Connection{})
         .add_events<NetworkConnectEvent, NetworkDisconnectEvent, NetworkSendEvent, NetworkMessageEvent, NetworkErrorEvent>()
+
+        .add_systems<network_startup_system>(Schedule::STARTUP)
         .add_systems<network_connect_system, network_disconnect_system, network_send_system, network_receive_system, network_resend_system>(
-            Schedule::UPDATE);
+            Schedule::UPDATE)
+        .add_systems<network_cleanup_system>(Schedule::SHUTDOWN);
 
     r::Logger::debug("NetworkPlugin built");
 }

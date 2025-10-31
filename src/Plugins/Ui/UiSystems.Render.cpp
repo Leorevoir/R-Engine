@@ -1,4 +1,4 @@
-﻿/**
+/**
  * \file UiSystems.Render.cpp
  * \brief Rendering system for the UI plugin using Raylib.
  */
@@ -41,7 +41,7 @@ static constexpr auto PLACEHOLDER_THRESHOLD = std::numeric_limits<r::ecs::Entity
 /**
  * @brief Computes the intersection of two rectangles
  * @param x X coordinate of first rectangle
- * @param y Y coordinate of first rectangle  
+ * @param y Y coordinate of first rectangle
  * @param w Width of first rectangle
  * @param h Height of first rectangle
  * @param x2 X coordinate of second rectangle
@@ -313,12 +313,11 @@ static void render_backgrounds(const std::vector<DrawItem> &items, const RenderD
                 border_thickness = theme.ptr->button.border_thickness;
             }
         }
-        if (!it.is_button && bg.a == 0) {
-            bg = theme.ptr->panel_bg;
-        }
 
-        DrawRectangle(static_cast<int>(static_cast<float>(x) + sx), static_cast<int>(static_cast<float>(y) + sy), w, h,
-            {bg.r, bg.g, bg.b, bg.a});
+        if (bg.a > 0) {
+            DrawRectangle(static_cast<int>(static_cast<float>(x) + sx), static_cast<int>(static_cast<float>(y) + sy), w, h,
+                {bg.r, bg.g, bg.b, bg.a});
+        }
 
         if (border_thickness > 0.f) {
             ::Rectangle rec{static_cast<float>(x) + sx, static_cast<float>(y) + sy, static_cast<float>(w), static_cast<float>(h)};

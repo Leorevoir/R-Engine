@@ -20,6 +20,8 @@ class Shaders final
 
         const ::Shader *get(ShaderHandle handle) const;
 
+        static void set_value(const ::Shader &shader, const r::ShaderLocation loc, const std::any &data_any) noexcept;
+
     private:
         std::vector<::Shader> _shaders;
 };

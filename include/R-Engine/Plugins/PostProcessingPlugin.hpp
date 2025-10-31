@@ -2,6 +2,7 @@
 
 #include <R-Engine/Plugins/Plugin.hpp>
 #include <R-Engine/Types.hpp>
+#include <string>
 
 namespace r {
 
@@ -32,6 +33,14 @@ enum class PostProcessingState {
 struct R_ENGINE_API PostProcessingPluginConfig final {
         PostProcessingState state = PostProcessingState::Disabled;
         f32 contrast_level = 1.5f;
+        /**
+         * @brief The path prefix to the engine's assets folder.
+         * @details Defaults to "assets/" for standalone engine usage.
+         * When used as a submodule, this should be set to the relative
+         * path from the executable to the engine's assets folder.
+         * Example: "external/R-Engine/assets/"
+         */
+        std::string engine_assets_prefix = "assets/";
 };
 
 class R_ENGINE_API PostProcessingPlugin final : public Plugin

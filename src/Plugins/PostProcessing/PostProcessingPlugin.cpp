@@ -26,102 +26,102 @@ static struct {
         i32 contrastLoc;
 } g_shaders[] = {
     {
-        .name = r::path::get("assets/shaders/postprocessing/grayscale.frag"),
+        .name = "shaders/postprocessing/grayscale.frag",
         .shader = {},
         .resolutionLoc = -1,
         .timeLoc = -1,
         .contrastLoc = -1},
     {
-        .name = r::path::get("assets/shaders/postprocessing/posterization.frag"),
+        .name = "shaders/postprocessing/posterization.frag",
         .shader = {},
         .resolutionLoc = -1,
         .timeLoc = -1,
         .contrastLoc = -1},
     {
-        .name = r::path::get("assets/shaders/postprocessing/dream_vision.frag"),
+        .name = "shaders/postprocessing/dream_vision.frag",
         .shader = {},
         .resolutionLoc = -1,
         .timeLoc = -1,
         .contrastLoc = -1},
     {
-        .name = r::path::get("assets/shaders/postprocessing/pixelizer.frag"),
+        .name = "shaders/postprocessing/pixelizer.frag",
         .shader = {},
         .resolutionLoc = -1,
         .timeLoc = -1,
         .contrastLoc = -1},
     {
-        .name = r::path::get("assets/shaders/postprocessing/cross_hatching.frag"),
+        .name = "shaders/postprocessing/cross_hatching.frag",
         .shader = {},
         .resolutionLoc = -1,
         .timeLoc = -1,
         .contrastLoc = -1},
     {
-        .name = r::path::get("assets/shaders/postprocessing/cross_stitching.frag"),
+        .name = "shaders/postprocessing/cross_stitching.frag",
         .shader = {},
         .resolutionLoc = -1,
         .timeLoc = -1,
         .contrastLoc = -1},
     {
-        .name = r::path::get("assets/shaders/postprocessing/predator.frag"),
+        .name = "shaders/postprocessing/predator.frag",
         .shader = {},
         .resolutionLoc = -1,
         .timeLoc = -1,
         .contrastLoc = -1},
     {
-        .name = r::path::get("assets/shaders/postprocessing/scanlines.frag"),
+        .name = "shaders/postprocessing/scanlines.frag",
         .shader = {},
         .resolutionLoc = -1,
         .timeLoc = -1,
         .contrastLoc = -1},
     {
-        .name = r::path::get("assets/shaders/postprocessing/fisheye.frag"),
+        .name = "shaders/postprocessing/fisheye.frag",
         .shader = {},
         .resolutionLoc = -1,
         .timeLoc = -1,
         .contrastLoc = -1},
     {
-        .name = r::path::get("assets/shaders/postprocessing/sobel.frag"),
+        .name = "shaders/postprocessing/sobel.frag",
         .shader = {},
         .resolutionLoc = -1,
         .timeLoc = -1,
         .contrastLoc = -1},
     {
-        .name = r::path::get("assets/shaders/postprocessing/bloom.frag"),
+        .name = "shaders/postprocessing/bloom.frag",
         .shader = {},
         .resolutionLoc = -1,
         .timeLoc = -1,
         .contrastLoc = -1
     },
     {
-        .name = r::path::get("assets/shaders/postprocessing/blur.frag"),
+        .name = "shaders/postprocessing/blur.frag",
         .shader = {},
         .resolutionLoc = -1,
         .timeLoc = -1,
         .contrastLoc = -1
     },
     {
-        .name = r::path::get("assets/shaders/postprocessing/contrast.frag"),
+        .name = "shaders/postprocessing/contrast.frag",
         .shader = {},
         .resolutionLoc = -1,
         .timeLoc = -1,
         .contrastLoc = -1
     },
     {
-        .name = r::path::get("assets/shaders/postprocessing/protanopia.frag"),
+        .name = "shaders/postprocessing/protanopia.frag",
         .shader = {},
         .resolutionLoc = -1,
         .timeLoc = -1,
         .contrastLoc = -1
     },
     {
-        .name = r::path::get("assets/shaders/postprocessing/deuteranopia.frag"),
+        .name = "shaders/postprocessing/deuteranopia.frag",
         .shader = {},
         .resolutionLoc = -1,
         .timeLoc = -1,
         .contrastLoc = -1
     },
     {
-        .name = r::path::get("assets/shaders/postprocessing/tritanopia.frag"),
+        .name = "shaders/postprocessing/tritanopia.frag",
         .shader = {},
         .resolutionLoc = -1,
         .timeLoc = -1,
@@ -174,15 +174,19 @@ static inline void post_processing_draw_texture(void) noexcept
  * systems
  */
 
-static void post_processing_plugin_startup(const r::ecs::Res<r::WindowPluginConfig> config_ptr) noexcept
+static void post_processing_plugin_startup(const r::ecs::Res<r::WindowPluginConfig> config_ptr,
+    const r::ecs::Res<r::PostProcessingPluginConfig> pp_config_ptr) noexcept
 {
     const r::Vec2i w_size = static_cast<r::Vec2i>(config_ptr.ptr->size);
 
     g_render_texture.target = LoadRenderTexture(w_size.x, w_size.y);
     g_render_texture.initialized = true;
 
+    const std::string &prefix = pp_config_ptr.ptr->engine_assets_prefix;
+
     for (auto &fx : g_shaders) {
-        fx.shader = LoadShader(nullptr, fx.name.c_str());
+        std::string final_path = r::path::get(prefix + fx.name);
+        fx.shader = LoadShader(nullptr, final_path.c_str());
         fx.resolutionLoc = GetShaderLocation(fx.shader, "resolution");
         fx.timeLoc = GetShaderLocation(fx.shader, "time");
         fx.contrastLoc = GetShaderLocation(fx.shader, "contrast");

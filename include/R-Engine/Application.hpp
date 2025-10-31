@@ -50,7 +50,7 @@ class R_ENGINE_API Application final
 {
     private:
         std::unordered_map<std::type_index, sys::States> _states;
-        std::function<void()> _state_transition_runner;
+        std::vector<std::function<void()>> _state_transition_runners;
 
         using ScheduleMap = std::unordered_map<Schedule, sys::ScheduleGraph>;
         friend class sys::SystemConfigurator;

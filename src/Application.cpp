@@ -22,15 +22,15 @@ r::Application::Application()
 
     _prepare_thread_local_buffers(thread_count > 0 ? thread_count : 1);
 
-    #if !defined(ECS_SERVER_MODE)
-        std::signal(SIGINT, [](i32) {
-            r::Application::quit.store(true, std::memory_order_relaxed);
-            std::cout << "\r";
-            Logger::warn("SIGINT received, quitting application...");
-        });
-    #else
-        Logger::warn("Server mode build detected, SIGINT handler is disabled for the ECS.");
-    #endif
+#if !defined(ECS_SERVER_MODE)
+    std::signal(SIGINT, [](i32) {
+        r::Application::quit.store(true, std::memory_order_relaxed);
+        std::cout << "\r";
+        Logger::warn("SIGINT received, quitting application...");
+    });
+#else
+    Logger::warn("Server mode build detected, SIGINT handler is disabled for the ECS.");
+#endif
 }
 
 void r::Application::run()
@@ -139,8 +139,10 @@ void r::Application::_apply_commands()
 
 void r::Application::_apply_state_transitions()
 {
-    if (_state_transition_runner) {
-        _state_transition_runner();
+    for (const auto &runner : _state_transition_runners) {
+        if (runner) {
+            runner();
+        }
     }
 }
 

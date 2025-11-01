@@ -4,3 +4,6 @@
 [submodule "external/lua"]
 	path = external/lua
 	url = git@github.com:Leorevoir/lua-cmakelists.git
+[submodule "external/R-Type-Network"]
+	path = external/R-Type-Network
+	url = git@github.com:mbarleon-org/R-Type-Network.git

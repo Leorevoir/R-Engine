@@ -56,6 +56,11 @@ void r::Application::tick()
 
     _apply_commands();
 
+    for (i32 i = 0; i < _clock.frame().substep_count; ++i) {
+        _run_schedule(Schedule::FIXED_UPDATE);
+        _apply_commands();
+    }
+
     _run_schedule(Schedule::EVENT_CLEANUP);
     _apply_commands();
 }

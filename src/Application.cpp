@@ -40,6 +40,26 @@ void r::Application::run()
     _shutdown();
 }
 
+void r::Application::init()
+{
+    _startup();
+}
+
+void r::Application::tick()
+{
+    _clock.tick();
+    *_scene.get_resource_ptr<core::FrameTime>() = _clock.frame();
+
+    _apply_state_transitions();
+
+    _run_schedule(Schedule::UPDATE);
+
+    _apply_commands();
+
+    _run_schedule(Schedule::EVENT_CLEANUP);
+    _apply_commands();
+}
+
 /**
 * private
 */

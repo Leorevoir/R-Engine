@@ -2,7 +2,6 @@
 #include <R-Engine/Core/Filepath.hpp>
 #include <R-Engine/Core/Logger.hpp>
 #include <R-Engine/Maths/Quaternion.hpp>
-
 #include <R-Engine/Plugins/MeshPlugin.hpp>
 
 /**
@@ -73,7 +72,15 @@
         mesh.indices[idx + 2] = static_cast<unsigned short>(i + 2);
     }
 
-    UploadMesh(&mesh, false);
+    // UploadMesh(&mesh, false);
+    return mesh;
+}
+
+::Mesh r::Mesh3d::Sphere(const f32 radius, const i32 rings, const i32 slices) noexcept
+{
+    ::Mesh mesh = GenMeshSphere(radius, rings, slices);
+
+    // UploadMesh(&mesh, false);
     return mesh;
 }
 

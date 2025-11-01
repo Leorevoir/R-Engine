@@ -19,57 +19,36 @@ struct PlayerActionEvent {
         std::string description;
 };
 
-/**
- * systems
- */
-
-static void menu_system(r::ecs::ResMut<r::NextState<AppState>> next_state)
+static void menu_render_system()
 {
     DrawText("Main Menu (Press ENTER)", 250, 250, 30, BLACK);
 }
 
-static void game_logic_system(r::ecs::ResMut<r::NextState<AppState>> next_state, r::ecs::EventWriter<PlayerActionEvent> event_writer)
+static void game_render_system()
 {
     DrawText("Playing!", 320, 250, 40, BLACK);
     DrawText("Press P to Pause", 300, 300, 20, DARKGRAY);
     DrawText("Press SPACE to trigger an event", 240, 340, 20, DARKGRAY);
-
-    if (IsKeyPressed(KEY_P)) {
-        next_state.ptr->set(AppState::Paused);
-    }
-    if (IsKeyPressed(KEY_SPACE)) {
-        event_writer.send({"Player Jumped!"});
-    }
 }
 
-static void paused_overlay_system(r::ecs::ResMut<r::NextState<AppState>> next_state)
+static void paused_render_system()
 {
     DrawRectangle(0, 0, 800, 600, {0, 0, 0, 100});
     DrawText("PAUSED", 320, 250, 40, RAYWHITE);
     DrawText("Press P to Resume", 300, 300, 20, LIGHTGRAY);
-    if (IsKeyPressed(KEY_P)) {
-        next_state.ptr->set(AppState::Playing);
-    }
 }
 
-static void display_score_system(r::ecs::Res<GameScore> score)
+static void display_score_render_system(r::ecs::Res<GameScore> score)
 {
     DrawText(TextFormat("Score: %d", score.ptr->value), 680, 20, 20, SKYBLUE);
 }
 
-static void playing_or_paused_system()
+static void playing_or_paused_render_system()
 {
     DrawText("State: Playing or Paused", 10, 40, 20, GREEN);
 }
 
-static void playing_and_event_system(r::ecs::EventReader<PlayerActionEvent> reader)
-{
-    for (const auto &event : reader) {
-        std::cout << "--- 'Playing' AND 'on_event' system fired with event: " << event.description << " ---" << std::endl;
-    }
-}
-
-static void not_in_menu_system()
+static void not_in_menu_render_system()
 {
     DrawText("NOT in Main Menu", 10, 70, 20, MAROON);
 }
@@ -79,7 +58,30 @@ static void state_control_system(r::ecs::Res<r::State<AppState>> state, r::ecs::
     if (state.ptr->current() == AppState::MainMenu && IsKeyPressed(KEY_ENTER)) {
         next_state.ptr->set(AppState::Playing);
     }
-    DrawFPS(10, 10);
+}
+
+static void game_logic_system(r::ecs::ResMut<r::NextState<AppState>> next_state, r::ecs::EventWriter<PlayerActionEvent> event_writer)
+{
+    if (IsKeyPressed(KEY_P)) {
+        next_state.ptr->set(AppState::Paused);
+    }
+    if (IsKeyPressed(KEY_SPACE)) {
+        event_writer.send({"Player Jumped!"});
+    }
+}
+
+static void paused_logic_system(r::ecs::ResMut<r::NextState<AppState>> next_state)
+{
+    if (IsKeyPressed(KEY_P)) {
+        next_state.ptr->set(AppState::Playing);
+    }
+}
+
+static void playing_and_event_system(r::ecs::EventReader<PlayerActionEvent> reader)
+{
+    for (const auto &event : reader) {
+        std::cout << "--- 'Playing' AND 'on_event' system fired with event: " << event.description << " ---" << std::endl;
+    }
 }
 
 static void cleanup_game_system(r::ecs::Commands commands)
@@ -106,27 +108,28 @@ int main(void)
 
         .add_systems<cleanup_game_system>(r::OnEnter(AppState::MainMenu))
         .add_systems<setup_game_system>(r::OnEnter(AppState::Playing))
-        .add_systems<state_control_system>(r::Schedule::UPDATE)
 
-        .add_systems<menu_system>(r::Schedule::UPDATE)
-        .run_if<r::run_conditions::in_state<AppState::MainMenu>>()
+        .add_systems<state_control_system>(r::Schedule::UPDATE)
         .add_systems<game_logic_system>(r::Schedule::UPDATE)
         .run_if<r::run_conditions::in_state<AppState::Playing>>()
-        .add_systems<paused_overlay_system>(r::Schedule::UPDATE)
+        .add_systems<paused_logic_system>(r::Schedule::UPDATE)
         .run_if<r::run_conditions::in_state<AppState::Paused>>()
-
-        .add_systems<playing_or_paused_system>(r::Schedule::UPDATE)
-        .run_if<r::run_conditions::in_state<AppState::Playing>>()
-        .run_or<r::run_conditions::in_state<AppState::Paused>>()
-
         .add_systems<playing_and_event_system>(r::Schedule::UPDATE)
         .run_if<r::run_conditions::in_state<AppState::Playing>>()
         .run_and<r::run_conditions::on_event<PlayerActionEvent>>()
 
-        .add_systems<not_in_menu_system>(r::Schedule::UPDATE)
+        .add_systems<menu_render_system>(r::Schedule::RENDER_2D)
+        .run_if<r::run_conditions::in_state<AppState::MainMenu>>()
+        .add_systems<game_render_system>(r::Schedule::RENDER_2D)
+        .run_if<r::run_conditions::in_state<AppState::Playing>>()
+        .add_systems<paused_render_system>(r::Schedule::RENDER_2D)
+        .run_if<r::run_conditions::in_state<AppState::Paused>>()
+        .add_systems<playing_or_paused_render_system>(r::Schedule::RENDER_2D)
+        .run_if<r::run_conditions::in_state<AppState::Playing>>()
+        .run_or<r::run_conditions::in_state<AppState::Paused>>()
+        .add_systems<not_in_menu_render_system>(r::Schedule::RENDER_2D)
         .run_unless<r::run_conditions::in_state<AppState::MainMenu>>()
-
-        .add_systems<display_score_system>(r::Schedule::UPDATE)
+        .add_systems<display_score_render_system>(r::Schedule::RENDER_2D)
         .run_if<r::run_conditions::resource_exists<GameScore>>()
 
         .run();

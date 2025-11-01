@@ -11,7 +11,11 @@
     #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
     #pragma GCC diagnostic ignored "-Wswitch-default"
 #endif
+extern "C" {
 #include <raylib.h>
+#include <rlgl.h>
+}
+#include <raymath.h>
 #if defined(__clang__)
     #pragma clang diagnostic pop
 #elif defined(__GNUC__)

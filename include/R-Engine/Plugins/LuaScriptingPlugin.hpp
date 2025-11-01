@@ -68,8 +68,9 @@ class R_ENGINE_API LuaScripts final : public MoveOnly
 /**
 * @brief Configuration structure for LuaScriptingPlugin.
 */
-struct R_ENGINE_API LuaScriptingPluginConfig {
-};
+// INFO: keep commented out until configuration options are added
+// struct R_ENGINE_API LuaScriptingPluginConfig {
+// };
 
 /**
 * @brief Plugin that adds Lua scripting support to the application.
@@ -77,11 +78,13 @@ struct R_ENGINE_API LuaScriptingPluginConfig {
 class R_ENGINE_API LuaScriptingPlugin final : public Plugin
 {
     public:
-        explicit LuaScriptingPlugin(const LuaScriptingPluginConfig &config = LuaScriptingPluginConfig()) noexcept;
+        // explicit LuaScriptingPlugin(const LuaScriptingPluginConfig &config = LuaScriptingPluginConfig()) noexcept;
+        LuaScriptingPlugin() noexcept = default;
         void build(Application &app) noexcept override;
 
     private:
-        LuaScriptingPluginConfig _config;
+        // INFO: keep commented out until configuration options are added
+        // LuaScriptingPluginConfig _config;
 };
 
 }// namespace r

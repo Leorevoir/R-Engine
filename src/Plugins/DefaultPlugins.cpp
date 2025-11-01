@@ -3,6 +3,7 @@
 #include <R-Engine/Plugins/InputPlugin.hpp>
 #include <R-Engine/Plugins/LuaScriptingPlugin.hpp>
 #include <R-Engine/Plugins/MeshPlugin.hpp>
+#include <R-Engine/Plugins/PostProcessingPlugin.hpp>
 #include <R-Engine/Plugins/RenderPlugin.hpp>
 #include <R-Engine/Plugins/TransformPlugin.hpp>
 #include <R-Engine/Plugins/UiPlugin.hpp>
@@ -22,6 +23,7 @@ r::DefaultPlugins::DefaultPlugins()
     add<AudioPlugin>();
     add<UiPlugin>();
     add<LuaScriptingPlugin>();
+    add<PostProcessingPlugin>();
 }
 
 void r::DefaultPlugins::build(r::Application &app)

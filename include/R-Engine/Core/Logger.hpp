@@ -1,3 +1,5 @@
+#pragma once
+
 #include <R-Engine/R-EngineExport.hpp>
 
 #include <string_view>

@@ -1,0 +1,38 @@
+{
+  "version.label": {
+    "message": "Actuel",
+    "description": "The label for version current"
+  },
+  "sidebar.tutorialSidebar.category.Core Concepts": {
+    "message": "Concepts Fondamentaux",
+    "description": "The label for category 'Core Concepts' in sidebar 'tutorialSidebar'"
+  },
+  "sidebar.tutorialSidebar.category.Advanced Features": {
+    "message": "Fonctionnalités Avancées",
+    "description": "The label for category 'Advanced Features' in sidebar 'tutorialSidebar'"
+  },
+  "sidebar.tutorialSidebar.category.Examples": {
+    "message": "Exemples",
+    "description": "The label for category 'Examples' in sidebar 'tutorialSidebar'"
+  },
+  "sidebar.tutorialSidebar.category.API Reference": {
+    "message": "Référence API",
+    "description": "The label for category 'API Reference' in sidebar 'tutorialSidebar'"
+  },
+  "sidebar.tutorialSidebar.doc.advanced/events": {
+    "message": "Événements",
+    "description": "The label for the doc item 'advanced/events' in sidebar 'tutorialSidebar'"
+  },
+  "sidebar.tutorialSidebar.doc.advanced/hierarchies": {
+    "message": "Hiérarchies",
+    "description": "The label for the doc item 'advanced/hierarchies' in sidebar 'tutorialSidebar'"
+  },
+  "sidebar.tutorialSidebar.doc.advanced/run-conditions": {
+    "message": "Conditions d'Exécution",
+    "description": "The label for the doc item 'advanced/run-conditions' in sidebar 'tutorialSidebar'"
+  },
+  "sidebar.tutorialSidebar.doc.advanced/schedules": {
+    "message": "Plannings",
+    "description": "The label for the doc item 'advanced/schedules' in sidebar 'tutorialSidebar'"
+  }
+}

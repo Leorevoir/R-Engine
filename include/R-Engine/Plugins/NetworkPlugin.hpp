@@ -94,7 +94,7 @@ struct Packet {
         u8 flags;
         u32 sequence;
         u32 ackBase;
-        u32 ackBits;
+        u8 ackBits;
         u8 channel;
         u16 size;
         u32 clientId;

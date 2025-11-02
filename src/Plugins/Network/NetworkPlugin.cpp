@@ -58,7 +58,7 @@ rtype::network::Endpoint to_rtype_endpoint(const std::string &address, u16 port)
 std::vector<u8> serializePacket(const Packet &packet)
 {
     std::vector<u8> buffer;
-    buffer.resize(24);
+    buffer.resize(21);
     size_t offset = 0;
 
     auto write16 = [&](u16 v) {
@@ -78,7 +78,7 @@ std::vector<u8> serializePacket(const Packet &packet)
     write8(packet.flags);
     write32(packet.sequence);
     write32(packet.ackBase);
-    write32(packet.ackBits);
+    write8(packet.ackBits);
     write8(packet.channel);
     write16(static_cast<u16>(packet.payload.size()));///< Use actual payload size
     write32(packet.clientId);
@@ -97,7 +97,7 @@ std::vector<u8> serializePacket(const Packet &packet)
 Packet deserializePacket(const std::vector<u8> &buffer)
 {
     Packet packet = {};
-    if (buffer.size() < 24) {
+    if (buffer.size() < 21) {
         return packet;
     }
     size_t offset = 0;
@@ -121,7 +121,7 @@ Packet deserializePacket(const std::vector<u8> &buffer)
     packet.flags = read8();
     packet.sequence = read32();
     packet.ackBase = read32();
-    packet.ackBits = read32();
+    packet.ackBits = read8();
     packet.channel = read8();
     packet.size = read16();///< This is the payload size
     packet.clientId = read32();
@@ -307,7 +307,7 @@ static void network_send_system(ecs::ResMut<Connection> conn, ecs::EventReader<N
             conn.ptr->local_sequence++;
             packet_to_send.sequence = conn.ptr->local_sequence;
             packet_to_send.ackBase = conn.ptr->remote_sequence;
-            packet_to_send.ackBits = conn.ptr->ack_bits;
+            packet_to_send.ackBits = static_cast<u8>(conn.ptr->ack_bits);
         }
 
         std::vector<u8> buffer = serializePacket(packet_to_send);

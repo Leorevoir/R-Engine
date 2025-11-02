@@ -9,27 +9,23 @@
 #include <R-Engine/Plugins/RenderPlugin.hpp>
 #include <R-Engine/Plugins/WindowPlugin.hpp>
 
-// clang-format off
-
 struct SpinningCube final {
 };
 
 static void setup_scene_system(r::ecs::Commands commands, r::ecs::ResMut<r::Meshes> meshes)
 {
-    commands.spawn(
-        SpinningCube{},
+    commands.spawn(SpinningCube{},
         r::Mesh3d{
             .id = meshes.ptr->add(r::Mesh3d::Cube(2.0f)),
-            .color = {255, 100, 50, 255}
+            .color = {255, 100, 50, 255},
         },
-        r::Transform3d{.position = {0.0f, 1.0f, 0.0f}}
-    );
+        r::Transform3d{
+            .position = {0.0f, 1.0f, 0.0f},
+        });
 }
 
-static void spinning_cube_system(
-    r::ecs::Query<r::ecs::Mut<r::Transform3d>, r::ecs::With<SpinningCube>> query,
-    r::ecs::Res<r::core::FrameTime> time
-) noexcept
+static void spinning_cube_system(r::ecs::Query<r::ecs::Mut<r::Transform3d>, r::ecs::With<SpinningCube>> query,
+    r::ecs::Res<r::core::FrameTime> time) noexcept
 {
     for (auto [transform, _] : query) {
         transform.ptr->rotation.y += 0.5f * time.ptr->delta_time;
@@ -37,22 +33,19 @@ static void spinning_cube_system(
     }
 }
 
-static void post_processing_switcher_system(
-    r::ecs::Res<r::UserInput> input,
-    r::ecs::ResMut<r::PostProcessingPluginConfig> post_fx_config
-)
+static void post_processing_switcher_system(r::ecs::Res<r::UserInput> input, r::ecs::ResMut<r::PostProcessingPluginConfig> post_fx_config)
 {
     const i32 total_states = static_cast<i32>(r::PostProcessingState::Disabled) + 1;
     i32 current_state = static_cast<i32>(post_fx_config.ptr->state);
 
-    if (input.ptr->isKeyPressed(KEY_RIGHT)) {
+    if (input.ptr->isKeyJustPressed(KEY_RIGHT)) {
         ++current_state;
         if (current_state >= total_states) {
             current_state = 0;
         }
     }
 
-    if (input.ptr->isKeyPressed(KEY_LEFT)) {
+    if (input.ptr->isKeyJustPressed(KEY_LEFT)) {
         --current_state;
         if (current_state < 0) {
             current_state = total_states - 1;
@@ -125,19 +118,17 @@ static void ui_info_system(const r::ecs::Res<r::PostProcessingPluginConfig> conf
     DrawText(current_effect_text.c_str(), 10, 40, 20, LIME);
 }
 
-static const auto g_window_plugin_config = r::WindowPluginConfig
-{
-    .size = {1280, 720},
-    .title = "Post-Processing Demo",
-};
-
 i32 main(void)
 {
     r::Application{}
         .add_plugins(r::DefaultPlugins{}
-            .set(r::WindowPlugin(g_window_plugin_config))
-            .set(r::RenderPlugin({.clear_color = {25, 25, 35, 255}}))
-        )
+                .set(r::WindowPlugin(r::WindowPluginConfig{
+                    .size = {1280, 720},
+                    .title = "Post-Processing Demo",
+                }))
+                .set(r::RenderPlugin({
+                    .clear_color = {25, 25, 35, 255},
+                })))
         .add_systems<setup_scene_system>(r::Schedule::STARTUP)
         .add_systems<spinning_cube_system, post_processing_switcher_system>(r::Schedule::UPDATE)
         .add_systems<ui_info_system>(r::Schedule::RENDER_2D)

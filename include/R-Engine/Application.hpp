@@ -50,7 +50,7 @@ class R_ENGINE_API Application final
 {
     private:
         std::unordered_map<std::type_index, sys::States> _states;
-        std::function<void()> _state_transition_runner;
+        std::vector<std::function<void()>> _state_transition_runners;
 
         using ScheduleMap = std::unordered_map<Schedule, sys::ScheduleGraph>;
         friend class sys::SystemConfigurator;
@@ -142,6 +142,18 @@ class R_ENGINE_API Application final
          */
         template<typename T>
         T *get_resource_ptr() noexcept;
+
+        /**
+        * @brief Call the startup function (useful for the server)
+        * @details Function for the server which is calling the startup function
+        */
+        void init(); 
+
+        /**
+        * @brief Call every useful functions for the game server loop
+        * @details Is used by the server to call every functions useful functions for the game server loop
+        */
+        void tick();
 
         static inline std::atomic_bool quit{false};
         static inline std::atomic_bool quit_from_signal{false};

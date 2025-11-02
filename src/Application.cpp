@@ -22,15 +22,15 @@ r::Application::Application()
 
     _prepare_thread_local_buffers(thread_count > 0 ? thread_count : 1);
 
-    #if !defined(ECS_SERVER_MODE)
-        std::signal(SIGINT, [](i32) {
-            r::Application::quit.store(true, std::memory_order_relaxed);
-            std::cout << "\r";
-            Logger::warn("SIGINT received, quitting application...");
-        });
-    #else
-        Logger::warn("Server mode build detected, SIGINT handler is disabled for the ECS.");
-    #endif
+#if !defined(ECS_SERVER_MODE)
+    std::signal(SIGINT, [](i32) {
+        r::Application::quit.store(true, std::memory_order_relaxed);
+        std::cout << "\r";
+        Logger::warn("SIGINT received, quitting application...");
+    });
+#else
+    Logger::warn("Server mode build detected, SIGINT handler is disabled for the ECS.");
+#endif
 }
 
 void r::Application::run()
@@ -38,6 +38,31 @@ void r::Application::run()
     _startup();
     _main_loop();
     _shutdown();
+}
+
+void r::Application::init()
+{
+    _startup();
+}
+
+void r::Application::tick()
+{
+    _clock.tick();
+    *_scene.get_resource_ptr<core::FrameTime>() = _clock.frame();
+
+    _apply_state_transitions();
+
+    _run_schedule(Schedule::UPDATE);
+
+    _apply_commands();
+
+    for (i32 i = 0; i < _clock.frame().substep_count; ++i) {
+        _run_schedule(Schedule::FIXED_UPDATE);
+        _apply_commands();
+    }
+
+    _run_schedule(Schedule::EVENT_CLEANUP);
+    _apply_commands();
 }
 
 /**
@@ -139,8 +164,10 @@ void r::Application::_apply_commands()
 
 void r::Application::_apply_state_transitions()
 {
-    if (_state_transition_runner) {
-        _state_transition_runner();
+    for (const auto &runner : _state_transition_runners) {
+        if (runner) {
+            runner();
+        }
     }
 }
 

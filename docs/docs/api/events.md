@@ -8,57 +8,64 @@ Event communication between systems.
 
 ## EventWriter\<T\>
 
-Send events to other systems.
+A system parameter for sending events to other systems.
 
 ### send()
 
 ```cpp
-void send(T event)
+void send(const EventT& event);
+void send(EventT&& event);
 ```
 
-Send an event to be sent.
+Sends an event of type `T`.
 
 **Example**:
+
 ```cpp
-void system(EventWriter<CollisionEvent> events) {
+void system(ecs::EventWriter<CollisionEvent> events) {
     events.send(CollisionEvent{entity_a, entity_b});
 }
 ```
 
 ## EventReader\<T\>
 
-Receive events from other systems.
+A system parameter for receiving events from other systems.
 
-### iter()
+### Iteration
+
+`EventReader` is directly iterable.
 
 ```cpp
-Iterator iter()
-```
-
-Iterate over all events sent this frame.
-
-**Example**:
-```cpp
-void system(EventReader<CollisionEvent> events) {
-    for (const auto& event : events.iter()) {
+void system(ecs::EventReader<CollisionEvent> events) {
+    for (const auto& event : events) {
         // Handle event
         std::cout << "Collision!\n";
     }
 }
 ```
 
+### has_events()
+
+```cpp
+bool has_events() const noexcept;
+```
+
+Checks if there are any events to be read. Useful for run conditions.
+
 ## Event Lifecycle
 
-Events last for one frame:
+Events are managed with a **double-buffer** system. Events sent in frame `N` are available to be read by any system in **frame `N+1`**. At the end of frame `N+1`, during the `EVENT_CLEANUP` schedule, the buffer that was read from is cleared.
 
 ```
 Frame N:
-  - EventWriter sends event
-  - EventReader(s) read event
-  - Event cleared at frame end
+  - EventWriter sends event E1.
+  - Event E1 is stored in the "write" buffer.
+  - During EVENT_CLEANUP, buffers are swapped.
 
 Frame N+1:
-  - Event no longer available
+  - EventReader(s) can now read event E1 from the "read" buffer.
+  - EventWriter sends new events to the "write" buffer.
+  - During EVENT_CLEANUP, the "read" buffer (with E1) is cleared, and buffers are swapped again.
 ```
 
 ## Usage Pattern
@@ -66,28 +73,28 @@ Frame N+1:
 ```cpp
 // 1. Define event
 struct DamageEvent {
-    Entity target;
+    ecs::Entity target;
     int amount;
 };
 
-// 2. Register event
+// 2. Register event in the application
 Application{}
-    .add_event<DamageEvent>()
+    .add_events<DamageEvent>()
     // ...
 
-// 3. Send events
-void combat_system(EventWriter<DamageEvent> events) {
+// 3. Send events from a system
+void combat_system(ecs::EventWriter<DamageEvent> events) {
     events.send(DamageEvent{enemy, 25});
 }
 
-// 4. Read events
+// 4. Read events in another system
 void health_system(
-    EventReader<DamageEvent> events,
-    Query<Mut<Health>> query
+    ecs::EventReader<DamageEvent> events,
+    ecs::Query<ecs::Mut<Health>> query
 ) {
-    for (const auto& event : events.iter()) {
-        if (auto health = query.get<Mut<Health>>(event.target)) {
-            health.ptr->current -= event.amount;
+    for (const auto& event : events) {
+        if (auto* health = query.get_component_ptr<Health>(event.target)) {
+            health->current -= event.amount;
         }
     }
 }
@@ -95,19 +102,19 @@ void health_system(
 
 ## Multiple Readers
 
-Multiple systems can read the same event:
+Multiple systems can have an `EventReader` for the same event type. All of them will receive all events sent that frame.
 
 ```cpp
 // System 1
-void damage_system(EventReader<CollisionEvent> events) {
-    for (const auto& e : events.iter()) {
+void damage_system(ecs::EventReader<CollisionEvent> events) {
+    for (const auto& e : events) {
         // Apply damage
     }
 }
 
 // System 2
-void sound_system(EventReader<CollisionEvent> events) {
-    for (const auto& e : events.iter()) {
+void sound_system(ecs::EventReader<CollisionEvent> events) {
+    for (const auto& e : events) {
         // Play sound
     }
 }

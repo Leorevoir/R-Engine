@@ -12,14 +12,14 @@ Comprendre l'architecture de R-Engine ECS vous aidera à écrire du code plus ef
 ┌─────────────────────────────────────────────────────────┐
 │                      Application                         │
 │  ┌────────────────────────────────────────────────────┐ │
-│  │                   Ordonnanceur                      │ │
+│  │                   Ordonnanceur (Scheduler)          │ │
 │  │  ┌──────────┐  ┌──────────┐  ┌──────────┐         │ │
 │  │  │ STARTUP  │  │  UPDATE  │  │  RENDER  │  ...    │ │
 │  │  └──────────┘  └──────────┘  └──────────┘         │ │
 │  └────────────────────────────────────────────────────┘ │
 │                                                          │
 │  ┌────────────────────────────────────────────────────┐ │
-│  │                     Scène                           │ │
+│  │                     Scène (Scene)                   │ │
 │  │  ┌──────────────┐  ┌──────────────┐               │ │
 │  │  │   Stockage   │  │  Ressources  │               │ │
 │  │  │  (Entités)   │  │  (Globales)  │               │ │
@@ -45,18 +45,18 @@ Les systèmes dans le schedule STARTUP s'exécutent une fois avant la boucle pri
 
 ```
 ┌─────────────┐
-│  DÉMARRAGE  │
+│   DÉMARRAGE │
 └──────┬──────┘
        │
        v
-┌──────────────────┐
-│ Systèmes STARTUP │
-└──────┬───────────┘
+┌─────────────────┐
+│ Systèmes STARTUP│
+└──────┬──────────┘
        │
        v
-┌──────────────┐
-│ Boucle Princ │
-└──────────────┘
+┌─────────────┐
+│ Boucle Princ.│
+└─────────────┘
 ```
 
 ### 2. Boucle de Mise à Jour
@@ -65,14 +65,14 @@ La boucle principale s'exécute de manière répétée :
 
 ```
 ┌──────────────────────────────────────────┐
-│            Schedule UPDATE                │
-│                                           │
+│            Schedule UPDATE               │
+│                                          │
 │  Entrée → Logique → Physique → Rendu     │
-│    ↓         ↓          ↓          ↓     │
-│  Systèmes exécutés avec dépendances      │
-│                                           │
-│  Commandes appliquées entre systèmes     │
-│  Événements distribués entre systèmes    │
+│    ↓       ↓        ↓          ↓         │
+│  Systèmes s'exécutant avec dépendances   │
+│                                          │
+│  Commandes appliquées entre les systèmes │
+│  Événements distribués entre les systèmes│
 └──────────────────────────────────────────┘
        │
        v (Image suivante)
@@ -111,9 +111,9 @@ Archétype B: [Position, Velocity, Health]
 
 ### Avantages
 
-- **Cache-friendly** : Les composants du même type sont stockés de manière contiguë
-- **Itération rapide** : Les requêtes itèrent sur des archétypes entiers à la fois
-- **Efficacité mémoire** : Pas d'indirection de pointeur
+- **Optimisé pour le cache**: Les composants du même type sont stockés de manière contiguë
+- **Itération rapide**: Les requêtes itèrent sur des archétypes entiers à la fois
+- **Efficacité mémoire**: Pas d'indirection de pointeur
 
 ### Changements d'Archétype
 
@@ -134,20 +134,20 @@ entity_commands.remove<Velocity>();
 
 ```
 ┌──────────────────────────────────────────────────┐
-│           Stockage par Archétype                  │
+│              Stockage par Archétype              │
 ├──────────────────────────────────────────────────┤
 │ Archétype [Position, Velocity]                   │
 │ ┌──────────────────────────────────────────────┐ │
 │ │ Positions: [P1][P2][P3][P4]...               │ │
 │ │ Velocités: [V1][V2][V3][V4]...               │ │
-│ │ IDs Entités: [E1][E2][E3][E4]...             │ │
+│ │ IDs Entité: [E1][E2][E3][E4]...              │ │
 │ └──────────────────────────────────────────────┘ │
-│                                                   │
+│                                                  │
 │ Archétype [Position, Health]                     │
 │ ┌──────────────────────────────────────────────┐ │
 │ │ Positions: [P5][P6][P7]...                   │ │
-│ │ Santé: [H5][H6][H7]...                       │ │
-│ │ IDs Entités: [E5][E6][E7]...                 │ │
+│ │ Santé:    [H5][H6][H7]...                    │ │
+│ │ IDs Entité: [E5][E6][E7]...                  │ │
 │ └──────────────────────────────────────────────┘ │
 └──────────────────────────────────────────────────┘
 ```
@@ -176,24 +176,24 @@ Archétypes Disponibles:
   [Velocity]                 ← Pas de correspondance ✗
 ```
 
-## Buffer de Commandes
+## Tampon de Commandes (Command Buffer)
 
 Les commandes sont différées pour éviter l'invalidation des itérateurs :
 
 ```
 Exécution du Système:
 ┌────────────────────┐
-│  Système exécuté   │
-│  Requêtes itèrent  │
-│  Commandes en file │
+│   Le système tourne│
+│   Les requêtes itèrent│
+│   Commandes en file│
 └─────────┬──────────┘
           │
           v
 ┌────────────────────┐
-│ Commandes appl.    │
+│ Commandes appliquées│
 │ Entités créées     │
 │ Composants ajoutés │
-│ Archétypes MAJ     │
+│ Archétypes mis à jour│
 └────────────────────┘
 ```
 
@@ -201,6 +201,6 @@ Cela garantit que les modifications n'affectent pas l'itération en cours.
 
 ## Prochaines Étapes
 
-- Explorezz les [Concepts Fondamentaux](./core-concepts/index.md) pour des explications détaillées
+- Explorez les [Concepts Fondamentaux](./core-concepts/index.md) pour des explications détaillées
 - Consultez le [Système de Stockage](./storage.md) pour les détails d'implémentation
 - Regardez les [Exemples](./examples/index.md) pour du code pratique

@@ -4,102 +4,105 @@ sidebar_position: 5
 
 # Requêtes
 
-Les requêtes permettent aux systèmes d'itérer sur les entités qui correspondent à des critères spécifiques. Elles fournissent un accès type-safe aux composants.
+Les requêtes sont le principal moyen pour les systèmes d'accéder et d'itérer sur les entités qui possèdent un ensemble spécifique de composants. Elles fournissent un accès sûr, efficace et avec typage sûr aux données des composants.
 
-## Requête Basique
+## Requête de Base
+
+Une requête est définie par les wrappers de composants passés comme arguments de son template. Cet exemple interroge toutes les entités qui ont à la fois un composant `Position` et `Velocity`.
 
 ```cpp
-void system(Query<Ref<Position>, Ref<Velocity>> query) {
+void movement_system(ecs::Query<ecs::Mut<Position>, ecs::Ref<Velocity>> query) {
     for (auto [pos, vel] : query) {
-        // Traite les entités ayant Position ET Velocity
+        // Traiter les entités avec à la fois Position ET Velocity
+        pos.ptr->x += vel.ptr->x;
     }
 }
 ```
 
-## Modes d'Accès
+## Modes d'Accès (Wrappers)
 
-### Ref\<T\> - Lecture Seule
+### `Ref<T>` - Accès en Lecture Seule
+
+Utilisez `Ref<T>` lorsque vous avez seulement besoin de lire les données d'un composant. C'est le choix par défaut préféré car il permet au planificateur plus de possibilités de parallélisme.
 
 ```cpp
-Query<Ref<Position>> query
-// Accès en lecture seule à Position
+ecs::Query<ecs::Ref<Position>> query;
+// Fournit un accès en lecture seule à Position.
 ```
 
-### Mut\<T\> - Mutable
+### `Mut<T>` - Accès Modifiable
+
+Utilisez `Mut<T>` lorsque vous devez modifier les données d'un composant.
 
 ```cpp
-Query<Mut<Position>> query
-// Accès mutable à Position
+ecs::Query<ecs::Mut<Position>> query;
+// Fournit un accès en lecture/écriture à Position.
 ```
 
 ## Filtres de Requête
 
-### With\<T\> - Possède le Composant
+Les filtres vous permettent de restreindre les entités qu'une requête va correspondre sans accéder aux données du composant.
+
+### `With<T>` - Doit Avoir le Composant
+
+Sélectionne les entités qui ont le composant `T`.
 
 ```cpp
-Query<Ref<Position>, With<Player>> query
-// Entités qui ont les composants Position ET Player
+// Obtient la Position des entités qui ont aussi un composant Player.
+ecs::Query<ecs::Ref<Position>, ecs::With<Player>> query;
 ```
 
-### Without\<T\> - N'a Pas le Composant
+### `Without<T>` - Ne Doit Pas Avoir le Composant
+
+Sélectionne les entités qui n'ont **pas** le composant `T`.
 
 ```cpp
-Query<Ref<Position>, Without<Dead>> query
-// Entités avec Position mais SANS le composant Dead
+// Obtient la Position des entités qui n'ont PAS de composant Dead.
+ecs::Query<ecs::Ref<Position>, ecs::Without<Dead>> query;
 ```
 
-### Filtres Combinés
+### `Optional<T>` - Peut Avoir le Composant
+
+Fournit un accès optionnel en lecture seule à un composant. Le pointeur du wrapper sera `nullptr` si l'entité n'a pas le composant.
 
 ```cpp
-Query<Mut<Position>, With<Player>, Without<Frozen>> query
-// Entités joueur qui ne sont pas gelées
-```
-
-## Obtenir l'ID d'Entité
-
-Vous pouvez obtenir l'ID de l'entité actuelle depuis l'itérateur de la requête.
-
-```cpp
-void system(Query<Ref<Position>> query) {
-    for (auto it = query.begin(); it != query.end(); ++it) {
-        // Obtenir le tuple de composants
-        auto [pos] = *it;
-
-        // Obtenir l'ID de l'entité depuis l'itérateur
-        Entity entity = it.entity();
-
-        std::cout << "Entité " << entity
-                  << " est à (" << pos->x << ", " << pos->y << ")\n";
+void system(ecs::Query<ecs::Ref<Position>, ecs::Optional<Health>> query) {
+    for (auto [pos, health_opt] : query) {
+        if (health_opt.ptr) {
+            // Cette entité a un composant Health.
+        } else {
+            // Cette entité n'en a pas.
+        }
     }
 }
 ```
 
-## Itération de Requête
+## Obtenir l'ID de l'Entité
 
-### Boucle For Basée sur une Plage
-
-```cpp
-for (auto [pos, vel] : query) {
-    pos->x += vel->x;
-}
-```
-
-### Itération Manuelle
+Pour obtenir l'ID de l'entité sur laquelle vous itérez actuellement, utilisez la méthode `.entity()` de l'itérateur.
 
 ```cpp
-for (auto it = query.begin(); it != query.end(); ++it) {
-    auto [pos, vel] = *it;
-    // Traitement...
+void system(ecs::Query<ecs::Ref<Position>> query) {
+    for (auto it = query.begin(); it != query.end(); ++it) {
+        // Obtenir le tuple de composants de l'itérateur
+        auto [pos] = *it;
+
+        // Obtenir l'ID de l'entité de l'itérateur
+        ecs::Entity entity_id = it.entity();
+
+        std::cout << "Entité " << entity_id
+                  << " est à (" << pos.ptr->x << ", " << pos.ptr->y << ")\n";
+    }
 }
 ```
 
 ## Bonnes Pratiques
 
-- Utilisez `Ref<T>` par défaut, `Mut<T>` seulement quand nécessaire
-- Utilisez les filtres pour réduire les itérations
-- Accédez à l'ID d'entité quand vous devez référencer des entités
+- Utilisez toujours `Ref<T>` par défaut et passez à `Mut<T>` uniquement lorsque la modification est nécessaire.
+- Utilisez des filtres (`With<T>`, `Without<T>`) pour être aussi spécifique que possible, réduisant le nombre d'entités que votre système doit parcourir.
+- N'incluez dans la requête que les composants auxquels votre système a réellement besoin d'accéder.
 
 ## Prochaines Étapes
 
-- Apprenez les [Commandes](./commands.md)
-- Consultez les [Exemples](../examples/index.md)
+- Apprenez-en plus sur les [Commandes](./commands.md) pour modifier les entités.
+- Consultez les [Exemples](../examples/index.md) pour une utilisation pratique des requêtes.

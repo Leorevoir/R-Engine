@@ -10,30 +10,34 @@ Hierarchies enable parent-child relationships between entities, useful for trans
 
 ### With Children
 
-The primary way to create hierarchies is to spawn entities with children:
+The primary way to create hierarchies is to spawn entities with children using the `with_children` builder on `EntityCommands`.
 
 ```cpp
-void setup(Commands& commands) {
-    // Create parent
-    Entity parent = commands.spawn(Transform{}).id();
-
-    // Add children
-    commands.entity(parent).with_children([&](Commands& child_commands) {
-        child_commands.spawn(Transform{});
-        child_commands.spawn(Transform{});
-    });
+void setup(ecs::Commands& commands) {
+    // Create a parent entity
+    commands.spawn(Transform3d{})
+        // Use with_children to add children to the parent
+        .with_children([](ecs::ChildBuilder &builder) {
+            // The builder spawns entities that are automatically parented
+            builder.spawn(Transform3d{ .position = { 1.0f, 0.0f, 0.0f } });
+            builder.spawn(Transform3d{ .position = { -1.0f, 0.0f, 0.0f } });
+        });
 }
 ```
+
+This automatically adds a `Children` component to the parent and a `Parent` component to each child.
 
 ## Traversing Hierarchies
 
 ### Get Children
 
+The `Children` component contains a vector of child entities.
+
 ```cpp
-void system(Query<Entity, Ref<Children>> query) {
-    for (auto [entity, children] : query) {
-        for (Entity child : children->entities) {
-            // Process child
+void system(ecs::Query<ecs::Ref<ecs::Children>> query) {
+    for (auto [children] : query) {
+        for (ecs::Entity child : children.ptr->entities) {
+            // Process child entity
         }
     }
 }
@@ -41,57 +45,54 @@ void system(Query<Entity, Ref<Children>> query) {
 
 ### Get Parent
 
-```cpp
-void system(Query<Entity, Ref<Parent>> query) {
-    for (auto [entity, parent] : query) {
-        Entity parent_entity = parent->entity;
-        // Process parent
+The `Parent` component stores the parent's entity ID.
+
+````cpp
+void system(ecs::Query<ecs::Ref<ecs::Parent>> query) {
+    for (auto [parent] : query) {
+        ecs::Entity parent_entity = parent.ptr->entity;
+        // Process parent entity
     }
-}
-```
+}```
 
 ## Transform Hierarchy
 
-Common use case - transform propagation:
+The most common use case is transform propagation, which the `TransformPlugin` handles automatically.
+
+-   **`Transform3d`**: Represents the entity's local position, rotation, and scale relative to its parent.
+-   **`GlobalTransform3d`**: Represents the entity's final position, rotation, and scale in world space.
+
+The `transform_propagate_system` runs automatically in the `BEFORE_RENDER_3D` schedule, calculating `GlobalTransform3d` for all entities based on their `Transform3d` and their parent's `GlobalTransform3d`.
 
 ```cpp
-struct Transform {
-    Vec3 position;
-    Vec3 rotation;
-    Vec3 scale = {1, 1, 1};
-};
-
-struct GlobalTransform {
-    Mat4 matrix;
-};
-
-void transform_propagation(
-    Query<Mut<GlobalTransform>, Ref<Transform>, Ref<Parent>> query,
-    Query<Ref<GlobalTransform>> parent_query
+// The engine does this for you!
+void transform_propagation_concept(
+    ecs::Query<ecs::Ref<Transform3d>, ecs::Mut<GlobalTransform3d>, ecs::Ref<ecs::Parent>> query,
+    ecs::Query<ecs::Ref<GlobalTransform3d>> parent_query
 ) {
-    for (auto [global, local, parent] : query) {
-        auto parent_global = parent_query.get<Ref<GlobalTransform>>(parent->entity);
-        if (parent_global) {
-            global->matrix = parent_global->matrix * local->to_matrix();
+    for (auto [local, global, parent] : query) {
+        if (auto* parent_global = parent_query.get_component_ptr<GlobalTransform3d>(parent.ptr->entity)) {
+            // This logic is handled by GlobalTransform3d::from_local_and_parent
+            *global.ptr = GlobalTransform3d::from_local_and_parent(*local.ptr, *parent_global);
         }
     }
 }
-```
+````
 
 ## Removing from Hierarchy
 
-Despawning an entity will also despawn all of its descendants recursively.
+Despawning an entity with `commands.despawn(entity)` will also despawn all of its descendants recursively.
 
 ```cpp
 // This will despawn the parent and all its children.
-commands.entity(parent).despawn();
+commands.despawn(parent_entity);
 ```
 
 ## Best Practices
 
-- Use hierarchies for logical grouping
-- Propagate transforms from parent to child
-- Be careful with recursive operations
+- Use hierarchies for logical grouping and transform propagation.
+- Modify the `Transform3d` component; let the engine calculate `GlobalTransform3d`.
+- Be mindful of recursive operations when traversing hierarchies manually.
 
 ## Next Steps
 

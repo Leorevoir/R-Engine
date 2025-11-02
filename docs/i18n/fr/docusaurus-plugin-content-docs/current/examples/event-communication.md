@@ -2,54 +2,57 @@
 sidebar_position: 3
 ---
 
-# Exemple Communication par Événements
+# Exemple de Communication par Événements
 
-Démontre la communication inter-système utilisant les événements.
+Démontre la communication inter-système à l'aide d'événements.
 
 ## Vue d'Ensemble
 
-Cet exemple montre comment les systèmes communiquent sans couplage fort en utilisant les événements :
-- L'entrée joueur génère des événements
-- Le système de création de balles réagit aux événements
-- Le système de collision envoie des événements de dégâts
-- Le système de santé reçoit les événements de dégâts
+Cet exemple montre comment les systèmes peuvent communiquer sans être fortement couplés.
+
+- Un système d'entrée envoie un `FireEvent`.
+- Un système de création de balles écoute les `FireEvent` et crée des balles.
+- Un système de collision détecte les impacts et envoie un `DamageEvent`.
+- Un système de santé écoute les `DamageEvent` et envoie un `DeathEvent` si la santé est épuisée.
+- Un système de score écoute les `DeathEvent` pour mettre à jour le score.
 
 ## Définitions d'Événements
 
 ```cpp
 struct FireEvent {
-    Entity shooter;
+    ecs::Entity shooter;
     Vec2f position;
     Vec2f direction;
 };
 
 struct DamageEvent {
-    Entity target;
+    ecs::Entity target;
     int damage;
 };
 
 struct DeathEvent {
-    Entity entity;
+    ecs::Entity entity;
     int score_value;
 };
 ```
 
-## Systems
+## Systèmes
 
 ### Système d'Entrée
 
-Envoie des événements de tir :
+Envoie un `FireEvent` lorsque le joueur appuie sur une touche.
 
 ```cpp
 void input_system(
-    Query<Entity, Ref<Position>, With<Player>> query,
-    Res<Input> input,
-    EventWriter<FireEvent> events
+    ecs::Query<ecs::Entity, ecs::Ref<Position>, ecs::With<Player>> query,
+    ecs::Res<UserInput> input,
+    ecs::EventWriter<FireEvent> events
 ) {
-    if (input.ptr->fire_pressed) {
-        for (auto [entity, pos, _] : query) {
+    if (input.ptr->isKeyJustPressed(KEY_SPACE)) {
+        for (auto it = query.begin(); it != query.end(); ++it) {
+            auto [pos, _] = *it;
             events.send(FireEvent{
-                entity,
+                it.entity(),
                 pos.ptr->value,
                 Vec2f{1, 0}  // Tirer vers la droite
             });
@@ -60,14 +63,14 @@ void input_system(
 
 ### Système de Création de Balles
 
-Réagit aux événements de tir :
+Réagit aux `FireEvent` en créant des entités de balles.
 
 ```cpp
 void spawn_bullets(
-    EventReader<FireEvent> events,
-    Commands& commands
+    ecs::EventReader<FireEvent> events,
+    ecs::Commands& commands
 ) {
-    for (const auto& event : events.iter()) {
+    for (const auto& event : events) {
         commands.spawn(
             Position{event.position},
             Velocity{event.direction * 500.0f},
@@ -79,23 +82,22 @@ void spawn_bullets(
 
 ### Système de Collision
 
-Détecte les collisions et envoie des événements de dégâts :
+Détecte les collisions et envoie un `DamageEvent`.
 
 ```cpp
 void collision_system(
-    Query<Entity, Ref<Position>, With<Bullet>> bullets,
-    Query<Entity, Ref<Position>, With<Enemy>> enemies,
-    EventWriter<DamageEvent> events,
-    Commands& commands
+    ecs::Query<ecs::Entity, ecs::Ref<Position>, ecs::With<Bullet>> bullets,
+    ecs::Query<ecs::Entity, ecs::Ref<Position>, ecs::With<Enemy>> enemies,
+    ecs::EventWriter<DamageEvent> events,
+    ecs::Commands& commands
 ) {
-    for (auto [bullet_entity, bullet_pos, _] : bullets) {
-        for (auto [enemy_entity, enemy_pos, _] : enemies) {
+    for (auto it_bullet = bullets.begin(); it_bullet != bullets.end(); ++it_bullet) {
+        auto [bullet_pos, _] = *it_bullet;
+        for (auto it_enemy = enemies.begin(); it_enemy != enemies.end(); ++it_enemy) {
+            auto [enemy_pos, __] = *it_enemy;
             if (distance(bullet_pos.ptr->value, enemy_pos.ptr->value) < 20.0f) {
-                // Envoyer l'événement de dégâts
-                events.send(DamageEvent{enemy_entity, 25});
-                
-                // Détruire la balle
-                commands.entity(bullet_entity).despawn();
+                events.send(DamageEvent{it_enemy.entity(), 25});
+                commands.despawn(it_bullet.entity());
             }
         }
     }
@@ -104,23 +106,22 @@ void collision_system(
 
 ### Système de Santé
 
-Reçoit les événements de dégâts :
+Reçoit les `DamageEvent` et envoie les `DeathEvent`.
 
 ```cpp
 void health_system(
-    EventReader<DamageEvent> damage_events,
-    EventWriter<DeathEvent> death_events,
-    Query<Entity, Mut<Health>> query,
-    Commands& commands
+    ecs::EventReader<DamageEvent> damage_events,
+    ecs::EventWriter<DeathEvent> death_events,
+    ecs::Query<ecs::Mut<Health>> query,
+    ecs::Commands& commands
 ) {
-    for (const auto& event : damage_events.iter()) {
-        if (auto health = query.get<Mut<Health>>(event.target)) {
-            health.ptr->current -= event.damage;
-            
-            // Vérifier la mort
-            if (health.ptr->current <= 0) {
+    for (const auto& event : damage_events) {
+        if (auto* health = query.get_component_ptr<Health>(event.target)) {
+            health->current -= event.damage;
+
+            if (health->current <= 0) {
                 death_events.send(DeathEvent{event.target, 100});
-                commands.entity(event.target).despawn();
+                commands.despawn(event.target);
             }
         }
     }
@@ -129,14 +130,14 @@ void health_system(
 
 ### Système de Score
 
-Suit le score depuis les événements de mort :
+Suit le score à partir des `DeathEvent`.
 
 ```cpp
 void score_system(
-    EventReader<DeathEvent> events,
-    ResMut<Score> score
+    ecs::EventReader<DeathEvent> events,
+    ecs::ResMut<Score> score
 ) {
-    for (const auto& event : events.iter()) {
+    for (const auto& event : events) {
         score.ptr->value += event.score_value;
         std::cout << "Score: " << score.ptr->value << "\n";
     }
@@ -148,16 +149,14 @@ void score_system(
 ```cpp
 int main() {
     Application{}
-        // Enregistrer les événements
-        .add_event<FireEvent>()
-        .add_event<DamageEvent>()
-        .add_event<DeathEvent>()
-        
-        // Ressources
-        .insert_resource(Input{})
+        // Enregistrer tous les types d'événements
+        .add_events<FireEvent, DamageEvent, DeathEvent>()
+
+        // Ajouter des ressources
+        .insert_resource(UserInput{})
         .insert_resource(Score{0})
-        
-        // Systèmes
+
+        // Ajouter des systèmes
         .add_systems<
             input_system,
             spawn_bullets,
@@ -166,39 +165,19 @@ int main() {
             score_system
         >(Schedule::UPDATE)
         .run();
-    
+
     return 0;
 }
 ```
 
-## Flux d'Événements
-
-```
-Entrée Joueur
-    ↓ (FireEvent)
-Créer des Balles
-    ↓ (les balles se déplacent)
-Détection de Collision
-    ↓ (DamageEvent)
-Système de Santé
-    ↓ (DeathEvent)
-Système de Score
-```
-
 ## Concepts Clés
 
-1. **Couplage Lâche** : Les systèmes ne s'appellent pas directement
-2. **Orienté Événements** : Les actions déclenchent des événements auxquels d'autres peuvent réagir
-3. **Récepteurs Multiples** : Plusieurs systèmes peuvent lire le même événement
-4. **Durée d'une Frame** : Les événements sont effacés chaque frame
-
-## Exécution
-
-```bash
-./r-engine__event_writer_reader
-```
+1.  **Couplage Lâche** : Les systèmes communiquent sans avoir besoin de se connaître mutuellement.
+2.  **Logique Pilotée par les Événements** : Les actions déclenchent des événements auxquels d'autres systèmes réagissent.
+3.  **Récepteurs Multiples** : Un événement peut être lu par n'importe quel nombre de systèmes.
+4.  **Cycle de Vie d'une Frame Suivante** : Les événements envoyés dans une frame sont lisibles dans la suivante.
 
 ## Prochaines Étapes
 
-- En savoir plus sur les [Événements](../advanced/events.md)
+- Apprenez-en plus sur les [Événements](../advanced/events.md)
 - Consultez la [Référence API](../api/events.md)

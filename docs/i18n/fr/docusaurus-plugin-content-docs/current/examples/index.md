@@ -14,19 +14,19 @@ Ces exemples montrent l'utilisation réelle de R-Engine ECS :
 
 Une simulation physique simple avec plusieurs entités.
 
-[Voir l'Exemple Balles Rebondissantes →](./bouncing-balls.md)
+[Voir l'Exemple des Balles Rebondissantes →](./bouncing-balls.md)
 
 ### Hiérarchie de Systèmes
 
 Démontre les relations parent-enfant entre entités.
 
-[Voir l'Exemple Hiérarchie de Systèmes →](./system-hierarchy.md)
+[Voir l'Exemple de Hiérarchie de Systèmes →](./system-hierarchy.md)
 
 ### Communication par Événements
 
-Montre la communication inter-système utilisant les événements.
+Montre la communication inter-système à l'aide d'événements.
 
-[Voir l'Exemple Communication par Événements →](./event-communication.md)
+[Voir l'Exemple de Communication par Événements →](./event-communication.md)
 
 ## Exécuter les Exemples
 
@@ -45,7 +45,7 @@ make
 ./r-engine__event_writer_reader
 ```
 
-## Structure d'Exemple
+## Structure d'un Exemple
 
 Chaque exemple suit ce modèle :
 

@@ -4,32 +4,33 @@ sidebar_position: 6
 
 # Commands
 
-Commands provide deferred access to modify the ECS world. They prevent iterator invalidation and enable safe structural changes.
+Commands provide deferred access to modify the ECS world. They prevent iterator invalidation and enable safe structural changes during system execution.
 
 ## What are Commands?
 
-Commands queue modifications to be applied later, ensuring that queries don't break during iteration.
+`ecs::Commands` is a system parameter that queues modifications (like spawning/despawning entities or adding/removing components). These changes are applied all at once at a safe point between system executions, ensuring that queries don't break while you're iterating over them.
 
 ```cpp
-void system(Query<Entity> query, Commands& commands) {
-    for (auto [entity] : query) {
-        // Safe: queued for later
-        commands.entity(entity).despawn();
+void system(ecs::Query<ecs::Entity, ecs::With<Enemy>> query, ecs::Commands& commands) {
+    for (auto it = query.begin(); it != query.end(); ++it) {
+        ecs::Entity entity = it.entity();
+        // This is safe: the despawn is queued and won't affect the current query iteration.
+        commands.despawn(entity);
     }
-    // Commands applied after iteration
+    // All queued commands are applied after this system finishes.
 }
 ```
 
 ## Command Types
 
-### Spawn Entity
+### Spawning Entities
 
 ```cpp
-void system(Commands& commands) {
-    // Empty entity
-    Entity e = commands.spawn().id();
-    
-    // With components
+void system(ecs::Commands& commands) {
+    // Spawn an entity with no components
+    ecs::Entity e = commands.spawn().id();
+
+    // Spawn an entity with a set of components
     commands.spawn(
         Position{0, 0},
         Velocity{1, 0}
@@ -37,38 +38,40 @@ void system(Commands& commands) {
 }
 ```
 
-### Entity Commands
+### Modifying Entities
+
+Use `commands.entity(entity_id)` to get an `EntityCommands` builder.
 
 ```cpp
-void system(Entity entity, Commands& commands) {
+void system(ecs::Entity entity, ecs::Commands& commands) {
     auto entity_cmds = commands.entity(entity);
-    
-    // Add component
+
+    // Add a component
     entity_cmds.insert(Health{100});
-    
-    // Remove component
+
+    // Remove a component
     entity_cmds.remove<AI>();
-    
-    // Despawn
-    entity_cmds.despawn();
+
+    // Despawn the entity
+    commands.despawn(entity);
 }
 ```
 
-### Resource Commands
+### Managing Resources
 
 ```cpp
-void system(Commands& commands) {
-    // Insert resource
+void system(ecs::Commands& commands) {
+    // Insert or update a resource
     commands.insert_resource(Config{});
-    
-    // Remove resource
+
+    // Remove a resource
     commands.remove_resource<OldResource>();
 }
 ```
 
 ## EntityCommands
 
-Chain operations on a single entity:
+The `EntityCommands` struct provides a convenient builder pattern for chaining operations on a single entity:
 
 ```cpp
 commands.spawn()
@@ -79,35 +82,36 @@ commands.spawn()
 
 ## Command Execution
 
-Commands are applied between system executions:
+Commands are applied at specific synchronization points, usually after all systems in a given schedule have run.
 
 ```
 System A executes
-  → Commands queued
+  → Commands for spawning and component changes are queued
 System B executes
-  → Commands queued
-Commands applied ← All at once
+  → More commands are queued
+Sync Point (e.g., end of UPDATE schedule)
+  → All queued commands are applied at once
 System C executes
-  → Can see changes
+  → Can see the changes made by systems A and B
 ```
 
 ## Best Practices
 
 ### ✅ Do
 
-- Use commands for all structural changes
-- Chain entity commands for clarity
-- Let commands apply automatically
+- Use `Commands` for **all** structural changes (spawning, despawning, adding/removing components).
+- Chain `EntityCommands` calls for better readability.
+- Rely on the engine to apply commands automatically at the correct time.
 
 ### ❌ Don't
 
-- Don't try to apply commands manually
-- Don't expect immediate changes within the same system
+- Don't try to apply commands manually.
+- Don't expect changes made via `Commands` to be visible within the same system that issued them.
 
 ## Example
 
 ```cpp
-void spawn_enemies(Commands& commands) {
+void spawn_enemies(ecs::Commands& commands) {
     for (int i = 0; i < 10; i++) {
         commands.spawn(
             Enemy{},
@@ -117,9 +121,9 @@ void spawn_enemies(Commands& commands) {
     }
 }
 
-void cleanup(Query<Entity, With<Dead>> query, Commands& commands) {
-    for (auto [entity, _] : query) {
-        commands.entity(entity).despawn();
+void cleanup_system(ecs::Query<ecs::Entity, ecs::With<Dead>> query, ecs::Commands& commands) {
+    for (auto it = query.begin(); it != query.end(); ++it) {
+        commands.despawn(it.entity());
     }
 }
 ```

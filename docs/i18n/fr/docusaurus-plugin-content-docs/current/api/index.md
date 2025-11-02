@@ -28,7 +28,7 @@ Commandes pour une entité spécifique.
 
 ### Query avec Wrappers
 
-Itération d'entités type-safe avec accès aux composants.
+Itération d'entités avec typage sûr et accès aux composants.
 
 [API Query →](./query.md)
 
@@ -36,30 +36,30 @@ Itération d'entités type-safe avec accès aux composants.
 
 ### EventWriter\<T\>
 
-Envoyer des événements vers d'autres systèmes.
+Envoyer des événements à d'autres systèmes.
 
 ### EventReader\<T\>
 
-Recevoir des événements depuis d'autres systèmes.
+Recevoir des événements d'autres systèmes.
 
 [API Events →](./events.md)
 
 ## Référence Rapide
 
-| Type | Objectif | Exemple |
-|------|---------|---------|
-| `Entity` | Identifiant d'entité | `Entity player = ...;` |
-| `Ref<T>` | Accès composant lecture seule | `Ref<Position>` |
-| `Mut<T>` | Accès composant mutable | `Mut<Position>` |
-| `With<T>` | Filtre : possède le composant | `With<Player>` |
-| `Without<T>` | Filtre : n'a pas le composant | `Without<Dead>` |
-| `Res<T>` | Ressource lecture seule | `Res<Config>` |
-| `ResMut<T>` | Ressource mutable | `ResMut<Score>` |
-| `Commands` | Tampon de commandes | `Commands& cmds` |
-| `EventWriter<T>` | Envoyer événements | `EventWriter<E>` |
-| `EventReader<T>` | Lire événements | `EventReader<E>` |
+| Type             | Objectif                             | Exemple                |
+| ---------------- | ------------------------------------ | ---------------------- |
+| `Entity`         | Identifiant d'entité                 | `Entity player = ...;` |
+| `Ref<T>`         | Accès composant en lecture seule     | `Ref<Position>`        |
+| `Mut<T>`         | Accès composant modifiable           | `Mut<Position>`        |
+| `With<T>`        | Filtre : possède le composant        | `With<Player>`         |
+| `Without<T>`     | Filtre : ne possède pas le composant | `Without<Dead>`        |
+| `Res<T>`         | Ressource en lecture seule           | `Res<Config>`          |
+| `ResMut<T>`      | Ressource modifiable                 | `ResMut<Score>`        |
+| `Commands`       | Tampon de commandes                  | `Commands& cmds`       |
+| `EventWriter<T>` | Envoyer des événements               | `EventWriter<E>`       |
+| `EventReader<T>` | Lire des événements                  | `EventReader<E>`       |
 
-## Patterns d'Utilisation
+## Patrons d'Utilisation
 
 ### Signature de Système
 

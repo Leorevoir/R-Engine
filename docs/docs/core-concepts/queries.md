@@ -4,102 +4,105 @@ sidebar_position: 5
 
 # Queries
 
-Queries allow systems to iterate over entities that match specific criteria. They provide type-safe access to components.
+Queries are the primary way for systems to access and iterate over entities that have a specific set of components. They provide safe, efficient, and type-safe access to component data.
 
 ## Basic Query
 
+A query is defined by the component wrappers passed as its template arguments. This example queries for all entities that have both a `Position` and a `Velocity` component.
+
 ```cpp
-void system(Query<Ref<Position>, Ref<Velocity>> query) {
+void movement_system(ecs::Query<ecs::Mut<Position>, ecs::Ref<Velocity>> query) {
     for (auto [pos, vel] : query) {
-        // Process entities with Position AND Velocity
+        // Process entities with both Position AND Velocity
+        pos.ptr->x += vel.ptr->x;
     }
 }
 ```
 
-## Access Modes
+## Access Modes (Wrappers)
 
-### Ref\<T\> - Read-Only
+### `Ref<T>` - Read-Only Access
+
+Use `Ref<T>` when you only need to read a component's data. This is the preferred default as it allows the scheduler more opportunities for parallelism.
 
 ```cpp
-Query<Ref<Position>> query
-// Read-only access to Position
+ecs::Query<ecs::Ref<Position>> query;
+// Provides read-only access to Position.
 ```
 
-### Mut\<T\> - Mutable
+### `Mut<T>` - Mutable Access
+
+Use `Mut<T>` when you need to modify a component's data.
 
 ```cpp
-Query<Mut<Position>> query
-// Mutable access to Position
+ecs::Query<ecs::Mut<Position>> query;
+// Provides read/write access to Position.
 ```
 
 ## Query Filters
 
-### With\<T\> - Has Component
+Filters allow you to narrow down which entities a query will match without accessing the component data.
+
+### `With<T>` - Must Have Component
+
+Selects entities that have the component `T`.
 
 ```cpp
-Query<Ref<Position>, With<Player>> query
-// Entities that have Position AND Player components
+// Gets the Position of entities that also have a Player component.
+ecs::Query<ecs::Ref<Position>, ecs::With<Player>> query;
 ```
 
-### Without\<T\> - Lacks Component
+### `Without<T>` - Must Not Have Component
+
+Selects entities that do **not** have the component `T`.
 
 ```cpp
-Query<Ref<Position>, Without<Dead>> query
-// Entities with Position but NOT Dead component
+// Gets the Position of entities that do NOT have a Dead component.
+ecs::Query<ecs::Ref<Position>, ecs::Without<Dead>> query;
 ```
 
-### Combined Filters
+### `Optional<T>` - May Have Component
+
+Provides optional read-only access to a component. The wrapper's pointer will be `nullptr` if the entity does not have the component.
 
 ```cpp
-Query<Mut<Position>, With<Player>, Without<Frozen>> query
-// Player entities that are not frozen
-```
-
-## Getting Entity ID
-
-You can get the ID of the current entity from the query's iterator.
-
-```cpp
-void system(Query<Ref<Position>> query) {
-    for (auto it = query.begin(); it != query.end(); ++it) {
-        // Get the component tuple
-        auto [pos] = *it;
-        
-        // Get the entity ID from the iterator
-        Entity entity = it.entity();
-        
-        std::cout << "Entity " << entity 
-                  << " is at (" << pos->x << ", " << pos->y << ")\n";
+void system(ecs::Query<ecs::Ref<Position>, ecs::Optional<Health>> query) {
+    for (auto [pos, health_opt] : query) {
+        if (health_opt.ptr) {
+            // This entity has a Health component.
+        } else {
+            // This entity does not.
+        }
     }
 }
 ```
 
-## Query Iteration
+## Getting the Entity ID
 
-### Range-Based For Loop
-
-```cpp
-for (auto [pos, vel] : query) {
-    pos->x += vel->x;
-}
-```
-
-### Manual Iteration
+To get the ID of the entity you are currently iterating over, use the iterator's `.entity()` method.
 
 ```cpp
-for (auto it = query.begin(); it != query.end(); ++it) {
-    auto [pos, vel] = *it;
-    // Process...
+void system(ecs::Query<ecs::Ref<Position>> query) {
+    for (auto it = query.begin(); it != query.end(); ++it) {
+        // Get the component tuple from the iterator
+        auto [pos] = *it;
+
+        // Get the entity ID from the iterator
+        ecs::Entity entity_id = it.entity();
+
+        std::cout << "Entity " << entity_id
+                  << " is at (" << pos.ptr->x << ", " << pos.ptr->y << ")\n";
+    }
 }
 ```
 
 ## Best Practices
 
-- Use `Ref<T>` by default, `Mut<T>` only when needed
-- Use filters to reduce iterations
-- Access entity ID when you need to reference entities
+- Always use `Ref<T>` by default and only switch to `Mut<T>` when modification is necessary.
+- Use filters (`With<T>`, `Without<T>`) to be as specific as possible, reducing the number of entities your system has to iterate over.
+- Only include components in the query that your system actually needs to access.
 
 ## Next Steps
 
-- Learn about [Commands](./commands.md)
-- See [Examples](../examples/index.md)
+- Learn about [Commands](./commands.md) for modifying entities.
+- See [Examples](../examples/index.md) for practical query usage.

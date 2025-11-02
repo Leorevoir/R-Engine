@@ -4,157 +4,247 @@ sidebar_position: 2
 
 # Composants
 
-Les composants sont des structures de données pures qui définissent ce qu'une entité **est** ou **possède**.
+Les composants sont des structures de données pures qui définissent ce qu'une entité **est** ou **possède**. Ils ne contiennent aucune logique, seulement des données.
 
 ## Qu'est-ce qu'un Composant ?
 
-Un composant est une simple structure C++ (ou classe) contenant des données. Les composants n'ont pas de logique — ils stockent uniquement des données.
+Un composant est une simple `struct` ou `class` qui contient des données. Les composants sont attachés aux entités pour leur donner des propriétés.
 
 ```cpp
-// Composants simples
+// Composant de position simple
 struct Position {
-    float x, y;
+    float x;
+    float y;
 };
 
-struct Velocity {
-    float x, y;
-};
-
+// Composant de santé
 struct Health {
     int current;
-    int maximum;
+    int max;
+};
+
+// Composant marqueur (sans données)
+struct Player {};
+```
+
+## Créer des Composants
+
+### Composants POD (Recommandé)
+
+Utilisez des structures de données simples (Plain Old Data - POD) pour de meilleures performances :
+
+```cpp
+struct Velocity {
+    float x = 0.0f;
+    float y = 0.0f;
+};
+
+struct Color {
+    uint8_t r = 255;
+    uint8_t g = 255;
+    uint8_t b = 255;
+    uint8_t a = 255;
 };
 ```
 
-## Ajouter des Composants
+### Composants Complexes
 
-Les composants sont attachés aux entités lors de leur création ou plus tard :
-
-```cpp
-void spawn_system(Commands& commands) {
-    // Ajouter des composants à la création
-    commands.spawn(
-        Position{0.0f, 0.0f},
-        Velocity{1.0f, 0.5f},
-        Health{100, 100}
-    );
-    
-    // Ajouter des composants plus tard
-    Entity e = commands.spawn().id();
-    commands.entity(e).insert(Position{5.0f, 10.0f});
-}
-```
-
-## Accéder aux Composants
-
-Accédez aux composants dans les systèmes via des requêtes :
+Les composants peuvent contenir des méthodes pour plus de commodité :
 
 ```cpp
-void movement_system(
-    Query<Mut<Position>, Ref<Velocity>> query
-) {
-    for (auto [pos, vel] : query) {
-        pos->x += vel->x;
-        pos->y += vel->y;
+struct Health {
+    float current = 100.0f;
+    float max = 100.0f;
+
+    bool is_alive() const {
+        return current > 0.0f;
     }
-}
+
+    float percentage() const {
+        return current / max;
+    }
+
+    void damage(float amount) {
+        current = std::max(0.0f, current - amount);
+    }
+};
 ```
+
+:::tip Bonne Pratique
+Gardez la logique dans les composants au minimum. La plupart de la logique devrait se trouver dans les systèmes.
+:::
 
 ## Types de Composants
 
 ### Composants de Données
 
-Composants standards qui contiennent des données :
+Stockent un état ou des propriétés :
 
 ```cpp
 struct Transform {
-    glm::vec3 position;
-    glm::quat rotation;
-    glm::vec3 scale;
+    Vec3 position;
+    Quaternion rotation;
+    Vec3 scale = {1, 1, 1};
 };
 
 struct Sprite {
-    std::string texture_path;
-    glm::vec4 color;
+    Texture texture;
+    Rect source_rect;
 };
 ```
 
 ### Composants Marqueurs
 
-Composants vides utilisés pour le marquage ou la catégorisation :
+Marquent les entités sans stocker de données :
 
 ```cpp
 struct Player {};
 struct Enemy {};
-struct Projectile {};
+struct Bullet {};
+struct Dead {};
 
-// Requête uniquement les joueurs
-void player_system(
-    Query<Ref<Position>, With<Player>> query
-) {
-    // Traite uniquement les entités avec le marqueur Player
+// Utilisation dans une requête
+void player_system(Query<Ref<Position>, With<Player>> query) {
+    // Traite uniquement les entités avec le composant Player
 }
 ```
 
-### Composants avec Méthodes
+### Composants de Drapeaux (Flags)
 
-Les composants peuvent avoir des méthodes utilitaires :
+Stockent des états booléens de manière efficace :
 
 ```cpp
-struct Health {
-    int current;
-    int maximum;
-    
-    void heal(int amount) {
-        current = std::min(current + amount, maximum);
-    }
-    
-    void damage(int amount) {
-        current = std::max(current - amount, 0);
-    }
-    
-    bool is_alive() const {
-        return current > 0;
-    }
+struct Flags {
+    bool is_visible : 1;
+    bool is_solid : 1;
+    bool is_animated : 1;
+    bool is_hostile : 1;
 };
 ```
 
-:::tip Gardez les Composants Simples
-Préférez la logique simple dans les méthodes. La logique complexe devrait aller dans les systèmes.
-:::
+## Ajouter des Composants
 
-## Supprimer des Composants
-
-Supprimez des composants des entités :
+### À la Création
 
 ```cpp
-void system(Commands& commands) {
-    Entity e = /* ... */;
-    
-    // Supprimer un composant unique
-    commands.entity(e).remove<Velocity>();
-    
-    // Supprimer plusieurs composants
-    commands.entity(e).remove<Velocity, Health>();
+void spawn_system(Commands& commands) {
+    // Créer une entité avec plusieurs composants
+    commands.spawn(
+        Position{100.0f, 200.0f},
+        Velocity{0.0f, 0.0f},
+        Health{100},
+        Player{}
+    );
 }
 ```
 
-## Composition de Composants
-
-Combinez des composants pour créer des comportements complexes :
+### Après la Création
 
 ```cpp
-// Composants atomiques simples
-struct Position { float x, y; };
-struct Velocity { float x, y; };
-struct Gravity { float force; };
-struct Sprite { /* ... */ };
-struct Collider { /* ... */ };
+void system(Query<Entity, Without<Health>> query, Commands& commands) {
+    for (auto [entity, _] : query) {
+        // Ajouter un composant à une entité existante
+        commands.entity(entity).insert(Health{50});
+    }
+}
+```
 
-// Différentes combinaisons = différents comportements
-commands.spawn(Position{}, Velocity{}, Sprite{});           // Objet en mouvement
-commands.spawn(Position{}, Velocity{}, Gravity{}, Sprite{}); // Objet affecté par la gravité
-commands.spawn(Position{}, Collider{}, Sprite{});            // Objet statique avec collision
+## Supprimer des Composants
+
+```cpp
+void system(Query<Entity, With<Dead>> query, Commands& commands) {
+    for (auto [entity, _] : query) {
+        // Supprimer un composant spécifique
+        commands.entity(entity).remove<AI>();
+
+        // Ou détruire l'entité entière
+        commands.entity(entity).despawn();
+    }
+}
+```
+
+## Accéder aux Composants
+
+### Accès Modifiable
+
+Utilisez `Mut<T>` pour modifier les composants :
+
+```cpp
+void movement_system(
+    Query<Mut<Position>, Ref<Velocity>> query,
+    Res<DeltaTime> time
+) {
+    for (auto [pos, vel] : query) {
+        pos->x += vel->x * time->dt;
+        pos->y += vel->y * time->dt;
+    }
+}
+```
+
+### Accès en Lecture Seule
+
+Utilisez `Ref<T>` pour un accès en lecture seule :
+
+```cpp
+void render_system(Query<Ref<Position>, Ref<Sprite>> query) {
+    for (auto [pos, sprite] : query) {
+        draw(sprite->texture, pos->x, pos->y);
+    }
+}
+```
+
+## Patrons de Conception de Composants
+
+### Composition plutôt qu'Héritage
+
+Au lieu de hiérarchies d'héritage, composez les entités à partir de composants :
+
+```cpp
+// ❌ Mauvais : Héritage profond
+class GameObject {};
+class Character : public GameObject {};
+class Player : public Character {};
+class Mage : public Player {};
+
+// ✅ Bon : Composition
+struct Player {};
+struct Character {};
+struct MagicUser {};
+
+// Créer un mage en combinant des composants
+commands.spawn(Player{}, Character{}, MagicUser{});
+```
+
+### Responsabilité Unique
+
+Gardez les composants focalisés sur une seule préoccupation :
+
+```cpp
+// ❌ Mauvais : Composant fourre-tout
+struct GameObject {
+    Position position;
+    Velocity velocity;
+    Health health;
+    Sprite sprite;
+    // Trop de responsabilités !
+};
+
+// ✅ Bon : Composants focalisés
+struct Position { Vec2 value; };
+struct Velocity { Vec2 value; };
+struct Health { int value; };
+struct Sprite { Texture tex; };
+```
+
+### Conception Orientée Données
+
+Stockez les données dans des tableaux (géré par l'ECS) :
+
+```cpp
+// L'ECS stocke les composants dans des tableaux contigus :
+// Positions: [P1][P2][P3][P4]...
+// Velocities: [V1][V2][V3][V4]...
+// Très optimisé pour le cache !
 ```
 
 ## Bonnes Pratiques
@@ -162,87 +252,68 @@ commands.spawn(Position{}, Collider{}, Sprite{});            // Objet statique a
 ### ✅ À Faire
 
 - Gardez les composants petits et focalisés
-- Utilisez des données simples (POD quand c'est possible)
-- Préférez la composition à l'héritage
+- Utilisez des `struct` POD lorsque c'est possible
 - Utilisez des composants marqueurs pour la catégorisation
+- Préférez plusieurs petits composants à un seul grand composant
 
 ```cpp
-// Bon : composants petits et focalisés
+// Bon : Composants focalisés
+struct Position { Vec2 value; };
+struct Velocity { Vec2 value; };
+struct CircleCollider { float radius; };
+```
+
+### ❌ À Ne Pas Faire
+
+- N'ajoutez pas de logique aux composants (utilisez les systèmes)
+- Ne créez pas de composants "dieu" (god components)
+- N'utilisez pas l'héritage entre les composants
+
+```cpp
+// Mauvais : Trop de logique dans le composant
+struct Enemy {
+    void update() { /* logique ici */ }
+    void draw() { /* rendu ici */ }
+    // Devrait être dans des systèmes !
+};
+```
+
+## Exemple : Configuration Complète d'une Entité
+
+```cpp
+// Définir les composants
 struct Position { float x, y; };
 struct Velocity { float x, y; };
-struct Health { int current, maximum; };
-```
+struct Circle { float radius; Color color; };
+struct Player {};
 
-### ❌ À Éviter
+// Créer l'entité joueur
+void setup(Commands& commands) {
+    commands.spawn(
+        Position{400.0f, 300.0f},
+        Velocity{0.0f, 0.0f},
+        Circle{25.0f, Color::Blue},
+        Player{}
+    );
+}
 
-- Ne mettez pas de logique complexe dans les composants
-- Ne créez pas de composants "god" géants
-- N'utilisez pas d'héritage de composants
-
-```cpp
-// Mauvais : composant god
-struct GameObject {
-    Position pos;
-    Velocity vel;
-    Health health;
-    Sprite sprite;
-    AI ai;
-    // Trop de responsabilités !
-};
-```
-
-## Requête de Composants
-
-Filtrez les entités par présence de composants :
-
-```cpp
-// Entités AVEC Position ET Velocity
-Query<Ref<Position>, Ref<Velocity>>
-
-// Entités AVEC Position SANS Velocity
-Query<Ref<Position>, Without<Velocity>>
-
-// Entités avec le marqueur Enemy
-Query<Ref<Position>, With<Enemy>>
-```
-
-[En savoir plus sur les Requêtes →](./queries.md)
-
-## Exemple : Système de Santé
-
-```cpp
-struct Health {
-    int current;
-    int maximum;
-    
-    bool is_alive() const { return current > 0; }
-};
-
-struct Dead {};  // Composant marqueur
-
-void health_system(
-    Query<Entity, Ref<Health>, Without<Dead>> query,
-    Commands& commands
-) {
-    for (auto [entity, health, _] : query) {
-        if (!health->is_alive()) {
-            commands.entity(entity).insert(Dead{});
-        }
+// Les systèmes opèrent sur les composants
+void movement(Query<Mut<Position>, Ref<Velocity>> query) {
+    for (auto [pos, vel] : query) {
+        pos->x += vel->x;
+        pos->y += vel->y;
     }
 }
 
-void cleanup_dead_system(
-    Query<Entity, With<Dead>> query,
-    Commands& commands
-) {
-    for (auto [entity, _] : query) {
-        commands.entity(entity).despawn();
+void render(Query<Ref<Position>, Ref<Circle>> query) {
+    for (auto [pos, circle] : query) {
+        draw_circle(pos->x, pos->y, circle->radius, circle->color);
     }
 }
 ```
 
 ## Prochaines Étapes
 
-- Voyez comment les [Systèmes](./systems.md) opèrent sur les composants
-- Découvrez les [Requêtes](./queries.md) pour filtrer les composants
-- Explorez les [Commandes](./commands.md) pour modifier les composants
+- Apprenez-en plus sur les [Systèmes](./systems.md) pour ajouter de la logique
+- Explorez les [Requêtes](./queries.md) pour accéder efficacement aux composants
+- Consultez les [Commandes](./commands.md) pour ajouter/supprimer des composants

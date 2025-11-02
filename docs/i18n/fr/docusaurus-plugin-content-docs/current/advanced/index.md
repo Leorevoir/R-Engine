@@ -10,23 +10,23 @@ Cette section couvre les fonctionnalités ECS avancées qui vous donnent plus de
 
 Une fois que vous comprenez les concepts fondamentaux, ces fonctionnalités avancées vous aideront à construire des applications plus sophistiquées :
 
-### Events
+### Événements
 
 Communication asynchrone entre systèmes utilisant une architecture orientée événements.
 
-[En savoir plus sur les Events →](./events.md)
+[En savoir plus sur les Événements →](./events.md)
 
-### Hierarchies
+### Hiérarchies
 
-Relations parent-enfant entre entités pour les graphes de scène et structures imbriquées.
+Relations parent-enfant entre entités pour les graphes de scène et les structures imbriquées.
 
-[En savoir plus sur les Hierarchies →](./hierarchies.md)
+[En savoir plus sur les Hiérarchies →](./hierarchies.md)
 
-### Run Conditions
+### Conditions d'Exécution
 
 Contrôlez quand les systèmes s'exécutent en fonction de conditions d'exécution.
 
-[En savoir plus sur les Run Conditions →](./run-conditions.md)
+[En savoir plus sur les Conditions d'Exécution →](./run-conditions.md)
 
 ### Schedules
 
@@ -36,10 +36,10 @@ Organisez et ordonnez l'exécution des systèmes à travers plusieurs étapes.
 
 ## Quand Utiliser les Fonctionnalités Avancées
 
-- **Events** : Quand les systèmes doivent communiquer sans couplage fort
-- **Hierarchies** : Pour les transformations, dispositions UI, ou objets de jeu imbriqués
-- **Run Conditions** : Pour activer/désactiver les systèmes dynamiquement
-- **Schedules** : Pour organiser des dépendances système complexes
+- **Événements** : Quand les systèmes doivent communiquer sans couplage fort
+- **Hiérarchies** : Pour les transformations, les dispositions d'interface utilisateur ou les objets de jeu imbriqués
+- **Conditions d'Exécution** : Pour activer/désactiver les systèmes dynamiquement
+- **Schedules** : Pour organiser des dépendances de systèmes complexes
 
 ## Exemple : Combinaison de Fonctionnalités
 
@@ -56,11 +56,11 @@ bool game_is_running(Res<GameState> state) {
 Application{}
     // Événements
     .add_event<GameStartEvent>()
-    
+
     // Systèmes avec conditions
     .add_systems<game_logic>(Schedule::UPDATE)
     .run_if(run_condition<game_is_running>())
-    
+
     // Configuration hiérarchique
     .add_systems<setup_ui_hierarchy>(Schedule::STARTUP)
     .run();
@@ -68,4 +68,4 @@ Application{}
 
 ## Prochaines Étapes
 
-Commencez avec les [Events](./events.md) pour apprendre la communication inter-système.
+Commencez avec les [Événements](./events.md) pour apprendre la communication inter-système.

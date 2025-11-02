@@ -4,9 +4,9 @@ sidebar_position: 4
 
 # Ressources
 
-Les ressources sont des données globales uniques accessibles par tous les systèmes. Elles sont parfaites pour stocker la configuration, l'état global ou les services.
+Les ressources sont des données uniques et globales accessibles par tous les systèmes. Elles sont parfaites pour stocker la configuration, l'état global ou des services.
 
-## Qu'est-ce qu'un Resource?
+## Qu'est-ce qu'une Ressource ?
 
 Une ressource est un élément de données singleton qui existe en dehors des entités. Contrairement aux composants qui sont attachés aux entités, les ressources sont globales et uniques.
 
@@ -18,7 +18,7 @@ struct GameConfig {
 };
 ```
 
-## Ajouter des Resources
+## Ajouter des Ressources
 
 ### Au Démarrage de l'Application
 
@@ -31,13 +31,12 @@ Application{}
 
 ### Depuis les Systèmes
 
-```cpp
+````cpp
 void system(Commands& commands) {
     commands.insert_resource(NewResource{42});
-}
-```
+}```
 
-## Accéder aux Resources
+## Accéder aux Ressources
 
 ### Accès en Lecture Seule
 
@@ -52,24 +51,24 @@ void physics_system(
         vel->y += config->gravity;
     }
 }
-```
+````
 
-### Accès Mutable
+### Accès Modifiable
 
-Utilisez `ResMut<T>` pour un accès mutable :
+Utilisez `ResMut<T>` pour un accès modifiable :
 
 ```cpp
 void score_system(
     ResMut<Score> score,
     EventReader<PointEvent> events
 ) {
-    for (const auto& event : events.iter()) {
+    for (const auto& event : events) {
         score->value += event.points;
     }
 }
 ```
 
-## Supprimer les Resources
+## Supprimer des Ressources
 
 ```cpp
 void cleanup_system(Commands& commands) {
@@ -77,7 +76,7 @@ void cleanup_system(Commands& commands) {
 }
 ```
 
-## Common Resource Patterns
+## Patrons Courants de Ressources
 
 ### Configuration
 
@@ -104,7 +103,7 @@ struct DeltaTime {
 };
 
 void time_system(ResMut<DeltaTime> time) {
-    // Mise à jour à chaque frame
+    // Mettre à jour à chaque frame
     time->dt = calculate_delta();
     time->elapsed += time->dt;
 }
@@ -114,13 +113,13 @@ void time_system(ResMut<DeltaTime> time) {
 
 ```cpp
 struct Input {
-    bool keys[256];
+    bool keys;
     int mouse_x, mouse_y;
-    bool mouse_buttons[3];
+    bool mouse_buttons;
 };
 
 void input_system(ResMut<Input> input) {
-    // Mise à jour de l'état des entrées
+    // Mettre à jour l'état des entrées
     poll_events(input.ptr);
 }
 ```
@@ -130,16 +129,16 @@ void input_system(ResMut<Input> input) {
 ### ✅ À Faire
 
 - Utilisez les ressources pour les données globales et uniques
-- Préférez `Res<T>` à `ResMut<T>` quand c'est possible
+- Préférez `Res<T>` à `ResMut<T>` lorsque c'est possible
 - Utilisez les ressources pour les services et la configuration
 
-### ❌ À Éviter
+### ❌ À Ne Pas Faire
 
 - N'utilisez pas les ressources pour les données spécifiques aux entités (utilisez des composants)
-- N'abusez pas des ressources pour tout (utilisez des composants quand approprié)
+- N'abusez pas des ressources pour tout (utilisez des composants lorsque c'est approprié)
 
 ## Prochaines Étapes
 
-- Apprenez les [Requêtes](./queries.md)
+- Apprenez-en plus sur les [Requêtes](./queries.md)
 - Explorez les [Commandes](./commands.md)
 - Consultez les [Exemples](../examples/index.md)

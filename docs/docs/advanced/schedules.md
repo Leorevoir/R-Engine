@@ -8,23 +8,28 @@ Schedules organize system execution into distinct phases.
 
 ## Built-in Schedules
 
-R-Engine provides several default schedules:
+R-Engine provides several default schedules defined in the `Schedule` enum:
 
-```cpp
-Schedule::STARTUP    // Run once at application start
-Schedule::UPDATE     // Main game loop (every frame)
-Schedule::RENDER_2D  // 2D rendering
-Schedule::RENDER_3D  // 3D rendering
-// ... and more
-```
+- `PRE_STARTUP`: Runs once before the main startup phase. Useful for setting up foundational resources.
+- `STARTUP`: Runs once when the application starts, before the main loop. Ideal for spawning initial entities and loading assets.
+- `UPDATE`: The main game loop schedule, runs every frame. Most game logic goes here.
+- `FIXED_UPDATE`: Runs on a fixed time step, suitable for physics calculations.
+- `BEFORE_RENDER_3D` / `RENDER_3D` / `AFTER_RENDER_3D`: Phases for 3D rendering.
+- `BEFORE_RENDER_2D` / `RENDER_2D` / `AFTER_RENDER_2D`: Phases for 2D rendering and UI.
+- `EVENT_CLEANUP`: Runs at the end of the frame to clear events.
+- `SHUTDOWN`: Runs once when the application is closing.
 
 ## Using Schedules
 
+You assign systems to a schedule when adding them to the application.
+
 ```cpp
 Application{}
-    .add_systems<setup>(Schedule::STARTUP)
-    .add_systems<input, movement>(Schedule::UPDATE)
-    .add_systems<render>(Schedule::RENDER_2D)
+    .add_systems<setup_scene>(Schedule::STARTUP)
+    .add_systems<player_input, enemy_ai>(Schedule::UPDATE)
+    .add_systems<physics_step>(Schedule::FIXED_UPDATE)
+    .add_systems<render_models>(Schedule::RENDER_3D)
+    .add_systems<render_ui>(Schedule::RENDER_2D)
     .run();
 ```
 
@@ -40,24 +45,26 @@ app.add_systems<movement_system>(Schedule::UPDATE)
    .after<input_system>();
 ```
 
-### Between Schedules
+### Frame Execution Order
 
 Schedules run in a predefined order each frame:
 
 ```
-(STARTUP once)
+(PRE_STARTUP -> STARTUP once)
 ↓
-PRE_UPDATE
+<main loop>
+  UPDATE
+  ↓
+  FIXED_UPDATE (zero or more times)
+  ↓
+  BEFORE_RENDER_3D -> RENDER_3D -> AFTER_RENDER_3D
+  ↓
+  BEFORE_RENDER_2D -> RENDER_2D -> AFTER_RENDER_2D
+  ↓
+  EVENT_CLEANUP
+(repeat main loop)
 ↓
-UPDATE
-↓
-POST_UPDATE
-↓
-RENDER_3D
-↓
-RENDER_2D
-↓
-(repeat from PRE_UPDATE)
+SHUTDOWN
 ```
 
 ## System Sets
@@ -74,49 +81,53 @@ struct PhysicsSet {};
 app.add_systems<keyboard_input, mouse_input>(Schedule::UPDATE)
    .in_set<InputSet>();
 
-// Order entire sets relative to each other
 app.add_systems<player_movement, enemy_ai>(Schedule::UPDATE)
-   .in_set<LogicSet>()
+   .in_set<LogicSet>();
+
+// Order logic to run after input
+app.configure_sets<LogicSet>(Schedule::UPDATE)
    .after<InputSet>();
 
+// You can also specify dependencies directly when adding systems
 app.add_systems<collision_detection>(Schedule::UPDATE)
    .in_set<PhysicsSet>()
-   .after<LogicSet>();
+   .after<LogicSet>(); // The PhysicsSet runs after the LogicSet
 ```
 
 ## Best Practices
 
 ### Organize by Phase
 
+Use the appropriate schedule for each type of logic.
+
 ```cpp
 // Input phase
-app.add_systems<keyboard_input, mouse_input>(Schedule::PRE_UPDATE);
-
-// Logic phase
-app.add_systems<player_movement, enemy_ai>(Schedule::UPDATE);
+app.add_systems<keyboard_input, mouse_input>(Schedule::UPDATE);
 
 // Physics phase
-app.add_systems<collision, physics_solver>(Schedule::POST_UPDATE);
+app.add_systems<collision, physics_solver>(Schedule::FIXED_UPDATE);
 
 // Render phase
 app.add_systems<sprite_render, ui_render>(Schedule::RENDER_2D);
 ```
 
-### Use Sets for Dependencies
+### Use Sets for Broad Dependencies
+
+System sets are excellent for establishing high-level ordering between different parts of your application, like ensuring all game logic runs before all physics calculations within the same schedule.
 
 ```cpp
-struct LogicSet {};
-struct RenderingSet {};
+struct GameLogicSet {};
+struct PhysicsSet {};
 
-app.add_systems<game_logic_a, game_logic_b>(Schedule::UPDATE)
-   .in_set<LogicSet>();
+app.add_systems<player_logic, enemy_logic>(Schedule::UPDATE)
+   .in_set<GameLogicSet>();
 
-app.add_systems<render_a, render_b>(Schedule::RENDER_2D)
-   .in_set<RenderingSet>();
+app.add_systems<collision_system, solver_system>(Schedule::UPDATE)
+   .in_set<PhysicsSet>();
 
-// To ensure rendering happens after logic, you can configure the sets
-app.configure_sets<RenderingSet>(Schedule::UPDATE)
-   .after<LogicSet>();
+// Configure the entire PhysicsSet to run after the GameLogicSet
+app.configure_sets<PhysicsSet>(Schedule::UPDATE)
+   .after<GameLogicSet>();
 ```
 
 ## Example: Complete Setup
@@ -126,10 +137,8 @@ Application{}
     // Startup
     .add_systems<load_assets, spawn_player>(Schedule::STARTUP)
 
-    // Pre-update: Input
-    .add_systems<input_system>(Schedule::PRE_UPDATE)
-
-    // Update: Game Logic
+    // Update: Game Logic and Input
+    .add_systems<input_system>(Schedule::UPDATE)
     .add_systems<
         player_movement,
         enemy_ai,
@@ -137,11 +146,12 @@ Application{}
     >(Schedule::UPDATE)
     .after<input_system>()
 
-    // Post-update: Physics
-    .add_systems<collision_detection, physics_solver>(Schedule::POST_UPDATE)
+    // Fixed Update: Physics
+    .add_systems<collision_detection, physics_solver>(Schedule::FIXED_UPDATE)
 
     // Render
-    .add_systems<render_sprites, render_ui>(Schedule::RENDER_2D)
+    .add_systems<render_models>(Schedule::RENDER_3D)
+    .add_systems<render_ui>(Schedule::RENDER_2D)
     .run();
 ```
 

@@ -13,31 +13,30 @@ Events are messages sent by one system and received by others, enabling loose co
 ```cpp
 // Define an event
 struct CollisionEvent {
-    Entity entity_a;
-    Entity entity_b;
-    Vec2 impact_point;
+    ecs::Entity entity_a;
+    ecs::Entity entity_b;
+    Vec2f impact_point;
 };
 ```
 
 ## Registering Events
 
-Add events to your application:
+Add events to your application using the `add_events` method:
 
 ```cpp
 Application{}
-    .add_event<CollisionEvent>()
-    .add_event<DamageEvent>()
+    .add_events<CollisionEvent, DamageEvent>()
     .run();
 ```
 
 ## Sending Events
 
-Use `EventWriter<T>` to send events:
+Use `ecs::EventWriter<T>` to send events:
 
 ```cpp
 void collision_system(
-    Query<Entity, Ref<Position>, Ref<Collider>> query,
-    EventWriter<CollisionEvent> events
+    ecs::Query<ecs::Entity, ecs::Ref<Position>, ecs::Ref<Collider>> query,
+    ecs::EventWriter<CollisionEvent> events
 ) {
     // Check collisions...
     if (collision_detected) {
@@ -52,17 +51,16 @@ void collision_system(
 
 ## Reading Events
 
-Use `EventReader<T>` to receive events:
+Use `ecs::EventReader<T>` to receive events. The reader is directly iterable.
 
 ```cpp
 void damage_system(
-    EventReader<CollisionEvent> events,
-    Query<Mut<Health>> query
+    ecs::EventReader<CollisionEvent> collision_events,
+    ecs::Query<ecs::Mut<Health>> query
 ) {
-    for (const auto& event : events.iter()) {
+    for (const auto& event : collision_events) {
         // Handle collision event
-        auto health = query.get<Mut<Health>>(event.entity_a);
-        if (health) {
+        if (auto health = query.get_component_ptr<Health>(event.entity_a)) {
             health->value -= 10;
         }
     }
@@ -71,17 +69,23 @@ void damage_system(
 
 ## Event Lifecycle
 
-Events are cleared after all readers have processed them:
+Events are managed with a **double-buffer** system. This means events sent in a given frame are only available to be read in the **next frame**.
 
 ```
 Frame N:
-  System A sends event
-  System B reads event
-  System C reads event
-  Event cleared at end of frame
+System A sends event E1
+System B sends event E2
+...
+(Events E1 and E2 are stored in the "write" buffer for this frame)
+...
+EVENT_CLEANUP schedule runs
+Event buffers are swapped. The "write" buffer becomes the "read" buffer.
 
 Frame N+1:
-  Event no longer available
+System C reads events E1 and E2 from the "read" buffer.
+...
+EVENT_CLEANUP schedule runs
+The "read" buffer (containing E1, E2) is cleared, and buffers are swapped again.
 ```
 
 ## Common Event Patterns
@@ -94,15 +98,15 @@ struct KeyPressEvent {
     bool pressed;
 };
 
-void input_system(EventWriter<KeyPressEvent> events) {
+void input_system(ecs::EventWriter<KeyPressEvent> events) {
     // Poll input
-    if (key_pressed(KEY_SPACE)) {
+    if (IsKeyPressed(KEY_SPACE)) {
         events.send(KeyPressEvent{KEY_SPACE, true});
     }
 }
 
-void player_system(EventReader<KeyPressEvent> events) {
-    for (const auto& event : events.iter()) {
+void player_system(ecs::EventReader<KeyPressEvent> events) {
+    for (const auto& event : events) {
         if (event.key_code == KEY_SPACE && event.pressed) {
             // Jump!
         }
@@ -114,29 +118,29 @@ void player_system(EventReader<KeyPressEvent> events) {
 
 ```cpp
 struct EnemyDefeatedEvent {
-    Entity enemy;
+    ecs::Entity enemy;
     int score_value;
 };
 
 void combat_system(
-    Query<Entity, Mut<Health>, With<Enemy>> query,
-    EventWriter<EnemyDefeatedEvent> events,
-    Commands& commands
+    ecs::Query<ecs::Entity, ecs::Mut<Health>, ecs::With<Enemy>> query,
+    ecs::EventWriter<EnemyDefeatedEvent> events,
+    ecs::Commands& commands
 ) {
     for (auto [entity, health, _] : query) {
-        if (health->current <= 0) {
+        if (health.ptr->current <= 0) {
             events.send(EnemyDefeatedEvent{entity, 100});
-            commands.entity(entity).despawn();
+            commands.despawn(entity);
         }
     }
 }
 
 void score_system(
-    EventReader<EnemyDefeatedEvent> events,
-    ResMut<Score> score
+    ecs::EventReader<EnemyDefeatedEvent> events,
+    ecs::ResMut<Score> score
 ) {
-    for (const auto& event : events.iter()) {
-        score->value += event.score_value;
+    for (const auto& event : events) {
+        score.ptr->value += event.score_value;
     }
 }
 ```
@@ -153,33 +157,34 @@ void score_system(
 
 - Don't use events for every system interaction (queries are fine for direct access)
 - Don't store large data in events
-- Don't expect events to persist across frames
+- Don't expect events to be readable in the same frame they are sent.
 
 ## Example: Complete Event Flow
 
 ```cpp
 // Event definitions
 struct BulletFiredEvent {
-    Entity shooter;
-    Vec2 position;
-    Vec2 direction;
+    ecs::Entity shooter;
+    Vec2f position;
+    Vec2f direction;
 };
 
 struct HitEvent {
-    Entity target;
+    ecs::Entity target;
     int damage;
 };
 
 // System 1: Fire bullets
 void shooting_system(
-    Query<Entity, Ref<Position>, With<Player>> query,
-    Res<Input> input,
-    EventWriter<BulletFiredEvent> events
+    ecs::Query<ecs::Entity, ecs::Ref<Position>, ecs::With<Player>> query,
+    ecs::Res<UserInput> input,
+    ecs::EventWriter<BulletFiredEvent> events
 ) {
-    if (input->fire_pressed) {
-        for (auto [entity, pos, _] : query) {
+    if (input.ptr->isKeyJustPressed(KEY_SPACE)) {
+        for (auto it = query.begin(); it != query.end(); ++it) {
+            auto [pos, _] = *it;
             events.send(BulletFiredEvent{
-                entity, pos->value, Vec2{1, 0}
+                it.entity(), pos.ptr->value, Vec2f{1, 0}
             });
         }
     }
@@ -187,10 +192,10 @@ void shooting_system(
 
 // System 2: Spawn bullets from events
 void bullet_spawn_system(
-    EventReader<BulletFiredEvent> events,
-    Commands& commands
+    ecs::EventReader<BulletFiredEvent> events,
+    ecs::Commands& commands
 ) {
-    for (const auto& event : events.iter()) {
+    for (const auto& event : events) {
         commands.spawn(
             Bullet{},
             Position{event.position},
@@ -201,14 +206,16 @@ void bullet_spawn_system(
 
 // System 3: Detect hits
 void collision_system(
-    Query<Entity, Ref<Position>, With<Bullet>> bullets,
-    Query<Entity, Ref<Position>, With<Enemy>> enemies,
-    EventWriter<HitEvent> events
+    ecs::Query<ecs::Entity, ecs::Ref<Position>, ecs::With<Bullet>> bullets,
+    ecs::Query<ecs::Entity, ecs::Ref<Position>, ecs::With<Enemy>> enemies,
+    ecs::EventWriter<HitEvent> events
 ) {
-    for (auto [bullet_e, bullet_pos, _] : bullets) {
-        for (auto [enemy_e, enemy_pos, _] : enemies) {
-            if (distance(bullet_pos->value, enemy_pos->value) < 10.0f) {
-                events.send(HitEvent{enemy_e, 25});
+    for (auto it_bullet = bullets.begin(); it_bullet != bullets.end(); ++it_bullet) {
+        auto [bullet_pos, _] = *it_bullet;
+        for (auto it_enemy = enemies.begin(); it_enemy != enemies.end(); ++it_enemy) {
+            auto [enemy_pos, _] = *it_enemy;
+            if (distance(bullet_pos.ptr->value, enemy_pos.ptr->value) < 10.0f) {
+                events.send(HitEvent{it_enemy.entity(), 25});
             }
         }
     }
@@ -216,11 +223,11 @@ void collision_system(
 
 // System 4: Apply damage
 void damage_system(
-    EventReader<HitEvent> events,
-    Query<Mut<Health>> query
+    ecs::EventReader<HitEvent> events,
+    ecs::Query<ecs::Mut<Health>> query
 ) {
-    for (const auto& event : events.iter()) {
-        if (auto health = query.get<Mut<Health>>(event.target)) {
+    for (const auto& event : events) {
+        if (auto* health = query.get_component_ptr<Health>(event.target)) {
             health->current -= event.damage;
         }
     }
@@ -228,8 +235,7 @@ void damage_system(
 
 // Application
 Application{}
-    .add_event<BulletFiredEvent>()
-    .add_event<HitEvent>()
+    .add_events<BulletFiredEvent, HitEvent>()
     .add_systems<
         shooting_system,
         bullet_spawn_system,

@@ -2,85 +2,72 @@
 sidebar_position: 3
 ---
 
-# API des commandes d'entité
+# API des EntityCommands
 
-Commandes pour modifier une entité spécifique.
+`ecs::EntityCommands` fournit un patron de conception (builder pattern) pour modifier une entité spécifique.
 
 ## Méthodes
 
 ### insert()
 
 ```cpp
-EntityCommands& insert(Component component)
+EntityCommands& insert(T component) noexcept;
 ```
 
-Ajouter un composant à l'entité.
+Planifie l'ajout d'un composant à l'entité.
 
-**Retourne** : Self pour le chaînage
+**Retourne** : Self pour le chaînage.
 
 ### remove()
 
 ```cpp
-EntityCommands& remove<T>()
+EntityCommands& remove<T>() noexcept;
 ```
 
-Supprimer un composant de l'entité.
+Planifie la suppression d'un composant de l'entité.
 
-**Retourne** : Self pour le chaînage
-
-### despawn()
-
-```cpp
-void despawn()
-```
-
-Mettre l'entité en file d'attente pour destruction.
-
-### set_parent()
-
-```cpp
-EntityCommands& set_parent(Entity parent)
-```
-
-Définir l'entité parent (crée une hiérarchie).
+**Retourne** : Self pour le chaînage.
 
 ### with_children()
 
 ```cpp
-EntityCommands& with_children(Function fn)
+EntityCommands& with_children(FuncT&& func) noexcept;
 ```
 
-Créer des enfants pour cette entité.
+Crée des entités enfants pour cette entité. La fonction fournie reçoit un `ChildBuilder`.
+
+**Retourne** : Self pour le chaînage.
 
 ### id()
 
 ```cpp
-Entity id() const
+Entity id() const noexcept;
 ```
 
-Obtenir l'ID de l'entité.
+Retourne l'ID de l'entité. Si l'entité vient d'être créée, il s'agit d'un ID de substitution temporaire valide uniquement dans le cycle actuel du tampon de commandes.
 
 ## Exemple d'Utilisation
 
 ```cpp
-void system(Commands& commands) {
-    // Créer et configurer une entité
+void system(ecs::Commands& commands) {
+    // Créer et configurer une nouvelle entité
     commands.spawn()
         .insert(Position{0, 0})
         .insert(Velocity{1, 0})
         .insert(Player{});
-    
+
     // Modifier une entité existante
-    Entity e = /* ... */;
+    ecs::Entity e = /* ... */;
     commands.entity(e)
         .insert(Health{100})
         .remove<Frozen>();
-    
+
     // Créer une hiérarchie
-    Entity parent = commands.spawn(Transform{}).id();
-    commands.entity(parent).with_children([&](Commands& child) {
-        child.spawn(Transform{});
-    });
+    commands.spawn(Transform3d{})
+        .with_children([](ecs::ChildBuilder& builder) {
+            builder.spawn(Transform3d{ .position = {1, 0, 0} });
+            builder.spawn(Transform3d{ .position = {-1, 0, 0} });
+        });
 }
 ```
 
@@ -90,13 +77,12 @@ La plupart des méthodes retournent `EntityCommands&` pour un chaînage pratique
 
 ```cpp
 commands.entity(e)
-    .insert(A{})
-    .insert(B{})
-    .remove<C>()
-    .set_parent(parent);
+    .insert(ComponentA{})
+    .insert(ComponentB{})
+    .remove<ComponentC>();
 ```
 
 ## Voir Aussi
 
-- [Commands](./commands.md) - Commandes générales
-- [Hierarchies](../advanced/hierarchies.md) - Relations parent-enfant
+- [Commands](./commands.md) - L'interface principale pour toutes les modifications du monde.
+- [Hierarchies](../advanced/hierarchies.md) - Plus d'informations sur les relations parent-enfant.

@@ -4,32 +4,33 @@ sidebar_position: 6
 
 # Commandes
 
-Les commandes fournissent un accès différé pour modifier le monde ECS. Elles préviennent l'invalidation des itérateurs et permettent des changements structurels sécurisés.
+Les commandes fournissent un accès différé pour modifier le monde ECS. Elles préviennent l'invalidation des itérateurs et permettent des changements structurels sécurisés pendant l'exécution d'un système.
 
-## Que sont les Commands?
+## Que sont les Commandes ?
 
-Les commandes mettent en file d'attente les modifications à appliquer plus tard, garantissant que les requêtes ne se cassent pas pendant l'itération.
+`ecs::Commands` est un paramètre de système qui met en file d'attente les modifications (comme la création/suppression d'entités ou l'ajout/retrait de composants). Ces changements sont appliqués tous en même temps à un point sûr entre les exécutions de systèmes, garantissant que les requêtes ne se cassent pas pendant que vous itérez dessus.
 
 ```cpp
-void system(Query<Entity> query, Commands& commands) {
-    for (auto [entity] : query) {
-        // Sécurisé : mis en file d'attente pour plus tard
-        commands.entity(entity).despawn();
+void system(ecs::Query<ecs::Entity, ecs::With<Enemy>> query, ecs::Commands& commands) {
+    for (auto it = query.begin(); it != query.end(); ++it) {
+        ecs::Entity entity = it.entity();
+        // C'est sûr : la suppression est mise en file d'attente et n'affectera pas l'itération actuelle de la requête.
+        commands.despawn(entity);
     }
-    // Les commandes sont appliquées après l'itération
+    // Toutes les commandes en file d'attente sont appliquées après la fin de ce système.
 }
 ```
 
 ## Types de Commandes
 
-### Créer une Entité
+### Créer des Entités
 
 ```cpp
-void system(Commands& commands) {
-    // Entité vide
-    Entity e = commands.spawn().id();
-    
-    // Avec des composants
+void system(ecs::Commands& commands) {
+    // Créer une entité sans composants
+    ecs::Entity e = commands.spawn().id();
+
+    // Créer une entité avec un ensemble de composants
     commands.spawn(
         Position{0, 0},
         Velocity{1, 0}
@@ -37,38 +38,40 @@ void system(Commands& commands) {
 }
 ```
 
-### Commandes d'Entité
+### Modifier des Entités
+
+Utilisez `commands.entity(entity_id)` pour obtenir un constructeur `EntityCommands`.
 
 ```cpp
-void system(Entity entity, Commands& commands) {
+void system(ecs::Entity entity, ecs::Commands& commands) {
     auto entity_cmds = commands.entity(entity);
-    
+
     // Ajouter un composant
     entity_cmds.insert(Health{100});
-    
-    // Supprimer un composant
+
+    // Retirer un composant
     entity_cmds.remove<AI>();
-    
-    // Détruire
-    entity_cmds.despawn();
+
+    // Détruire l'entité
+    commands.despawn(entity);
 }
 ```
 
-### Commandes de Ressource
+### Gérer les Ressources
 
 ```cpp
-void system(Commands& commands) {
-    // Insérer une ressource
+void system(ecs::Commands& commands) {
+    // Insérer ou mettre à jour une ressource
     commands.insert_resource(Config{});
-    
-    // Supprimer une ressource
+
+    // Retirer une ressource
     commands.remove_resource<OldResource>();
 }
 ```
 
 ## EntityCommands
 
-Enchaînez les opérations sur une seule entité :
+La structure `EntityCommands` fournit un patron de conception (builder pattern) pratique pour enchaîner les opérations sur une seule entité :
 
 ```cpp
 commands.spawn()
@@ -79,35 +82,36 @@ commands.spawn()
 
 ## Exécution des Commandes
 
-Les commandes sont appliquées entre les exécutions de systèmes :
+Les commandes sont appliquées à des points de synchronisation spécifiques, généralement après que tous les systèmes d'un schedule donné ont été exécutés.
 
 ```
 Le système A s'exécute
-  → Commandes mises en file d'attente
+  → Les commandes pour la création et les changements de composants sont mises en file d'attente
 Le système B s'exécute
-  → Commandes mises en file d'attente
-Commandes appliquées ← Toutes en même temps
+  → D'autres commandes sont mises en file d'attente
+Point de synchronisation (par ex., fin du schedule UPDATE)
+  → Toutes les commandes en file d'attente sont appliquées en une seule fois
 Le système C s'exécute
-  → Peut voir les changements
+  → Peut voir les changements effectués par les systèmes A et B
 ```
 
 ## Bonnes Pratiques
 
 ### ✅ À Faire
 
-- Utilisez les commandes pour tous les changements structurels
-- Enchaînez les commandes d'entité pour plus de clarté
-- Laissez les commandes s'appliquer automatiquement
+- Utilisez `Commands` pour **tous** les changements structurels (création, suppression, ajout/retrait de composants).
+- Enchaînez les appels `EntityCommands` pour une meilleure lisibilité.
+- Fiez-vous au moteur pour appliquer les commandes automatiquement au bon moment.
 
-### ❌ À Éviter
+### ❌ À Ne Pas Faire
 
-- N'essayez pas d'appliquer les commandes manuellement
-- N'attendez pas de changements immédiats dans le même système
+- N'essayez pas d'appliquer les commandes manuellement.
+- N'attendez pas que les changements effectués via `Commands` soient visibles au sein du même système qui les a émis.
 
 ## Exemple
 
 ```cpp
-void spawn_enemies(Commands& commands) {
+void spawn_enemies(ecs::Commands& commands) {
     for (int i = 0; i < 10; i++) {
         commands.spawn(
             Enemy{},
@@ -117,9 +121,9 @@ void spawn_enemies(Commands& commands) {
     }
 }
 
-void cleanup(Query<Entity, With<Dead>> query, Commands& commands) {
-    for (auto [entity, _] : query) {
-        commands.entity(entity).despawn();
+void cleanup_system(ecs::Query<ecs::Entity, ecs::With<Dead>> query, ecs::Commands& commands) {
+    for (auto it = query.begin(); it != query.end(); ++it) {
+        commands.despawn(it.entity());
     }
 }
 ```

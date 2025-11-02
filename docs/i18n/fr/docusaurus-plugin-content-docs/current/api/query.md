@@ -2,42 +2,49 @@
 sidebar_position: 4
 ---
 
-# API des requêtes
+# API des Requêtes
 
-Itération d'entités type-safe avec accès aux composants.
+`ecs::Query` permet une itération avec typage sûr sur les entités possédant un ensemble spécifique de composants.
 
-## Paramètres Template
+## Paramètres de Template
 
 ```cpp
-Query<Wrappers...>
+ecs::Query<Wrappers...>
 ```
 
-Les wrappers peuvent être :
-- `Ref<T>` - Accès composant lecture seule
-- `Mut<T>` - Accès composant mutable
-- `With<T>` - Filtre : l'entité doit avoir T
-- `Without<T>` - Filtre : l'entité ne doit pas avoir T
-- `Entity` - Obtenir l'ID d'entité
+Les Wrappers définissent les composants à accéder et les filtres à appliquer :
+
+- `Ref<T>` : Accès en lecture seule au composant `T`.
+- `Mut<T>` : Accès modifiable (lecture/écriture) au composant `T`.
+- `With<T>` : Filtre pour inclure uniquement les entités qui _ont_ le composant `T`.
+- `Without<T>` : Filtre pour exclure les entités qui _ont_ le composant `T`.
+- `Optional<T>` : Accès optionnel en lecture seule au composant `T`. Le pointeur résultant sera `nullptr` si le composant est manquant.
 
 ## Itération
 
 ### Boucle For Basée sur une Plage
 
-```cpp
-Query<Mut<Position>, Ref<Velocity>> query;
+La manière la plus courante d'utiliser une requête est avec une boucle `for` basée sur une plage.
 
-for (auto [pos, vel] : query) {
-    pos.ptr->x += vel.ptr->x;
+```cpp
+void system(ecs::Query<ecs::Mut<Position>, ecs::Ref<Velocity>> query) {
+    for (auto [pos, vel] : query) {
+        pos.ptr->x += vel.ptr->x;
+    }
 }
 ```
 
-### Avec ID d'Entité
+### Accéder à l'ID de l'Entité
+
+Pour obtenir l'ID de l'entité, utilisez un itérateur et sa méthode `.entity()`.
 
 ```cpp
-Query<Entity, Ref<Position>> query;
-
-for (auto [entity, pos] : query) {
-    std::cout << "Entity " << entity.id() << "\n";
+void system(ecs::Query<ecs::Ref<Position>> query) {
+    for (auto it = query.begin(); it != query.end(); ++it) {
+        auto [pos] = *it;
+        ecs::Entity entity_id = it.entity();
+        std::cout << "Entity " << entity_id << "\n";
+    }
 }
 ```
 
@@ -45,88 +52,77 @@ for (auto [entity, pos] : query) {
 
 ### With\<T\>
 
-Seulement les entités qui ont le composant T :
+Inclure uniquement les entités qui ont le composant `T` :
 
 ```cpp
-Query<Ref<Position>, With<Player>> query;
-// Traite seulement les entités joueur
+// Cette requête n'itérera que sur les entités qui ont un composant Player.
+ecs::Query<ecs::Ref<Position>, ecs::With<Player>> query;
 ```
 
 ### Without\<T\>
 
-Seulement les entités qui n'ont pas le composant T :
+Exclure les entités qui ont le composant `T` :
 
 ```cpp
-Query<Ref<Position>, Without<Dead>> query;
-// Traite seulement les entités vivantes
+// Cette requête n'itérera que sur les entités qui n'ont PAS de composant Dead.
+ecs::Query<ecs::Ref<Position>, ecs::Without<Dead>> query;
 ```
 
-### Combinés
+### Filtres Combinés
+
+Vous pouvez combiner plusieurs filtres.
 
 ```cpp
-Query<
-    Mut<Position>,
-    With<Player>,
-    Without<Frozen>,
-    Without<Dead>
+// Obtenir un accès modifiable à la Position des entités qui sont des Players,
+// ne sont pas Frozen, et ne sont pas Dead.
+ecs::Query<
+    ecs::Mut<Position>,
+    ecs::With<Player>,
+    ecs::Without<Frozen>,
+    ecs::Without<Dead>
 > query;
-// Joueurs actifs uniquement
 ```
 
 ## Méthodes
 
-### get()
+### size()
 
 ```cpp
-template<typename Wrapper>
-std::optional<Wrapper> get(Entity e)
+u64 size() const;
 ```
 
-Obtenir le composant pour une entité spécifique.
+Retourne le nombre d'entités qui correspondent actuellement à la requête.
 
-**Exemple** :
-```cpp
-if (auto pos = query.get<Ref<Position>>(entity)) {
-    // Utiliser pos
-}
-```
+## Accéder aux Pointeurs de Composants
 
-### is_empty()
-
-```cpp
-bool is_empty() const
-```
-
-Vérifier si la requête correspond à des entités.
-
-## Modes d'Accès
+Lorsque vous itérez, vous obtenez des wrappers (`Mut<T>`, `Ref<T>`) qui contiennent un `ptr` vers les données du composant.
 
 ### Ref\<T\> - Lecture Seule
 
 ```cpp
-Query<Ref<Position>> query
+ecs::Query<ecs::Ref<Position>> query;
 for (auto [pos] : query) {
-    float x = pos.ptr->x;  // ✓ Lecture
-    // pos.ptr->x = 0;     // ✗ Erreur : const
+    float x = pos.ptr->x;  // ✓ La lecture est OK
+    // pos.ptr->x = 0;     // ✗ Erreur de compilation : ptr est const
 }
 ```
 
-### Mut\<T\> - Mutable
+### Mut\<T\> - Modifiable
 
 ```cpp
-Query<Mut<Position>> query
+ecs::Query<ecs::Mut<Position>> query;
 for (auto [pos] : query) {
-    pos.ptr->x = 0;  // ✓ Écriture autorisée
+    pos.ptr->x = 0;  // ✓ L'écriture est OK
 }
 ```
 
 ## Conseils de Performance
 
-- Utilisez `Ref<T>` au lieu de `Mut<T>` quand vous n'avez pas besoin de modifier
-- Utilisez les filtres pour réduire les itérations
-- Évitez de requêter des composants inutiles
+- Utilisez `Ref<T>` au lieu de `Mut<T>` lorsque vous n'avez pas besoin de modifier les données. Cela permet au planificateur d'exécuter potentiellement plus de systèmes en parallèle.
+- Utilisez les filtres `With<T>` et `Without<T>` pour affiner l'ensemble des entités que votre système doit traiter.
+- Évitez de requêter des composants que votre système n'utilise pas réellement.
 
 ## Voir Aussi
 
-- [Guide Queries](../core-concepts/queries.md)
-- [Components](../core-concepts/components.md)
+- [Guide des Requêtes](../core-concepts/queries.md)
+- [Composants](../core-concepts/components.md)

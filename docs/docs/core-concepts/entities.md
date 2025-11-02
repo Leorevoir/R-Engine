@@ -4,28 +4,28 @@ sidebar_position: 1
 
 # Entities
 
-Entities are unique identifiers that represent objects in your application. They are lightweight and tie components together.
+Entities are unique identifiers that represent objects in your application. They are lightweight and serve as a handle to group a set of components together.
 
 ## What is an Entity?
 
-An entity is simply a unique ID (typically a 32-bit or 64-bit integer). It has no data or behavior on its own — it's just a handle that groups components together.
+An entity is simply a unique ID (an unsigned 32-bit integer, aliased as `ecs::Entity`). It has no data or behavior on its own. Its sole purpose is to associate a collection of components.
 
 ```cpp
 // An entity is just an ID
-Entity player = Entity{42};
+ecs::Entity player_id = 42;
 ```
 
 ## Creating Entities
 
-Entities are created using the `Commands` system parameter:
+Entities are created using the `ecs::Commands` system parameter.
 
 ```cpp
-void spawn_system(Commands& commands) {
+void spawn_system(ecs::Commands& commands) {
     // Spawn an empty entity
-    Entity empty = commands.spawn().id();
-    
-    // Spawn an entity with components
-    Entity player = commands.spawn(
+    ecs::Entity empty_entity = commands.spawn().id();
+
+    // Spawn an entity with some initial components
+    ecs::Entity player = commands.spawn(
         Position{0.0f, 0.0f},
         Velocity{1.0f, 0.0f},
         Health{100}
@@ -35,64 +35,66 @@ void spawn_system(Commands& commands) {
 
 ## Entity Identity
 
-Each entity has a unique identifier that remains valid until the entity is despawned:
+Each entity has a unique identifier that remains valid until the entity is despawned.
 
 ```cpp
-void system(Commands& commands) {
-    Entity e1 = commands.spawn().id();
-    Entity e2 = commands.spawn().id();
-    
-    // e1 != e2 (always unique)
+void system(ecs::Commands& commands) {
+    ecs::Entity e1 = commands.spawn().id();
+    ecs::Entity e2 = commands.spawn().id();
+
+    // e1 will not be equal to e2
 }
 ```
 
 :::caution Entity Lifecycle
-Once an entity is despawned, its ID may be reused. Never store entity IDs across frames unless you're certain the entity still exists.
+Once an entity is despawned, its ID may eventually be reused by the engine. Avoid storing raw `Entity` IDs for long periods. If you need a stable reference, consider creating a resource that holds the entity ID.
 :::
 
 ## Despawning Entities
 
-Remove entities using `despawn`:
+Remove entities and all their components using `commands.despawn()`.
 
 ```cpp
 void cleanup_system(
-    Query<Entity, With<Dead>> query,
-    Commands& commands
+    ecs::Query<ecs::Entity, ecs::With<Dead>> query,
+    ecs::Commands& commands
 ) {
-    for (auto [entity, _] : query) {
-        commands.entity(entity).despawn();
+    for (auto it = query.begin(); it != query.end(); ++it) {
+        commands.despawn(it.entity());
     }
 }
 ```
 
-## Entity Relationships
+## Entity Relationships (Hierarchies)
 
-Entities can have parent-child relationships using the hierarchy system:
+Entities can have parent-child relationships, which is essential for transform propagation and scene graphs.
 
 ```cpp
-void spawn_hierarchy(Commands& commands) {
-    // Create parent
-    Entity parent = commands.spawn(Transform{}).id();
-    
-    // Create children
-    commands.entity(parent).with_children([&](Commands& child_builder) {
-        child_builder.spawn(Transform{});
-        child_builder.spawn(Transform{});
-    });
+void spawn_hierarchy(ecs::Commands& commands) {
+    // Create a parent entity
+    commands.spawn(Transform3d{ .position = {400, 300, 0} })
+        // Attach children to the parent
+        .with_children([](ecs::ChildBuilder& builder) {
+            builder.spawn(Transform3d{ .position = {50, 0, 0} });
+            builder.spawn(Transform3d{ .position = {-50, 0, 0} });
+        });
 }
 ```
 
 [Learn more about Hierarchies →](../advanced/hierarchies.md)
 
-## Querying Entities
+## Querying for Entities
 
-Get entities in queries using the `Entity` type:
+To get the ID of an entity you are processing in a query, use the iterator's `.entity()` method.
 
 ```cpp
-void system(Query<Entity, Ref<Position>> query) {
-    for (auto [entity, pos] : query) {
-        std::cout << "Entity " << entity.id() 
-                  << " at (" << pos->x << ", " << pos->y << ")\n";
+void system(ecs::Query<ecs::Ref<Position>> query) {
+    for (auto it = query.begin(); it != query.end(); ++it) {
+        auto [pos] = *it;
+        ecs::Entity entity = it.entity();
+
+        std::cout << "Entity " << entity
+                  << " is at (" << pos.ptr->x << ", " << pos.ptr->y << ")\n";
     }
 }
 ```
@@ -101,59 +103,28 @@ void system(Query<Entity, Ref<Position>> query) {
 
 ### ✅ Do
 
-- Use entities as lightweight handles
-- Despawn entities when no longer needed
-- Use marker components to categorize entities
+- Think of entities as simple, lightweight handles.
+- Despawn entities when they are no longer needed to free up resources.
+- Use marker components to categorize entities (e.g., `struct Player {};`).
 
 ```cpp
 struct Player {};
 struct Enemy {};
-struct Bullet {};
 
-// Easy to query specific entity types
-void player_system(Query<Ref<Position>, With<Player>> query) {
-    // Only processes player entities
+// This makes it easy to query for specific types of entities.
+void player_system(ecs::Query<ecs::Ref<Position>, ecs::With<Player>> query) {
+    // This system will only process entities that have a Player component.
 }
 ```
 
 ### ❌ Don't
 
-- Don't store entity IDs for long periods
-- Don't use entities as data containers (use components instead)
-- Don't manually manage entity IDs
-
-## Example: Entity Pool
-
-```cpp
-// Spawn multiple entities
-void spawn_enemies(Commands& commands) {
-    for (int i = 0; i < 10; i++) {
-        commands.spawn(
-            Enemy{},
-            Position{rand() % 800, rand() % 600},
-            Health{50}
-        );
-    }
-}
-
-// Process all enemies
-void enemy_ai_system(
-    Query<Entity, Mut<Position>, Ref<Health>, With<Enemy>> query,
-    Commands& commands
-) {
-    for (auto [entity, pos, health, _] : query) {
-        // AI logic...
-        
-        // Despawn if dead
-        if (health->current <= 0) {
-            commands.entity(entity).despawn();
-        }
-    }
-}
-```
+- Don't store entity IDs long-term without a strategy to handle despawning.
+- Don't try to embed data or logic into the entity itself; that's what components and systems are for.
+- Don't manage entity IDs manually; always let `Commands` handle creation.
 
 ## Next Steps
 
-- Learn about [Components](./components.md) to add data to entities
-- See how [Systems](./systems.md) operate on entities
-- Explore [Commands](./commands.md) for entity manipulation
+- Learn about [Components](./components.md) to add data to entities.
+- See how [Systems](./systems.md) operate on entities.
+- Explore [Commands](./commands.md) for entity manipulation.

@@ -4,7 +4,7 @@ sidebar_position: 3
 
 # Concepts Fondamentaux
 
-Cette section couvre les éléments fondamentaux de R-Engine ECS.
+Cette section couvre les briques de base de R-Engine ECS.
 
 ## Vue d'Ensemble
 
@@ -12,7 +12,7 @@ R-Engine ECS est construit sur trois concepts principaux :
 
 ### Entités
 
-Les entités sont des identifiants uniques qui représentent des "choses" dans votre jeu ou application. Ce sont des IDs légers qui relient les composants entre eux.
+Les entités sont des identifiants uniques qui représentent des "choses" dans votre jeu ou application. Ce sont des ID légers qui lient les composants entre eux.
 
 [En savoir plus sur les Entités →](./entities.md)
 
@@ -38,7 +38,7 @@ Les ressources sont des données globales et uniques accessibles par tous les sy
 
 ### Requêtes
 
-Les requêtes permettent aux systèmes d'itérer sur les entités qui correspondent à des critères spécifiques. Elles fournissent un accès type-safe aux composants.
+Les requêtes permettent aux systèmes d'itérer sur les entités qui correspondent à des critères spécifiques. Elles fournissent un accès avec typage sûr aux composants.
 
 [En savoir plus sur les Requêtes →](./queries.md)
 
@@ -48,9 +48,9 @@ Les commandes fournissent un accès différé pour modifier le monde ECS. Elles 
 
 [En savoir plus sur les Commandes →](./commands.md)
 
-## Le Pattern ECS
+## Le Modèle ECS
 
-```cpp
+````cpp
 // Composants : Données pures
 struct Position { float x, y; };
 struct Velocity { float x, y; };
@@ -66,18 +66,18 @@ void movement_system(
     }
 }
 
-// Application : Assembler le tout
+// Application : Lier le tout
 Application{}
     .add_systems<movement_system>(Schedule::UPDATE)
-    .run();
-```
+    .run();```
 
-Cette séparation des données et de la logique fournit :
-- **Flexibilité** : Facile d'ajouter, supprimer ou modifier le comportement
-- **Performance** : Conception orientée données optimisée pour les CPU modernes
+Cette séparation des données et de la logique offre :
+- **Flexibilité** : Facilité d'ajouter, de supprimer ou de modifier le comportement
+- **Performance** : Conception orientée données optimisée pour les processeurs modernes
 - **Maintenabilité** : Séparation claire des préoccupations
 - **Testabilité** : Les systèmes peuvent être testés de manière isolée
 
 ## Prochaines Étapes
 
-Commencez par [Entités](./entities.md) pour comprendre les fondations du pattern ECS.
+Commencez par les [Entités](./entities.md) pour comprendre les fondations du modèle ECS.
+````

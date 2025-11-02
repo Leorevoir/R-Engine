@@ -4,116 +4,56 @@ sidebar_position: 3
 
 # Systèmes
 
-Les systèmes sont des fonctions qui contiennent la logique de votre application. Ils opèrent sur les entités via des requêtes et peuvent accéder aux ressources globales.
+Les systèmes sont des fonctions qui contiennent la logique de votre application. Ils opèrent sur les entités en interrogeant les composants et peuvent accéder aux ressources globales.
 
-## Qu'est-ce qu'un System?
+## Qu'est-ce qu'un Système ?
 
-Un système est une fonction C++ standard qui prend des paramètres ECS et implémente la logique du jeu :
+Un système est une fonction C++ ordinaire qui prend des types ECS spéciaux comme paramètres. Le moteur utilise ces paramètres pour fournir les données nécessaires depuis la `Scene`.
 
 ```cpp
+// Un système qui déplace les entités en fonction de leur vélocité.
 void movement_system(
-    Query<Mut<Position>, Ref<Velocity>> query,
-    Res<DeltaTime> time
+    ecs::Query<ecs::Mut<Position>, ecs::Ref<Velocity>> query,
+    ecs::Res<FrameTime> time
 ) {
     for (auto [pos, vel] : query) {
-        pos->x += vel->x * time->dt;
-        pos->y += vel->y * time->dt;
+        pos.ptr->x += vel.ptr->x * time.ptr->delta_time;
+        pos.ptr->y += vel.ptr->y * time.ptr->delta_time;
     }
 }
 ```
 
 ## Paramètres des Systèmes
 
-Les systèmes peuvent accepter différents types de paramètres :
+Les systèmes peuvent accepter divers types de paramètres qui sont automatiquement injectés par le moteur :
 
-| Type | Description | Cas d'Usage |
-|------|-------------|----------|
-| `Query<...>` | Itérer sur les entités | Traiter plusieurs entités |
-| `Res<T>` | Accès ressource en lecture seule | Lire configuration, temps |
-| `ResMut<T>` | Accès ressource mutable | Modifier l'état global |
-| `Commands` | Tampon de commandes différé | Créer/détruire des entités |
-| `EventWriter<T>` | Envoyer des événements | Communication asynchrone |
-| `EventReader<T>` | Lire des événements | Réagir aux événements |
+| Type                  | Description                                             | Cas d'utilisation                                           |
+| --------------------- | ------------------------------------------------------- | ----------------------------------------------------------- |
+| `ecs::Query<...>`     | Itérer sur les entités avec des composants spécifiques. | La manière principale de traiter plusieurs entités.         |
+| `ecs::Res<T>`         | Accès en lecture seule à une ressource globale.         | Lire la configuration, le temps, l'état des entrées.        |
+| `ecs::ResMut<T>`      | Accès modifiable à une ressource globale.               | Modifier l'état global comme le score ou les paramètres.    |
+| `ecs::Commands`       | Un tampon pour les modifications différées du monde.    | Créer/détruire des entités, ajouter/retirer des composants. |
+| `ecs::EventWriter<T>` | Un expéditeur pour un type d'événement spécifique.      | Communication asynchrone entre les systèmes.                |
+| `ecs::EventReader<T>` | Un récepteur pour un type d'événement spécifique.       | Réagir aux événements envoyés par d'autres systèmes.        |
 
-### Paramètre Query
+[En savoir plus sur les Requêtes →](./queries.md)
+[En savoir plus sur les Ressources →](./resources.md)
+[En savoir plus sur les Commandes →](./commands.md)
+[En savoir plus sur les Événements →](../advanced/events.md)
 
-Accéder aux composants d'entité :
+## Enregistrer les Systèmes
 
-```cpp
-void system(Query<Mut<Position>, Ref<Velocity>, With<Player>> query) {
-    for (auto [pos, vel, _] : query) {
-        // Traiter les entités joueur
-    }
-}
-```
-
-[En savoir plus sur Queries →](./queries.md)
-
-### Resource Parameters
-
-Accéder aux données globales :
-
-```cpp
-void system(
-    Res<Config> config,      // Lecture seule
-    ResMut<Score> score      // Mutable
-) {
-    if (score->value > config->high_score) {
-        // Nouveau meilleur score !
-    }
-}
-```
-
-[En savoir plus sur Resources →](./resources.md)
-
-### Commandes Parameter
-
-Modifier le monde ECS :
-
-```cpp
-void system(Commands& commands) {
-    // Créer une entité
-    commands.spawn(Position{}, Velocity{});
-    
-    // Insérer une ressource
-    commands.insert_resource(NewResource{});
-}
-```
-
-[En savoir plus sur Commands →](./commands.md)
-
-### Event Parameters
-
-Envoyer et recevoir des événements :
-
-```cpp
-void system(
-    EventWriter<CollisionEvent> writer,
-    EventReader<InputEvent> reader
-) {
-    for (const auto& input : reader.iter()) {
-        // Traiter l'entrée
-    }
-    
-    writer.send(CollisionEvent{});
-}
-```
-
-[En savoir plus sur Events →](../advanced/events.md)
-
-## Registering Systems
-
-Ajoutez des systèmes aux plannings dans votre application :
+Vous ajoutez des systèmes à votre application et les assignez à un `Schedule`.
 
 ```cpp
 Application{}
-    // Systèmes STARTUP (exécutés une fois)
-    .add_systems<setup, init>(Schedule::STARTUP)
-    
-    // Systèmes UPDATE (exécutés chaque frame)
-    .add_systems<input, movement, collision>(Schedule::UPDATE)
-    
-    // Systèmes RENDER
+    // Les systèmes STARTUP s'exécutent une fois au début.
+    .add_systems<setup_game, load_assets>(Schedule::STARTUP)
+
+    // Les systèmes UPDATE s'exécutent à chaque frame.
+    .add_systems<player_input, movement, collision>(Schedule::UPDATE)
+
+    // Les systèmes RENDER gèrent le dessin.
     .add_systems<render_sprites>(Schedule::RENDER_2D)
     .run();
 ```
@@ -122,259 +62,93 @@ Application{}
 
 ### Ordre Automatique
 
-Par défaut, les systèmes s'exécutent dans l'ordre où ils sont ajoutés :
-
-```cpp
-.add_systems<system_a, system_b, system_c>(Schedule::UPDATE)
-// S'exécute : a → b → c
-```
+Par défaut, le planificateur tente d'exécuter les systèmes en parallèle si leur accès aux données ne crée pas de conflit.
 
 ### Dépendances Explicites
 
-Utilisez `.after<>()` et `.before<>()` pour spécifier l'ordre :
+Utilisez `.after<>()` et `.before<>()` pour définir un ordre d'exécution spécifique lorsque c'est nécessaire.
 
 ```cpp
-.add_systems<input_system, movement_system>(Schedule::UPDATE)
-.after<input_system>()  // movement_system s'exécute après input_system
+app.add_systems<movement_system>(Schedule::UPDATE)
+   .after<input_system>(); // Assure que movement_system s'exécute après input_system
 
-.add_systems<cleanup_system>(Schedule::UPDATE)
-.before<render_system>()  // cleanup s'exécute avant render
+app.add_systems<cleanup_system>(Schedule::UPDATE)
+   .before<render_system>(); // Assure que cleanup s'exécute avant render
 ```
 
-### System Sets
+### Ensembles de Systèmes (System Sets)
 
-Groupez les systèmes liés :
+Groupez les systèmes liés en ensembles pour gérer leurs dépendances collectivement. Les ensembles sont définis par des `struct` vides.
 
 ```cpp
-.add_systems<physics_a, physics_b>(Schedule::UPDATE)
-.in_set(SystemSet::Physics)
+struct PhysicsSet {};
+struct RenderingSet {};
 
-.add_systems<render_a, render_b>(Schedule::UPDATE)
-.in_set(SystemSet::Rendering)
-.after_set(SystemSet::Physics)  // Tout le rendu après la physique
+app.add_systems<physics_a, physics_b>(Schedule::UPDATE)
+   .in_set<PhysicsSet>();
+
+app.add_systems<render_a, render_b>(Schedule::UPDATE)
+   .in_set<RenderingSet>();
+
+// Configurer l'ensemble RenderingSet pour qu'il s'exécute après le PhysicsSet
+app.configure_sets<RenderingSet>(Schedule::UPDATE)
+   .after<PhysicsSet>();
 ```
 
-[En savoir plus sur System Sets →](../advanced/schedules.md)
+[En savoir plus sur les Schedules et les Sets →](../advanced/schedules.md)
 
-## Exécution des Systèmes
+## Exécution Conditionnelle
 
-### Exécution Unique
-
-Les systèmes s'exécutent une fois par exécution du planning :
+Utilisez des conditions d'exécution pour contrôler quand les systèmes s'exécutent.
 
 ```cpp
-void system() {
-    std::cout << "S'exécute une fois par frame\n";
-}
-```
-
-### Exécution Conditionnelle
-
-Utilisez les conditions d'exécution pour contrôler quand les systèmes s'exécutent :
-
-```cpp
-bool is_paused() {
-    // Vérifier l'état de pause
-    return /* ... */;
+// Une fonction prédicat qui vérifie une ressource.
+bool is_not_paused(ecs::Res<GameState> state) {
+    return !state.ptr->paused;
 }
 
-.add_systems<game_logic>(Schedule::UPDATE)
-.run_if(not_run_condition<is_paused>())
+// Le système ne s'exécutera que si le prédicat retourne vrai.
+app.add_systems<game_logic>(Schedule::UPDATE)
+   .run_if<is_not_paused>();
 ```
 
-[En savoir plus sur Run Conditions →](../advanced/run-conditions.md)
-
-## System Patterns
-
-### Système d'Initialisation
-
-S'exécute une fois au démarrage :
-
-```cpp
-void setup_system(Commands& commands) {
-    // Initialiser les ressources
-    commands.insert_resource(GameConfig{});
-    
-    // Créer les entités initiales
-    commands.spawn(Camera{}, Transform{});
-    commands.spawn(Player{}, Position{}, Health{100});
-}
-
-// Enregistrer dans le planning STARTUP
-.add_systems<setup_system>(Schedule::STARTUP)
-```
-
-### Système de Mise à Jour
-
-S'exécute chaque frame :
-
-```cpp
-void update_system(
-    Query<Mut<Position>, Ref<Velocity>> query,
-    Res<DeltaTime> time
-) {
-    for (auto [pos, vel] : query) {
-        pos->x += vel->x * time->dt;
-        pos->y += vel->y * time->dt;
-    }
-}
-
-.add_systems<update_system>(Schedule::UPDATE)
-```
-
-### Système Gestionnaire d'Événements
-
-Réagit aux événements :
-
-```cpp
-void collision_handler(
-    EventReader<CollisionEvent> events,
-    Commands& commands
-) {
-    for (const auto& event : events.iter()) {
-        // Gérer la collision
-        if (event.damage > 0) {
-            commands.entity(event.target).despawn();
-        }
-    }
-}
-```
-
-### Système de Nettoyage
-
-Supprimer les entités mortes :
-
-```cpp
-void cleanup_dead_entities(
-    Query<Entity, With<Dead>> query,
-    Commands& commands
-) {
-    for (auto [entity, _] : query) {
-        commands.entity(entity).despawn();
-    }
-}
-```
+[En savoir plus sur les Conditions d'Exécution →](../advanced/run-conditions.md)
 
 ## Bonnes Pratiques
 
 ### ✅ À Faire
 
-- Gardez les systèmes concentrés sur une tâche
-- Utilisez les requêtes pour itérer sur les entités
-- Préférez l'accès en lecture seule (`Ref<T>`) quand possible
-- Utilisez les commandes pour les changements structurels
+- Gardez les systèmes focalisés sur une seule responsabilité (par ex., un système de mouvement, un système de rendu).
+- Utilisez les requêtes pour itérer sur les entités.
+- Préférez l'accès en lecture seule (`Ref<T>`, `Res<T>`) autant que possible pour permettre plus de parallélisme.
+- Utilisez `Commands` pour tous les changements structurels au monde.
 
 ```cpp
-// Bon : Système concentré
-void apply_gravity(Query<Mut<Velocity>> query, Res<Gravity> gravity) {
+// Bon : Un système focalisé avec des dépendances claires.
+void apply_gravity(ecs::Query<ecs::Mut<Velocity>> query, ecs::Res<Gravity> gravity) {
     for (auto [vel] : query) {
-        vel->y += gravity->value;
+        vel.ptr->y += gravity.ptr->value;
     }
 }
 ```
 
-### ❌ À Éviter
+### ❌ À Ne Pas Faire
 
-- Ne stockez pas d'état dans les systèmes (utilisez des ressources ou composants)
-- Ne modifiez pas les entités directement pendant l'itération de requête
-- Ne créez pas de dépendances circulaires
+- Ne stockez pas d'état à l'intérieur de la fonction système elle-même (par ex., en utilisant des variables `static`). Utilisez plutôt des ressources ou des composants.
+- Ne modifiez pas le monde directement pendant une itération (par ex., en appelant `scene.add_component`). Utilisez `Commands`.
+- Ne créez pas de dépendances circulaires entre les systèmes.
 
 ```cpp
-// Mauvais : Stockage d'état dans le système
+// Mauvais : Stocker de l'état dans un système.
 void bad_system() {
-    static int counter = 0;  // ❌ Utilisez une ressource à la place
-    counter++;
-}
-```
-
-## Conseils de Performance
-
-### Minimiser l'Accès Mutable
-
-Utilisez `Ref<T>` au lieu de `Mut<T>` quand vous n'avez pas besoin de modifier :
-
-```cpp
-// Permet l'exécution parallèle avec d'autres systèmes en lecture seule
-void read_only_system(Query<Ref<Position>> query) {
-    for (auto [pos] : query) {
-        // Juste de la lecture
-    }
-}
-```
-
-### Diviser les Grands Systèmes
-
-Divisez les systèmes complexes en plus petits, concentrés :
-
-```cpp
-// Au lieu d'un grand système :
-void game_logic() { /* physique, IA, entrées... */ }
-
-// Divisez en systèmes concentrés :
-void physics_system() { /* ... */ }
-void ai_system() { /* ... */ }
-void input_system() { /* ... */ }
-```
-
-### Utiliser les Filtres
-
-Filtrez les requêtes pour réduire les itérations :
-
-```cpp
-// Traiter uniquement les ennemis actifs
-void ai_system(Query<Ref<Position>, With<Enemy>, Without<Dead>> query) {
-    for (auto [pos, _] : query) {
-        // Logique IA uniquement pour les ennemis vivants
-    }
-}
-```
-
-## Exemple: Complete System Setup
-
-```cpp
-// Composants
-struct Position { float x, y; };
-struct Velocity { float x, y; };
-struct Player {};
-
-// Ressources
-struct DeltaTime { float dt; };
-
-// Systèmes
-void movement_system(
-    Query<Mut<Position>, Ref<Velocity>> query,
-    Res<DeltaTime> time
-) {
-    for (auto [pos, vel] : query) {
-        pos->x += vel->x * time->dt;
-        pos->y += vel->y * time->dt;
-    }
-}
-
-void input_system(
-    Query<Mut<Velocity>, With<Player>> query,
-    Res<Input> input
-) {
-    for (auto [vel, _] : query) {
-        vel->x = input->horizontal * 5.0f;
-        vel->y = input->vertical * 5.0f;
-    }
-}
-
-// Application
-int main() {
-    Application{}
-        .insert_resource(DeltaTime{})
-        .insert_resource(Input{})
-        .add_systems<input_system, movement_system>(Schedule::UPDATE)
-        .after<input_system>()  // mouvement après entrée
-        .run();
+    static int counter = 0;  // ❌ Ce n'est pas thread-safe et c'est une mauvaise pratique.
+    counter++;               // Utilisez une ressource à la place : ResMut<MyCounter>.
 }
 ```
 
 ## Prochaines Étapes
 
-- Apprenez les [Resources](./resources.md) pour l'état global
-- Explorez les [Queries](./queries.md) pour l'accès aux entités
-- Consultez les [Commands](./commands.md) pour la modification du monde
-- Découvrez les [Fonctionnalités Avancées](../advanced/index.md) pour plus de capacités système
+- Apprenez-en plus sur les [Ressources](./resources.md) pour l'état global.
+- Explorez les [Requêtes](./queries.md) pour l'accès aux entités.
+- Consultez les [Commandes](./commands.md) pour la modification du monde.
+- Découvrez les [Fonctionnalités Avancées](../advanced/index.md) pour plus de capacités système.

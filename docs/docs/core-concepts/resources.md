@@ -63,7 +63,7 @@ void score_system(
     ResMut<Score> score,
     EventReader<PointEvent> events
 ) {
-    for (const auto& event : events.iter()) {
+    for (const auto& event : events) {
         score->value += event.points;
     }
 }
@@ -114,9 +114,9 @@ void time_system(ResMut<DeltaTime> time) {
 
 ```cpp
 struct Input {
-    bool keys[256];
+    bool keys;
     int mouse_x, mouse_y;
-    bool mouse_buttons[3];
+    bool mouse_buttons;
 };
 
 void input_system(ResMut<Input> input) {

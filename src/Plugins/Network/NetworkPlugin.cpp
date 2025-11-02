@@ -1,6 +1,5 @@
 #include "R-Engine/Plugins/NetworkPlugin.hpp"
 #include "R-Engine/Application.hpp"
-#include "R-Engine/Core/Clock.hpp"
 #include "R-Engine/Core/Logger.hpp"
 #include "R-Engine/Plugins/Plugin.hpp"
 #include <RTypeNet/Cleanup.hpp>
@@ -245,8 +244,18 @@ static void network_connect_system(ecs::ResMut<Connection> conn, ecs::EventReade
                 /* For TCP, we can use an empty local endpoint */
                 conn.ptr->socket.handle = rtype::network::connect({}, rtype_endpoint, proto);
             } else {
-                /* For UDP, we create a listening socket to be able to receive data */
-                conn.ptr->socket = rtype::network::listen(rtype_endpoint, proto);
+                /* HACK / WORKAROUND since we don't have time
+                 The rtype::network::listen() function is bugged for UDP; it incorrectly
+                 calls the ::listen system call which is for TCP only, causing the socket
+                 creation to fail or hang.
+                 For a UDP client, we should be creating an active socket, not a passive
+                 listening one. We are using rtype::network::connect() for UDP here as a
+                 workaround, as it correctly sets up a client-side socket.
+
+                 TODO: This issue should be fixed properly in the R-Type-Network library
+                 itself by correcting the implementation of rtype::network::listen() for UDP.  */
+                rtype::network::Endpoint local_endpoint = to_rtype_endpoint("0.0.0.0", 0);
+                conn.ptr->socket.handle = rtype::network::connect(local_endpoint, rtype_endpoint, proto);
             }
             conn.ptr->socket.endpoint = rtype_endpoint;
             conn.ptr->socket.protocol = proto;

@@ -210,6 +210,31 @@ static void post_processing_plugin_begin_capture(const r::ecs::Res<r::RenderPlug
     post_processing_clear(rl_color);
 }
 
+// Resize render texture when window size changes so the game render matches the UI size
+static void post_processing_plugin_resize_system(const r::ecs::Res<r::WindowPluginConfig> window_config) noexcept
+{
+    const r::Vec2i w_size = static_cast<r::Vec2i>(window_config.ptr->size);
+
+    if (!g_render_texture.initialized) {
+        // Not initialized yet, nothing to do
+        return;
+    }
+
+    // Current render texture size
+    const int cur_w = g_render_texture.target.texture.width;
+    const int cur_h = g_render_texture.target.texture.height;
+
+    if (cur_w != w_size.x || cur_h != w_size.y) {
+        // Recreate render texture at the new size
+        UnloadRenderTexture(g_render_texture.target);
+        g_render_texture.target = LoadRenderTexture(w_size.x, w_size.y);
+        g_render_texture.initialized = true;
+        // Make sure viewport/scissor state is consistent with new size (raylib takes care of that on BeginTextureMode/EndTextureMode)
+        const std::string msg = std::string("PostProcessing: resized render texture to ") + std::to_string(w_size.x) + " x " + std::to_string(w_size.y);
+        r::Logger::debug(msg);
+    }
+}
+
 static void post_processing_plugin_end_capture_and_draw(
     const r::ecs::Res<r::PostProcessingPluginConfig> config_ptr,
     const r::ecs::Res<r::WindowPluginConfig> window_config,
@@ -272,7 +297,7 @@ void r::PostProcessingPlugin::build(Application &app)
 {
     app.insert_resource(_config);
     app.add_systems<post_processing_plugin_startup>(Schedule::STARTUP);
-    app.add_systems<post_processing_plugin_begin_capture>(Schedule::BEFORE_RENDER_3D);
+    app.add_systems<post_processing_plugin_resize_system, post_processing_plugin_begin_capture>(Schedule::BEFORE_RENDER_3D);
     app.add_systems<post_processing_plugin_end_capture_and_draw>(Schedule::RENDER_2D).after<r::ui::render_system>();
     app.add_systems<post_processing_plugin_shutdown>(Schedule::SHUTDOWN);
 }

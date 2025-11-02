@@ -86,7 +86,13 @@ std::deque<r::ecs::Entity> transform_get_queue(OrphelinsQuery &roots_q, const Tr
         }
 
         const r::Transform3d *local = local_it->second;
-        r::GlobalTransform3d *global = cache.global.at(entity);
+        const auto global_it = cache.global.find(entity);
+        if (global_it == cache.global.end()) {
+            /* Missing global (component may have been added/removed concurrently) */
+            continue;
+        }
+
+        r::GlobalTransform3d *global = global_it->second;
 
         global->position = local->position;
         global->rotation = local->rotation;
@@ -116,12 +122,26 @@ void transform_bfs_propagation(std::deque<r::ecs::Entity> &queue, const Transfor
             continue;
         }
 
-        const r::GlobalTransform3d &parent_global = *cache.global.at(parent_entity);
+        const auto parent_global_it = cache.global.find(parent_entity);
+        if (parent_global_it == cache.global.end()) {
+            continue; /* parent global transform missing */
+        }
+
+        const r::GlobalTransform3d &parent_global = *parent_global_it->second;
         const std::vector<r::ecs::Entity> &child_entities = *children_it->second;
 
         for (const r::ecs::Entity child_entity : child_entities) {
-            const r::Transform3d *child_local = cache.local.at(child_entity);
-            r::GlobalTransform3d *child_global = cache.global.at(child_entity);
+            const auto child_local_it = cache.local.find(child_entity);
+            if (child_local_it == cache.local.end()) {
+                continue; /* child local transform missing */
+            }
+            const auto child_global_it = cache.global.find(child_entity);
+            if (child_global_it == cache.global.end()) {
+                continue; /* child global transform missing */
+            }
+
+            const r::Transform3d *child_local = child_local_it->second;
+            r::GlobalTransform3d *child_global = child_global_it->second;
 
             *child_global = r::GlobalTransform3d::from_local_and_parent(*child_local, parent_global);
 

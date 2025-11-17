@@ -143,7 +143,7 @@ class R_ENGINE_API CommandBuffer
         void _add_command(std::function<void(Scene &)> &&command);
 
         std::vector<std::function<void(Scene &)>> _commands;
-        Entity _next_placeholder = std::numeric_limits<Entity>::max();
+        Entity _next_placeholder = (std::numeric_limits<Entity>::max)();
         Commands *_commands_wrapper = nullptr;
 };
 

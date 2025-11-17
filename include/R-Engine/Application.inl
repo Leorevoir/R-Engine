@@ -1,7 +1,6 @@
 #pragma once
 
-#include <R-Engine/Application.hpp>
-#include <R-Engine/ECS/System.hpp>
+#include <array>
 #include <R-Engine/Plugins/Plugin.hpp>
 
 #include <type_traits>

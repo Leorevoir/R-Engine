@@ -9,7 +9,19 @@
 #include <utility>
 
 #ifndef R_UNUSED
-    #define R_UNUSED __attribute__((unused))
+    #if defined(_MSC_VER)
+        #if defined(__has_cpp_attribute)
+            #if __has_cpp_attribute(maybe_unused)
+                #define R_UNUSED [[maybe_unused]]
+            #else
+                #define R_UNUSED
+            #endif
+        #else
+            #define R_UNUSED
+        #endif
+    #else
+        #define R_UNUSED __attribute__((unused))
+    #endif
 #endif /* R_UNUSED */
 
 namespace r {

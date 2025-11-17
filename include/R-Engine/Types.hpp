@@ -46,6 +46,10 @@ static constexpr f32 R_ENGINE_EPSILON = 1e-6f;
 
 namespace r {
 
+#if defined(_MSC_VER)
+__pragma(warning(push)) __pragma(warning(disable : 4201)) /* nameless struct/union */
+#endif
+
 #if defined(__GNUC__)
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Wpedantic"
@@ -54,12 +58,12 @@ namespace r {
     #pragma clang diagnostic ignored "-Wpedantic"
 #endif
 
-/**
+    /**
  * @brief Color structure
  * @details holds RGBA color values and a packed u32 representation
  * @info the order of the color channels in memory depends on the endianness of the system
  */
-struct R_ENGINE_API Color {
+    struct R_ENGINE_API Color {
     public:
         union {
                 struct {
@@ -89,18 +93,23 @@ struct R_ENGINE_API Color {
     #pragma clang diagnostic pop
 #endif
 
-namespace F32 {
+#if defined(_MSC_VER)
+__pragma(warning(pop))
+#endif
 
-/**
+    namespace F32
+{
+
+    /**
 * @brief compare two floating point numbers for equality within a certain epsilon
-* 
+*
 * @param a the first number
 * @param b the second number
 */
-static inline bool equal(const f32 a, const f32 b, const f32 epsilon = R_ENGINE_EPSILON) noexcept
-{
-    return std::fabs(a - b) <= epsilon * fmaxf(1.0f, fmaxf(std::fabs(a), std::fabs(b)));
-}
+    static inline bool equal(const f32 a, const f32 b, const f32 epsilon = R_ENGINE_EPSILON) noexcept
+    {
+        return std::fabs(a - b) <= epsilon * fmaxf(1.0f, fmaxf(std::fabs(a), std::fabs(b)));
+    }
 
 }// namespace F32
 

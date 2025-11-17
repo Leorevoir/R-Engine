@@ -14,7 +14,10 @@
  * @return void
  */
 namespace r::exception {
-class R_ENGINE_API Error final : public std::exception
+#if defined(_MSC_VER)
+__pragma(warning(push)) __pragma(warning(disable : 4275)) /* non dll-interface base */
+#endif
+    class R_ENGINE_API Error final : public std::exception
 {
     public:
         /**
@@ -56,4 +59,7 @@ class R_ENGINE_API Error final : public std::exception
             return oss.str();
         }
 };
+#if defined(_MSC_VER)
+__pragma(warning(pop))
+#endif
 }// namespace r::exception

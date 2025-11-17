@@ -14,7 +14,8 @@ template<typename T, typename = void>
 struct system_param_access {
         static void get(sys::Access R_UNUSED &comp_access, sys::Access R_UNUSED &res_access)
         {
-            /* __empty__ */
+            (void) comp_access;
+            (void) res_access;
         }
 };
 
@@ -22,6 +23,7 @@ template<typename T>
 struct system_param_access<T, std::enable_if_t<is_res<T>::value>> {
         static void get(sys::Access R_UNUSED &comp_access, sys::Access &res_access)
         {
+            (void) comp_access;
             using ResType = typename T::ResourceType;
             res_access.reads.insert(typeid(ResType));
         }
@@ -31,6 +33,7 @@ template<typename T>
 struct system_param_access<T, std::enable_if_t<is_resmut<T>::value>> {
         static void get(sys::Access R_UNUSED &comp_access, sys::Access &res_access)
         {
+            (void) comp_access;
             using ResType = typename T::ResourceType;
             res_access.writes.insert(typeid(ResType));
         }
@@ -50,6 +53,7 @@ template<typename... T>
 struct system_param_access<Query<T...>> {
         static void get(sys::Access &comp_access, sys::Access R_UNUSED &res_access)
         {
+            (void) res_access;
             (get_query_wrapper_access<T>(comp_access), ...);
         }
 };

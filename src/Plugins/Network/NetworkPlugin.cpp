@@ -314,9 +314,9 @@ static void network_send_system(ecs::ResMut<Connection> conn, ecs::EventReader<N
         ssize_t sent_bytes = 0;
 
         if (conn.ptr->socket.protocol == rtype::network::Protocol::TCP) {
-            sent_bytes = rtype::network::send(conn.ptr->socket.handle, buffer.data(), buffer.size(), 0);
+            sent_bytes = rtype::network::send(conn.ptr->socket.handle, buffer.data(), static_cast<rtype::network::BufLen>(buffer.size()), 0);
         } else {///< UDP
-            sent_bytes = rtype::network::sendto(conn.ptr->socket.handle, buffer.data(), buffer.size(), 0, conn.ptr->socket.endpoint);
+            sent_bytes = rtype::network::sendto(conn.ptr->socket.handle, buffer.data(), static_cast<rtype::network::BufLen>(buffer.size()), 0, conn.ptr->socket.endpoint);
         }
 
         if (sent_bytes < 0) {
@@ -345,9 +345,9 @@ static void network_receive_system(ecs::ResMut<Connection> conn, ecs::EventWrite
         rtype::network::Endpoint from_endpoint;
 
         if (conn.ptr->socket.protocol == rtype::network::Protocol::TCP) {
-            received = rtype::network::recv(conn.ptr->socket.handle, buffer.data(), buffer.size(), 0);
+            received = rtype::network::recv(conn.ptr->socket.handle, buffer.data(), static_cast<rtype::network::BufLen>(buffer.size()), 0);
         } else {
-            received = rtype::network::recvfrom(conn.ptr->socket.handle, buffer.data(), buffer.size(), 0, from_endpoint);
+            received = rtype::network::recvfrom(conn.ptr->socket.handle, buffer.data(), static_cast<rtype::network::BufLen>(buffer.size()), 0, from_endpoint);
         }
 
         if (received > 0) {
@@ -390,7 +390,7 @@ static void network_resend_system(ecs::ResMut<Connection> conn, ecs::Res<core::F
 
     for (auto &sent_packet : conn.ptr->sent_buffer) {
         if (time.ptr->global_time - sent_packet.sent_time > conn.ptr->timeout_seconds) {
-            ssize_t sent_bytes = rtype::network::sendto(conn.ptr->socket.handle, sent_packet.buffer.data(), sent_packet.buffer.size(), 0,
+            ssize_t sent_bytes = rtype::network::sendto(conn.ptr->socket.handle, sent_packet.buffer.data(), static_cast<rtype::network::BufLen>(sent_packet.buffer.size()), 0,
                 conn.ptr->socket.endpoint);
 
             if (sent_bytes < 0) {

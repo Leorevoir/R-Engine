@@ -71,7 +71,13 @@ class R_ENGINE_API PluginGroup
         void add(Args &&...args);
 
     private:
-        std::vector<std::shared_ptr<Plugin>> _plugins;
+#if defined(_MSC_VER)
+        __pragma(warning(push)) __pragma(warning(disable : 4251)) /* non dll-interface for std::vector member */
+#endif
+            std::vector<std::shared_ptr<Plugin>> _plugins;
+#if defined(_MSC_VER)
+        __pragma(warning(pop))
+#endif
 };
 
 }// namespace r

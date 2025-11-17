@@ -14,6 +14,10 @@ namespace details {
  * NOTE: disable pedantic warnings for GCC/Clang to allow anonymous structs
  */
 
+#if defined(_MSC_VER)
+__pragma(warning(push)) __pragma(warning(disable : 4201)) /* nameless struct/union */
+#endif
+
 #if defined(__GNUC__)
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Wpedantic"
@@ -22,8 +26,8 @@ namespace details {
     #pragma clang diagnostic ignored "-Wpedantic"
 #endif
 
-template<usize N, typename T>
-struct VecData {
+    template<usize N, typename T>
+    struct VecData {
         T data[N] = {0};
 };
 
@@ -82,6 +86,10 @@ struct VecData<4, T> {
     #pragma GCC diagnostic pop
 #elif defined(__clang__)
     #pragma clang diagnostic pop
+#endif
+
+#if defined(_MSC_VER)
+__pragma(warning(pop))
 #endif
 
 }// namespace details
